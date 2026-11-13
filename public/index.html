@@ -171,6 +171,19 @@ canvas{position:relative;z-index:1}
  .frame .touch-controls.compact{z-index:4}
 }
 @media(pointer:coarse) and (orientation:portrait){.frame canvas{object-fit:contain}}
+
+/* v4 animation polish - restrained motion, accessible reduced-motion fallback */
+@keyframes starBreathe {0%,100%{filter:drop-shadow(0 0 3px #f6c7ff88);transform:scale(1)}50%{filter:drop-shadow(0 0 12px #b7f0ffaa);transform:scale(1.08)}}
+@keyframes connectionPulse {0%,100%{box-shadow:0 0 0 0 #75f2c733,0 0 11px #75f2c755}55%{box-shadow:0 0 0 5px #75f2c700,0 0 16px #75f2c766}}
+@keyframes menuAppear {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.brand-mark{animation:starBreathe 4.4s ease-in-out infinite}
+.status-dot.online{animation:connectionPulse 2.8s ease-in-out infinite}
+.overlay:not(.hidden) .overlay-card{animation:menuAppear .4s both ease-out}
+.step.active{transition:background .35s,box-shadow .35s,transform .35s;transform:scale(1.05)}
+.touch-controls.compact .touch-button{transition:background .12s ease,transform .12s ease,box-shadow .16s ease}
+.touch-controls.compact .touch-button.pressed{box-shadow:inset 0 0 20px #adbdff4a,0 3px 9px #0008}
+.toast.visible{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+@media(prefers-reduced-motion:reduce){.brand-mark,.status-dot.online,.overlay:not(.hidden) .overlay-card{animation:none!important}*{scroll-behavior:auto!important}}
 </style></head><body>
 <div class="game-shell">
 <header class="topline">
@@ -231,5 +244,5 @@ canvas{position:relative;z-index:1}
 </div><div class="footer-note">Вы: <b id="myRole">не в комнате</b><div>На iPhone поверните экран горизонтально · <b>R</b> — перезапуск уровня (хост)</div></div></section>
 <div class="rotate-tip">↻ Для удобной игры на iPhone поверните экран горизонтально.</div>
 </div>
-<script src="/shared/stages.js"></script><script src="/visuals.js?v=3"></script><script src="/client.js?v=3"></script>
+<script src="/shared/stages.js"></script><script src="/visuals.js?v=4"></script><script src="/juice.js?v=4"></script><script src="/client.js?v=4"></script>
 </body></html>
