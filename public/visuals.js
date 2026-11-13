@@ -1,4 +1,4 @@
-/* Linked by Light — visual engine v3.0. Pure canvas graphics, zero external assets. */
+/* Linked by Light — visual engine v4.0. Pure canvas graphics, zero external assets. */
 (function (root) {
 'use strict';
 const TAU = Math.PI * 2;
@@ -127,17 +127,27 @@ function platform(c,s,index,clock){const {x,y,w}=s;const sc=SCENES[index]||SCENE
  }c.restore();}
 function player(c,p,clock){
  const type=p.type||0,col=type?'#86eff4':'#ffc084',outline=type?'#1c526c':'#743d67';
- const bob=p.grounded?Math.sin(clock*7+(p.breathe||0))*1.5:0;
+ const anim=p.anim||{},run=anim.run||0,land=anim.land||0;
+ const bob=p.grounded?(Math.sin(clock*2.4+(p.breathe||0))*1.1+Math.abs(Math.sin(anim.stride||0))*run*2):0;
  const x=p.x+(p.w||30)/2,y=p.y+(p.h||43)+bob;
- c.save();glow(c,x,y-23,76,col,p.abilityFx>0?.23:.095);
- c.globalAlpha=.22;c.fillStyle='#000';c.beginPath();c.ellipse(x,y+3,25,5,0,0,TAU);c.fill();c.globalAlpha=1;
+ c.save();glow(c,x,y-23,76,col,(p.abilityFx>0?.24:.085)+.016*Math.sin(clock*2.5));
+ c.globalAlpha=p.grounded?.22:.10;c.fillStyle='#000';c.beginPath();c.ellipse(x,y+3,p.grounded?25:18,5,0,0,TAU);c.fill();c.globalAlpha=1;
  c.translate(x,y);const face=p.face||1;
+ // Squash on landing, stretch when airborne, lean slightly when running.
+ const stretch=anim.airborne?(anim.takeoff?.09:anim.fall?.055:.015):0;
+ c.rotate((anim.lean||0)+Math.sin(clock*1.7+(p.breathe||0))*.012);
+ c.scale(1+land*.12-stretch*.4,1-land*.13+stretch);
  // Sky-colored scarf floats behind the body.
  c.save();c.scale(face,1);c.fillStyle=type?'#43c8d1':'#ef747d';
- c.beginPath();c.moveTo(-5,-36);c.quadraticCurveTo(-26,-39+Math.sin(clock*6)*5,-37,-28+Math.sin(clock*8)*5);c.lineTo(-25,-24);c.quadraticCurveTo(-10,-26,-4,-26);c.closePath();c.fill();c.restore();
+ const flutter=Math.sin(clock*(6+run*7))*(4+run*7);
+ c.beginPath();c.moveTo(-5,-36);c.quadraticCurveTo(-25,-38+flutter,-37-run*6,-28+flutter*.7);c.lineTo(-25,-24+flutter*.55);c.quadraticCurveTo(-11,-26,-4,-26);c.closePath();c.fill();c.restore();
  // Simple readable feet animated only while moving.
- c.fillStyle=outline;const stride=p.grounded&&Math.abs(p.vx||0)>30?Math.sin(clock*13)*4:0;
- rr(c,-16,-10+stride,12,14,5);c.fill();rr(c,5,-10-stride,12,14,5);c.fill();
+ c.fillStyle=outline;const stride=anim.airborne?0:Math.sin(anim.stride||0)*7*run;
+ rr(c,-16,-10+Math.max(-5,stride),12,14,5);c.fill();
+ rr(c,5,-10+Math.max(-5,-stride),12,14,5);c.fill();
+ // Animated arms (behind the coat).
+ const arm=anim.airborne?-4:Math.sin(anim.stride||0)*run*5;
+ rr(c,-24,-38+arm,10,25,5);c.fill();rr(c,14,-38-arm,10,25,5);c.fill();
  // Outer coat / body silhouette.
  c.strokeStyle=outline;c.lineWidth=3;c.fillStyle=linear(c,0,-52,0,0,type?'#46b6dc':'#f3a26c',type?'#227d9e':'#b76178');
  rr(c,-19,-48,38,45,15);c.fill();c.stroke();
@@ -149,10 +159,16 @@ function player(c,p,clock){
  // A small gemstone crown.
  c.shadowColor=col;c.shadowBlur=12;c.fillStyle='#f9fcff';c.beginPath();c.moveTo(0,-63);c.lineTo(5,-58);c.lineTo(0,-53);c.lineTo(-5,-58);c.closePath();c.fill();c.shadowBlur=0;
  // Eyes are dark and remain readable at small phone resolution.
- c.fillStyle='#1f2d45';rr(c,-8,-37,5.5,8,3);c.fill();rr(c,4,-37,5.5,8,3);c.fill();
- c.fillStyle='#fff';c.beginPath();c.arc(-6,-35.5,1.45,0,TAU);c.arc(6,-35.5,1.45,0,TAU);c.fill();
+ c.fillStyle='#1f2d45';
+ if(anim.blink){rr(c,-8,-34,5.5,2,1);c.fill();rr(c,4,-34,5.5,2,1);c.fill();}
+ else{rr(c,-8,-37,5.5,8,3);c.fill();rr(c,4,-37,5.5,8,3);c.fill();}
+ if(!anim.blink){c.fillStyle='#fff';c.beginPath();c.arc(-6,-35.5,1.45,0,TAU);c.arc(6,-35.5,1.45,0,TAU);c.fill();}
  c.globalAlpha=.5;c.fillStyle=type?'#428da0':'#dd8193';c.beginPath();c.ellipse(-12,-29,3.2,1.9,0,0,TAU);c.ellipse(12,-29,3.2,1.9,0,0,TAU);c.fill();c.globalAlpha=1;
- c.strokeStyle='#26324b';c.lineWidth=1.3;c.beginPath();c.arc(0,-27,3,.16,Math.PI-.16);c.stroke();
+ c.strokeStyle='#26324b';c.lineWidth=1.3;c.beginPath();
+ if(run>.55)c.arc(0,-27,3.5,-.15,Math.PI+.15);
+ else if(anim.airborne)c.arc(0,-28,2.6,0,TAU);
+ else c.arc(0,-27,3,.16,Math.PI-.16);
+ c.stroke();
  // Character identity halo and cooldown ring.
  c.save();c.globalAlpha=.8;c.strokeStyle=col;c.lineWidth=2;
  c.beginPath();c.ellipse(0,-59,23,9,0,0,TAU);c.stroke();c.restore();
