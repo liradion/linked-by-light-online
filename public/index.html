@@ -123,6 +123,36 @@ canvas{width:100%;height:auto;display:block;aspect-ratio:1200 / 650;outline:0;to
   .overlay:not(.hidden){overflow-y:auto;align-items:flex-start;-webkit-overflow-scrolling:touch}
   .overlay:not(.hidden) .overlay-card{margin:auto}
 }
+
+/* Mobile controls v2.2 — small floating clusters, no wide player cards. */
+.touch-controls.compact{display:none;align-items:end;justify-content:space-between;gap:8px;margin:0}
+.touch-cluster{display:flex;gap:8px;pointer-events:auto}
+.touch-center-badge{pointer-events:none;display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;min-height:38px;max-width:40%;background:#10162ac9;border:1px solid #7e84aa77;box-shadow:0 8px 22px #0006;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.touch-role-icon{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;flex:none;font-size:16px;color:#8ff8ff;background:#73e3f01a}
+.touch-role-text{display:flex;flex-direction:column;gap:2px;min-width:0;line-height:1.12}
+.touch-role-text strong{font-size:11px;color:#f6f2ff;white-space:nowrap}
+.touch-role-text small{font-size:9px;color:#b3bedb;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;max-width:155px}
+.touch-controls.compact .touch-button{width:54px;height:54px;min-width:54px;min-height:54px;border-radius:17px;border:1px solid #7b82a8;background:linear-gradient(#27314fec,#171f3aef);color:#eef3ff;font-size:22px;font-weight:900;box-shadow:inset 0 1px 0 #ffffff22,0 8px 18px #0008}
+.touch-controls.compact .touch-button[data-input="ability"]{border-color:#68cad0;color:#9af7ff}
+.touch-controls.compact .touch-button:active,.touch-controls.compact .touch-button.pressed{background:linear-gradient(#5f5697f5,#393061f5);transform:scale(.95)}
+@media(pointer:coarse){
+  .touch-controls.compact{display:flex!important;position:absolute;z-index:3;left:12px;right:12px;bottom:9px;pointer-events:none}
+  .touch-controls.compact .touch-button{width:52px;height:52px;min-width:52px;min-height:52px}
+}
+@media(pointer:coarse) and (orientation:landscape){
+  .topline{gap:7px}.hud{padding:10px 13px 0;gap:8px}.chapter{font-size:9px;line-height:1.2}.chapter strong{font-size:12px;margin-top:2px}
+  .goal{font-size:11px;max-width:43%;line-height:1.25;padding:5px 9px;border-radius:10px;background:#10162855}
+  .touch-controls.compact{left:11px;right:11px;bottom:7px}
+  .touch-controls.compact .touch-button{width:50px;height:50px;min-width:50px;min-height:50px;font-size:21px}
+}
+@media(pointer:coarse) and (orientation:portrait){
+  .touch-controls.compact .touch-button{width:46px;height:46px;min-width:46px;min-height:46px;font-size:20px}
+  .touch-role-text small{display:none}
+}
+@media(pointer:coarse) and (max-height:390px) and (orientation:landscape){
+  .touch-controls.compact .touch-button{width:44px;height:44px;min-width:44px;min-height:44px;font-size:19px}
+  .touch-role-text small{display:none}.touch-center-badge{min-height:32px;padding:4px 8px}
+}
 </style></head><body>
 <div class="game-shell">
 <header class="topline">
@@ -135,16 +165,18 @@ canvas{width:100%;height:auto;display:block;aspect-ratio:1200 / 650;outline:0;to
 <div class="hud"><div class="chapter"><span id="levelLabel">ГЛАВА 01 / 03</span><strong id="levelName">Первый контакт</strong></div><div class="goal" id="objective">Объедините усилия, чтобы открыть ворота.</div></div>
 <div class="toast" id="toast"></div>
 <div class="banner hidden" id="waitingBanner">Партнёр отключился. Игра остановлена.<br/>Переподключение через прежнюю ссылку сохранит его роль.</div>
-<div class="touch-controls" id="touchControls" aria-label="Управление iPhone">
-  <div class="touch-panel orange">
-    <div class="touch-avatar orange">✦</div>
-    <div class="touch-meta"><div class="touch-title">Искра</div><div class="touch-sub">движение и рывок</div></div>
-    <div class="touch-group"><button class="touch-button" data-input="left" aria-label="Влево">◀</button><button class="touch-button" data-input="right" aria-label="Вправо">▶</button></div>
+<div class="touch-controls compact" id="touchControls" aria-label="Управление на телефоне">
+  <div class="touch-cluster move-cluster" aria-label="Движение">
+    <button class="touch-button" data-input="left" aria-label="Влево">◀</button>
+    <button class="touch-button" data-input="right" aria-label="Вправо">▶</button>
   </div>
-  <div class="touch-panel blue">
-    <div class="touch-avatar blue">◈</div>
-    <div class="touch-meta"><div class="touch-title">Эхо</div><div class="touch-sub">прыжок и импульс</div></div>
-    <div class="touch-group"><button class="touch-button" data-input="jump" aria-label="Прыжок">↑</button><button class="touch-button" data-input="ability" aria-label="Способность">✦</button></div>
+  <div class="touch-center-badge" id="touchRoleBadge" aria-live="polite">
+    <div class="touch-role-icon" id="touchRoleIcon">◈</div>
+    <div class="touch-role-text"><strong id="touchRoleName">Эхо</strong><small id="touchRoleHint">ваше управление</small></div>
+  </div>
+  <div class="touch-cluster action-cluster" aria-label="Действия">
+    <button class="touch-button" data-input="jump" aria-label="Прыжок">↑</button>
+    <button class="touch-button" data-input="ability" aria-label="Способность">✦</button>
   </div>
 </div>
 <div class="overlay" id="overlay" data-view="menu"><div class="overlay-card"><div class="mobile-connection" id="mobileConnection" data-status="offline"><span id="mobileConnectionText">Подключение к серверу…</span></div>
