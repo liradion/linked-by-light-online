@@ -88,6 +88,41 @@ canvas{width:100%;height:auto;display:block;aspect-ratio:1200 / 650;outline:0;to
  .touch-controls{bottom:4px}
  .touch-button{width:clamp(44px,7vw,62px);height:clamp(44px,7vw,62px)}
 }
+
+/* v2.1: Full-height menu on iPhone; prevent the room form being clipped. */
+.mobile-connection { display:none;align-items:center;justify-content:center;gap:9px;font-size:12px;font-weight:750;color:#b7f9df;margin:0 auto 15px;padding:9px 15px;background:#1a2635d9;border:1px solid #6e927f70;border-radius:999px;width:max-content;max-width:100%; }
+.mobile-connection::before{content:"";width:8px;height:8px;border-radius:50%;background:#67e7c1;box-shadow:0 0 10px #67e7c188;flex:none}
+.mobile-connection[data-status="offline"]{color:#ffe8d0;border-color:#c1a08070}
+.mobile-connection[data-status="offline"]::before{background:#ffbb7d;box-shadow:0 0 10px #ffbb7d77}
+@media (max-width:700px) {
+  .frame { overflow:visible; }
+  .overlay:not(.hidden) {
+    position:fixed;inset:0;z-index:1000;overflow-y:auto;overflow-x:hidden;
+    display:flex;justify-content:center;align-items:flex-start;
+    padding:calc(env(safe-area-inset-top) + 20px) 18px calc(env(safe-area-inset-bottom) + 24px);
+    background:radial-gradient(ellipse at 20% 10%,#2d274b,#101329 64%,#090d1c);
+    -webkit-overflow-scrolling:touch;
+  }
+  .overlay-card { max-width:480px;min-height:calc(100dvh - 70px);margin:auto;display:flex;flex-direction:column;justify-content:center;padding:12px 0 20px }
+  .mobile-connection {display:flex;}
+  .overlay .hero-title {font-size:clamp(34px,8vw,58px);line-height:1.07;letter-spacing:-.055em}
+  .overlay .eyebrow {display:block;font-size:11px;letter-spacing:.12em;line-height:1.5;margin-bottom:12px}
+  .overlay .intro-copy {font-size:14px!important;line-height:1.55!important;margin:16px auto!important;max-width:390px}
+  .overlay .menu-actions {margin:11px auto 0;max-width:350px;width:100%;gap:10px}
+  .overlay .menu-actions > input,.overlay .menu-actions > button {width:100%;min-width:0;min-height:46px}
+  .overlay .menu-actions > input {font-size:17px;padding:11px 13px}
+  .overlay .button-primary,.overlay .button-secondary {font-size:14px;padding:13px 18px}
+  .overlay .room-code{font-size:clamp(25px,7vw,38px);margin:8px auto;padding:10px 14px;letter-spacing:.14em}
+  .overlay .lobby-slots{gap:9px;margin:12px auto}
+  .overlay .lobby-slot{min-width:145px;flex:1;max-width:195px;padding:10px}
+  .overlay .lobby-slot em{font-size:12px}
+  #networkError:not(:empty){display:block;color:#ffe6e6;font-size:13px;font-weight:650;line-height:1.5;margin:15px auto 0;padding:12px 14px;border:1px solid #e783a977;border-radius:12px;background:#4c213e82;max-width:380px}
+  .overlay .orbit{opacity:.28}
+}
+@media (pointer:coarse) and (orientation:landscape) {
+  .overlay:not(.hidden){overflow-y:auto;align-items:flex-start;-webkit-overflow-scrolling:touch}
+  .overlay:not(.hidden) .overlay-card{margin:auto}
+}
 </style></head><body>
 <div class="game-shell">
 <header class="topline">
@@ -112,7 +147,7 @@ canvas{width:100%;height:auto;display:block;aspect-ratio:1200 / 650;outline:0;to
     <div class="touch-group"><button class="touch-button" data-input="jump" aria-label="Прыжок">↑</button><button class="touch-button" data-input="ability" aria-label="Способность">✦</button></div>
   </div>
 </div>
-<div class="overlay" id="overlay" data-view="menu"><div class="overlay-card">
+<div class="overlay" id="overlay" data-view="menu"><div class="overlay-card"><div class="mobile-connection" id="mobileConnection" data-status="offline"><span id="mobileConnectionText">Подключение к серверу…</span></div>
 <div class="orbit"></div><div class="orbit right"></div>
 <div id="menuView">
 <div class="eyebrow">ОНЛАЙН-ПРИКЛЮЧЕНИЕ · 2 ИГРОКА</div>
