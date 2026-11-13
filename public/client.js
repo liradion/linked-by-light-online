@@ -162,13 +162,14 @@ function updateHUD(){ $('levelLabel').textContent=`ГЛАВА 0${levelIndex+1} /
 function consumeSnapshot(s){
   if(latest&&s.tick<latest.tick)return;
   const previous=latest;
-  if(previous&&s.stage!==previous.stage){snapshots=[];camera=0;particles=[];rings=[];announce('✦ Новая глава: '+stageDefs[s.stage].title,2.3);tone(600,.16,'sine',.055);}
+  if(previous&&s.stage!==previous.stage){snapshots=[];camera=0;particles=[];rings=[];GameJuice.clear();announce('✦ Новая глава: '+stageDefs[s.stage].title,2.3);tone(600,.16,'sine',.055);}
   levelIndex=s.stage;phase=s.phase;connected=s.connected||connected;latest={...s,recvTime:performance.now()};
   level=structuredClone(stageDefs[levelIndex]);level.gateOpen=s.world.gateOpen;level.bridgeLatched=s.world.bridgeLatched;
   level.pads.forEach((p,i)=>p.pressed=!!s.world.pads[i]);
   level.walls.forEach((w,i)=>w.broken=!!s.world.walls[i]);
   level.crystals.forEach((c,i)=>c.on=!!s.world.crystals[i]);
   collectibles=level.shards.map((x,i)=>({x,y:i%2?390:432,taken:!!s.world.shards[i]}));
+  GameJuice.snapshot(previous,s,level);
   if(previous&&s.stage===previous.stage){
     if(!previous.world.gateOpen&&s.world.gateOpen){announce('✦ Ворота открыты! Оба к порталу.',2);tone(550,.2,'sine',.05);screenShake=7;}
     for(let i=0;i<level.walls.length;i++)if(!previous.world.walls[i]&&s.world.walls[i]){const w=level.walls[i];burst(w.x,w.y+w.h/2,colors.amber,30,200);screenShake=11;tone(180,.2,'sawtooth',.05);}
@@ -206,8 +207,12 @@ function animate(ts){
   for(const r of rings){r.life-=dt;r.r+=(r.max-r.r)*dt*5.5;}rings=rings.filter(r=>r.life>0);
   screenShake=Math.max(0,screenShake-35*dt);
   renderPlayers();
-  const target=Math.max(0,Math.min(level.width-W,((P[0].x+P[1].x)/2)-W/2+90));
-  camera+=(target-camera)*Math.min(1,dt*3.2);
+  // Animations are visual-only; server physics and multiplayer state are unchanged.
+  GameJuice.frame(dt,P,phase==='playing'&&connected.every(Boolean));
+  const avg=(P[0].x+P[1].x)/2;
+  const lead=((P[0].vx||0)+(P[1].vx||0))*.052;
+  const target=Math.max(0,Math.min(level.width-W,avg-W/2+90+lead));
+  camera+=(target-camera)*(1-Math.exp(-dt*4.65));
   draw();requestAnimationFrame(animate);
 }
 function bridgeActive(){return level.bridgeLatched||(levelIndex===1&&level.pads[0].pressed)||(levelIndex===2&&level.crystals[0].on);}
@@ -223,6 +228,7 @@ function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-
  // Layered terrain and enchanted scenery.
  GameVisuals.terrain(ctx,level,levelIndex,clock,GROUND);
  GameVisuals.scenery(ctx,level,levelIndex,clock);
+  GameJuice.ambient(ctx,level,clock,levelIndex);
  // pits
  for(let x=0;x<level.width;x+=12){if(!level.floor.some(([a,b])=>x>=a&&x<b)){glowCircle(x,615,28,levelIndex===2?'#ed77a015':'#78e9eb12');}}
  // bridge
@@ -246,6 +252,7 @@ function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-
  // particles behind character
  for(const r of rings){ctx.globalAlpha=Math.max(0,r.life/r.ttl)*.7;ctx.strokeStyle=r.color;ctx.lineWidth=5*(r.life/r.ttl)+1;ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;}
  P.forEach(drawPlayer);
+  GameJuice.effects(ctx);
  for(const pt of particles){ctx.globalAlpha=Math.max(0,pt.life/pt.ttl);ctx.fillStyle=pt.color;ctx.beginPath();ctx.arc(pt.x,pt.y,pt.r*Math.max(.25,pt.life/pt.ttl),0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
  ctx.restore();}
 function drawPortal(x,y,active){GameVisuals.portal(ctx,x,y,active,clock);}
