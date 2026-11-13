@@ -153,6 +153,24 @@ canvas{width:100%;height:auto;display:block;aspect-ratio:1200 / 650;outline:0;to
   .touch-controls.compact .touch-button{width:44px;height:44px;min-width:44px;min-height:44px;font-size:19px}
   .touch-role-text small{display:none}.touch-center-badge{min-height:32px;padding:4px 8px}
 }
+/* Visual refresh v3 — identical stage art and responsive compositions. */
+.frame{background:radial-gradient(ellipse at 50% 63%,#38415a,#10142a 65%,#0b1023 100%);isolation:isolate}
+.frame::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 10% 80%,#a28aff16,transparent 30%),radial-gradient(circle at 89% 18%,#72ddeb16,transparent 32%);z-index:0}
+canvas{position:relative;z-index:1}
+.hud{z-index:2}.toast,.banner{z-index:3}
+.chapter{padding:9px 14px;border:1px solid #ffffff16;background:#080e2669;border-radius:13px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.chapter strong{font-weight:880;letter-spacing:-.035em}
+.goal{padding:11px 15px;border:1px solid #ffffff16;background:#080e2669;border-radius:13px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.brand-mark{background:radial-gradient(circle,#b999ea30,#ffffff08);box-shadow:0 0 23px #bb91ec2f,inset 0 1px 0 #ffffff26}
+.frame{box-shadow:0 26px 75px #0008,0 0 0 3px #c2b0fa09,0 0 55px #8d8ef515}
+@media(pointer:coarse) and (orientation:landscape){
+ .frame canvas{width:100%;height:100%;object-fit:contain;object-position:center}
+ .frame .hud{inset:6px 6px auto;padding:0;gap:10px}
+ .frame .chapter{padding:7px 9px;max-width:25%;background:#10152ccb}
+ .frame .goal{padding:7px 9px;max-width:27%;background:#10152ccb}
+ .frame .touch-controls.compact{z-index:4}
+}
+@media(pointer:coarse) and (orientation:portrait){.frame canvas{object-fit:contain}}
 </style></head><body>
 <div class="game-shell">
 <header class="topline">
@@ -213,5 +231,5 @@ canvas{width:100%;height:auto;display:block;aspect-ratio:1200 / 650;outline:0;to
 </div><div class="footer-note">Вы: <b id="myRole">не в комнате</b><div>На iPhone поверните экран горизонтально · <b>R</b> — перезапуск уровня (хост)</div></div></section>
 <div class="rotate-tip">↻ Для удобной игры на iPhone поверните экран горизонтально.</div>
 </div>
-<script src="/shared/stages.js"></script><script src="/client.js"></script>
+<script src="/shared/stages.js"></script><script src="/visuals.js?v=3"></script><script src="/client.js?v=3"></script>
 </body></html>
