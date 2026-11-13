@@ -1,0 +1,100 @@
+'use strict';
+const { stages, GROUND } = require('./shared/stages');
+const DT=1/60, WIDTH=1200, HEIGHT=650;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const overlaps=(a,b)=>a.x < b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
+const freshPlayer=(type,x)=>({type,x,y:GROUND-43,w:30,h:43,vx:0,vy:0,face:1,grounded:false,coyote:0,jumpBuffer:0,dash:0,cool:0,abilityFx:0});
+function createGame(){const g={stage:0,phase:'waiting',level:null,players:[],shards:[],tick:0,completion:0,transition:0,padTimer:0,input:[null,null]}; initStage(g,0);return g;}
+function initStage(g,index){
+  g.stage=index;g.level=structuredClone(stages[index]);g.players=[freshPlayer(0,g.level.spawn[0]),freshPlayer(1,g.level.spawn[1])];
+  g.level.gateOpen=false;g.level.bridgeLatched=false;
+  g.level.pads.forEach(p=>p.pressed=false);
+  g.shards=g.level.shards.map(x=>false);g.completion=0;g.transition=0;g.padTimer=0;
+  // Последнее состояние ввода не переносится между главами.
+  g.input=[makeInput(),makeInput()];
+}
+const makeInput=()=>({left:false,right:false,jumpQueued:false,abilityQueued:false,jumpSeq:0,abilitySeq:0});
+function updateInput(g,role,message){
+  if(![0,1].includes(role))return;
+  let i=g.input[role];
+  i.left=message.left===true;i.right=message.right===true;
+  for(const [seqField,queued] of [['jumpSeq','jumpQueued'],['abilitySeq','abilityQueued']]){
+    const value=message[seqField];
+    if(Number.isSafeInteger(value)&&value>=0&&value<=1_000_000_000&&value>i[seqField]){
+      // Ограничение очереди: одна команда за обновление, без накопления повторов.
+      i[seqField]=value;
+      i[queued]=true;
+    }
+  }
+}
+function clearMovement(g,role){if(role==null)return;const i=g.input[role];i.left=false;i.right=false;i.jumpQueued=false;i.abilityQueued=false;}
+function bridgeActive(g){const l=g.level;return l.bridgeLatched||(g.stage===1&&l.pads[0].pressed)||(g.stage===2&&l.crystals[0].on);}
+function solidRects(g){const l=g.level,out=l.platforms.map(p=>({...p,kind:'platform'}));
+  for(const [a,b] of l.floor)out.push({x:a,y:GROUND,w:b-a,h:180,kind:'floor'});
+  if(bridgeActive(g))l.bridges.forEach(b=>out.push({...b,kind:'bridge'}));
+  l.walls.filter(w=>!w.broken).forEach(w=>out.push({...w,kind:'wall',wall:w}));
+  if(!l.gateOpen)l.gates.forEach(q=>out.push({...q,kind:'gate'}));
+  return out;
+}
+function respawn(g,p){p.x=g.level.spawn[p.type];p.y=GROUND-43;p.vx=0;p.vy=0;p.dash=0;p.cool=Math.min(.4,p.cool);}
+function stepPlayer(g,p,dt){const i=g.input[p.type], axis=Number(i.right)-Number(i.left);
+  if(axis)p.face=axis;
+  p.cool=Math.max(0,p.cool-dt);p.abilityFx=Math.max(0,p.abilityFx-dt);
+  if(i.abilityQueued&&p.cool<=0){
+    if(p.type===0){p.dash=.22;p.cool=1;p.vy*=.2;p.abilityFx=.3;}
+    else{p.cool=1.05;p.abilityFx=.55;let cx=p.x+15,cy=p.y+21.5;
+      for(const c of g.level.crystals){if(!c.on&&Math.hypot(c.x-cx,c.y-cy)<175)c.on=true;}
+    }
+  }
+  i.abilityQueued=false;
+  if(i.jumpQueued)p.jumpBuffer=.14;else p.jumpBuffer=Math.max(0,p.jumpBuffer-dt);
+  i.jumpQueued=false;
+  if(p.grounded)p.coyote=.11;else p.coyote=Math.max(0,p.coyote-dt);
+  if(p.jumpBuffer>0&&p.coyote>0){p.vy=-486;p.grounded=false;p.coyote=0;p.jumpBuffer=0;}
+  if(p.dash>0){p.dash=Math.max(0,p.dash-dt);p.vx=p.face*760;}
+  else{const target=axis*273;p.vx+=clamp(target-p.vx,-2450*dt,2450*dt);}
+  p.vy=Math.min(950,p.vy+1300*dt);
+  const solids=solidRects(g);
+  p.x+=p.vx*dt;
+  for(const s of solids)if(overlaps(p,s)){
+    if(s.kind==='wall'&&p.type===0&&p.dash>0){s.wall.broken=true;continue;}
+    if(p.vx>0)p.x=s.x-p.w;else if(p.vx<0)p.x=s.x+s.w;
+    p.vx=0;p.dash=0;
+  }
+  p.x=clamp(p.x,5,g.level.width-p.w-5);
+  p.y+=p.vy*dt;p.grounded=false;
+  for(const s of solids)if(overlaps(p,s)){
+    if(p.vy>=0&&p.y+p.h-s.y<Math.max(30,p.vy*dt+14)){
+      p.y=s.y-p.h;p.vy=0;p.grounded=true;
+    }else if(p.vy<0){p.y=s.y+s.h;p.vy=0;}
+    else if(p.x+p.w/2<s.x+s.w/2)p.x=s.x-p.w;else p.x=s.x+s.w;
+  }
+  for(const h of g.level.hazards)if(overlaps(p,{...h,y:h.y+3,h:h.h-3})){respawn(g,p);break;}
+  if(p.y>HEIGHT+120)respawn(g,p);
+  g.level.shards.forEach((x,idx)=>{if(!g.shards[idx]){
+    const y=idx%2?390:432;
+    if(Math.hypot(p.x+15-x,p.y+21.5-y)<32)g.shards[idx]=true;
+  }});
+}
+function updateObjectives(g,dt){const l=g.level;
+  for(const pad of l.pads){pad.pressed=g.players.some(p=>p.type===pad.type&&p.x+p.w>pad.x+6&&p.x<pad.x+pad.w-6&&Math.abs(p.y+p.h-GROUND)<13);}
+  if(g.stage===0){g.padTimer=l.pads.every(p=>p.pressed)?g.padTimer+dt:0;if(g.padTimer>.22)l.gateOpen=true;}
+  if(g.stage===1&&l.crystals[0].on){l.bridgeLatched=true;l.gateOpen=true;}
+  if(g.stage===2){g.padTimer=l.crystals[0].on&&l.pads.every(p=>p.pressed)?g.padTimer+dt:0;if(g.padTimer>.22)l.gateOpen=true;}
+}
+function tick(g,connected){g.tick++;
+  if(g.phase!=='playing'||!connected[0]||!connected[1])return;
+  if(g.transition>0){g.transition-=DT;if(g.transition<=0){
+    if(g.stage>=stages.length-1)g.phase='win';else initStage(g,g.stage+1);
+  }return;}
+  // Fixed timestep на сервере; оба героя и все головоломки обновляются здесь.
+  for(const p of g.players)stepPlayer(g,p,DT);
+  updateObjectives(g,DT);
+  const both=g.players.every(p=>Math.abs(p.x+15-g.level.portal)<70&&p.y+p.h>400);
+  if(g.level.gateOpen&&both){g.completion+=DT;if(g.completion>.58)g.transition=.85;}else g.completion=0;
+}
+function snapshot(g,connected){const l=g.level;
+  return {t:'snapshot',tick:g.tick,stage:g.stage,phase:g.phase,players:g.players.map(p=>({x:p.x,y:p.y,vx:p.vx,vy:p.vy,face:p.face,grounded:p.grounded,cool:p.cool,dash:p.dash,abilityFx:p.abilityFx})),
+  world:{pads:l.pads.map(p=>p.pressed),walls:l.walls.map(w=>w.broken),crystals:l.crystals.map(c=>c.on),gateOpen:l.gateOpen,bridgeLatched:l.bridgeLatched,shards:g.shards},connected,transition:g.transition>0};
+}
+module.exports={createGame,initStage,updateInput,clearMovement,tick,snapshot,bridgeActive};
