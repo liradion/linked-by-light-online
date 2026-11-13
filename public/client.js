@@ -22,6 +22,9 @@ function updateStatus(){const online=socket?.readyState===WebSocket.OPEN;
   $('statusDot').className='status-dot '+(online?'online':'offline');
   $('connectionStatus').textContent=online?'На связи':room?'Нет связи':'Подключение…';
   $('ping').textContent=online&&latency?`${latency} мс`:'';
+  const mobileStatus=$('mobileConnectionText'),mobileBox=$('mobileConnection');
+  if(mobileStatus)mobileStatus.textContent=online?('Сервер на связи'+(latency?' · '+latency+' мс':'')):'Подключение к серверу…';
+  if(mobileBox)mobileBox.dataset.status=online?'online':'offline';
 }
 function openConnection(){
   if(socket&&(socket.readyState===WebSocket.CONNECTING||socket.readyState===WebSocket.OPEN))return;
@@ -49,7 +52,10 @@ function openConnection(){
     if(m.t==='error'){
       const msg=m.message||'Ошибка подключения.';
       if(room&&msg.includes('Комната не найдена')){room='';role=-1;token='';phase='waiting';latest=null;snapshots=[];history.replaceState({},'',location.pathname);}
-      setError(msg);if(!room)pendingRoom='';showUI();return;
+      const help=msg.includes('Комната не найдена')
+        ?'Комната не найдена. Сначала создайте новую комнату на первом устройстве и отправьте свежую ссылку. После перезапуска сервера прежние коды исчезают.'
+        :msg;
+      setError(help);if(!room)pendingRoom='';showUI();return;
     }
     if(m.t==='pong'){
       if(Number.isFinite(m.sent)){latency=Math.max(0,Math.round(performance.now()-m.sent));updateStatus();}return;
