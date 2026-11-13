@@ -70,8 +70,19 @@ function openConnection(){
   });
   socket.addEventListener('error',()=>{/* close handles backoff */});
 }
+function updateTouchRole(){
+  const badge=$('touchRoleBadge'),icon=$('touchRoleIcon'),name=$('touchRoleName'),hint=$('touchRoleHint');
+  if(!badge||!icon||!name||!hint)return;
+  const echo=role===1;
+  icon.textContent=echo?'◈':'✦';name.textContent=echo?'Эхо':'Искра';
+  hint.textContent=echo?'прыжок и импульс':'прыжок и рывок';
+  icon.style.color=echo?'#8ff8ff':'#ffcf83';
+  icon.style.background=echo?'#73e3f01a':'#ffb45f1c';
+  badge.style.borderColor=echo?'#70e9f388':'#ffbb6e88';
+}
 function showUI(){
   updateStatus();
+  updateTouchRole();
   $('slot0').textContent=connected[0]?'● В сети':'○ Нет подключения';
   $('slot1').textContent=connected[1]?'● В сети':'○ Ожидаем игрока';
   $('roomCode').textContent=room||'------';
