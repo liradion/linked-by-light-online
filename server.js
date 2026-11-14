@@ -229,7 +229,7 @@ server.on('upgrade',(req,socket,head)=>{
     }
     if(msg.t==='input'&&room.game.phase==='playing'){
       const old=room.game.input[role];
-      const urgent=['jumpSeq','abilitySeq','bondSeq','emoteSeq'].some(k=>Number.isSafeInteger(msg[k])&&msg[k]>old[k]);
+      const urgent=['jumpSeq','abilitySeq','bondSeq','emoteSeq'].some(k=>Number.isSafeInteger(msg[k])&&msg[k]>=0&&msg[k]<=1_000_000_000&&msg[k]>old[k]);
       updateInput(room.game,role,msg);
       if(urgent)room.urgentSnapshot=true;
       return;
