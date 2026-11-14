@@ -1,6 +1,6 @@
 {
   "name": "linked-by-light-online",
-  "version": "13.0.0",
+  "version": "14.0.0",
   "description": "Двухпользовательский кооперативный браузерный платформер с серверной синхронизацией",
   "private": true,
   "scripts": {
