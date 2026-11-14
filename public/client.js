@@ -200,6 +200,15 @@ function updateHUD(){
       goal=sp.kind==='clock'?(sp.window>0?'Пока идут часы, ОБА перейдите временную дверь. Осталось '+Math.ceil(sp.window)+' с.':'Эхо: запусти часы импульсом. Дверь откроется на время.')
        :sp.kind==='constellation'?'Порядок звёзд: '+sp.progress+'/'+total+'. Активируйте их по номерам.'
        :sp.hint+' ('+active+'/'+total+')';
+    }else if(level.reality&&!level.reality.done){
+      const r=level.reality;
+      if(r.kind==='mirror')goal=r.hint+' · Печати '+r.anchors.filter(a=>a.active).length+'/2';
+      else if(r.kind==='chronicle')goal=r.window>0
+        ?'Прошлое активировано. Эхо: включите будущее! Осталось '+Math.ceil(r.window)+' с.'
+        :r.hint;
+      else if(r.kind==='gravity')goal=r.gravityTimer>0
+        ?'Антигравитация: коснитесь ядра оба! '+r.touched.filter(Boolean).length+'/2 · '+Math.ceil(r.gravityTimer)+' с.'
+        :r.hint;
     }else goal=level.hint||'Помогайте друг другу, чтобы открыть выход.';
     const extra=latest?.world?.adventure;
     if(extra?.boss?.hp>0&&extra.boss.active)goal='БОСС '+extra.boss.name+' · '+extra.boss.hp+'/'+extra.boss.max+' HP · атакует '+(extra.boss.next?'Эхо':'Искра');
@@ -232,8 +241,17 @@ function consumeSnapshot(s){
     z.progress=data.progress||0;z.done=!!data.done;z.window=data.window||0;
     z.phase=data.phase||0;z.elapsed=data.elapsed||0;z.flash=data.flash||0;
   }
+  if(level.reality&&s.world.reality){
+    const state=s.world.reality,r=level.reality;
+    r.done=!!state.done;r.window=state.window||0;r.charge=state.charge||0;
+    r.gravityTimer=state.gravityTimer||0;r.touched=state.touched||[false,false];
+    r.anchors.forEach((a,i)=>a.active=!!state.anchors?.[i]);
+  }
   collectibles=level.shards.map((x,i)=>({x,y:i%2?390:432,taken:!!s.world.shards[i]}));
   GameJuice.snapshot(previous,s,level);GameAdventure.onSnapshot(s);
+  if(previous?.world?.reality&&!previous.world.reality.done&&s.world.reality?.done){
+    announce('✦ Две реальности соединены!',2.6);tone(860,.22,'sine',.05);GameQuality.effect('star');
+  }
   if(previous?.world?.adventure?.boss?.hp>s.world?.adventure?.boss?.hp)GameQuality.effect('boss');
   if(previous?.world?.adventure?.bond?.active>0&&s.world?.adventure?.bond?.active===0&&s.stats?.rescues>previous.stats?.rescues)GameQuality.effect('rescue');
   if(previous&&s.stage===previous.stage&&s.world.signature){
@@ -313,6 +331,7 @@ function glowCircle(x,y,r,color,alpha=1){ctx.save();ctx.globalAlpha=alpha;const 
 function background(){
  GameVisuals.background(ctx,{W,H,camera,clock,levelIndex});
  GameBiomes.background(ctx,level,levelIndex,clock,camera);
+ if(typeof GameReality!=='undefined'&&level)GameReality.background(ctx,level,role,clock);
 }
 function drawPlatform(p){GameVisuals.platform(ctx,p,levelIndex,clock);GameBiomes.platform(ctx,p,levelIndex,clock);}
 function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-.5)*screenShake),0);
@@ -340,6 +359,7 @@ function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-
  // shards
  for(const item of collectibles)if(!item.taken){const y=item.y+Math.sin(clock*2+item.x)*6;glowCircle(item.x,y,24,'#f8df9140');ctx.save();ctx.translate(item.x,y);ctx.rotate(clock*.8);ctx.fillStyle='#ffe7a7';ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,r=i%2?4:12;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}ctx.closePath();ctx.fill();ctx.restore();}
  GameBiomes.signature(ctx,level,clock);
+ if(typeof GameReality!=='undefined')GameReality.draw(ctx,level,P,latest?.world?.reality,clock,role);
  GameAdventure.draw(ctx,level,P,latest?.world?.adventure,clock);
  drawPortal(level.portal,GROUND-65,portalReady());
  // environmental hints
