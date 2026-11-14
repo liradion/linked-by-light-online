@@ -4,7 +4,7 @@
 const DT=1/60;
 const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 const overlaps=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
-function geometry(level,world){
+function geometry(level,world,role){
  const r=(level.platforms||[]).map(x=>({...x}));
  for(const [a,b] of level.floor||[])r.push({x:a,y:544,w:b-a,h:180});
  const bridge=!!world?.bridgeLatched||level.bridgeTrigger==='always'||
@@ -14,9 +14,13 @@ function geometry(level,world){
  if(bridge)r.push(...(level.bridges||[]).map(x=>({...x})));
  (level.walls||[]).forEach((w,i)=>{if(!world?.walls?.[i])r.push({...w});});
  if(!world?.gateOpen)r.push(...(level.gates||[]).map(x=>({...x})));
+ // Mirror ledges have collision only in the owner's reality once unlocked.
+ if(level?.reality?.kind==='mirror'&&world?.reality?.anchors?.[role]){
+  for(const p of level.reality.platforms||[])if(p.role===role)r.push({...p});
+ }
  return r;
 }
-function integrate(p,input,solids,width,dt=DT){
+function integrate(p,input,solids,width,dt=DT,gravity=1300){
  const q={...p},axis=Number(!!input.right)-Number(!!input.left);
  if(axis)q.face=axis;
  q.cool=Math.max(0,(q.cool||0)-dt);q.abilityFx=Math.max(0,(q.abilityFx||0)-dt);
@@ -25,7 +29,7 @@ function integrate(p,input,solids,width,dt=DT){
  if(q.grounded)q.coyote=.11;else q.coyote=Math.max(0,(q.coyote||0)-dt);
  if(q.dash>0){q.dash=Math.max(0,q.dash-dt);q.vx=(q.face||1)*760;}
  else q.vx+=clamp(axis*273-q.vx,-2450*dt,2450*dt);
- q.vy=Math.min(950,q.vy+1300*dt);
+ q.vy=Math.min(950,q.vy+gravity*dt);
  q.x+=q.vx*dt;
  for(const s of solids)if(overlaps(q,s)){
   if(q.vx>0)q.x=s.x-q.w;else if(q.vx<0)q.x=s.x+s.w;
@@ -58,7 +62,8 @@ function createPredictor(){
   appliedJump=Math.max(appliedJump,Number(processed.jumpSeq)||0);
   appliedAbility=Math.max(appliedAbility,Number(processed.abilitySeq)||0);
   history=history.filter(h=>h.seq>ackSeq);
-  const solids=geometry(level,world);
+  const solids=geometry(level,world,authoritative.type??0);
+  const gravity=level?.reality?.kind==='gravity'&&world?.reality?.gravityTimer>0?480:1300;
   let p={...authoritative,type:authoritative.type??0,w:30,h:43};
   const horizon=clamp(estimatedDelay,0,.25);
   // Replay unacknowledged samples, each for a conservative maximum number of fixed steps.
@@ -67,16 +72,16 @@ function createPredictor(){
    for(const item of history){
     const elapsed=clamp((item.at-prev.at)/1000,0,.08);
     const steps=Math.min(5,Math.round(elapsed/DT));
-    for(let n=0;n<steps&&used<24;n++,used++)p=integrate(p,{left:prev.left,right:prev.right},solids,level.width);
+    for(let n=0;n<steps&&used<24;n++,used++)p=integrate(p,{left:prev.left,right:prev.right},solids,level.width,DT,gravity);
     const jump=item.jumpSeq>appliedJump,ability=item.abilitySeq>appliedAbility;
-    if(jump||ability)p=integrate(p,{left:item.left,right:item.right,jump,ability},solids,level.width);
+    if(jump||ability)p=integrate(p,{left:item.left,right:item.right,jump,ability},solids,level.width,DT,gravity);
     appliedJump=Math.max(appliedJump,item.jumpSeq);appliedAbility=Math.max(appliedAbility,item.abilitySeq);
     prev=item;
    }
    const steps=Math.min(15,Math.round(horizon/DT));
-   for(let n=0;n<steps&&used<24;n++,used++)p=integrate(p,{left:prev.left,right:prev.right},solids,level.width);
+   for(let n=0;n<steps&&used<24;n++,used++)p=integrate(p,{left:prev.left,right:prev.right},solids,level.width,DT,gravity);
   }else if(lastSent){
-   const steps=Math.round(horizon/DT);for(let n=0;n<steps;n++)p=integrate(p,{left:lastSent.left,right:lastSent.right},solids,level.width);
+   const steps=Math.round(horizon/DT);for(let n=0;n<steps;n++)p=integrate(p,{left:lastSent.left,right:lastSent.right},solids,level.width,DT,gravity);
   }
   baseline=p;
   if(!state||Math.hypot(state.x-p.x,state.y-p.y)>170)state={...p};
@@ -89,7 +94,9 @@ function createPredictor(){
   if(level&&dt>0){
    const jump=(live.jumpSeq||0)>renderJump,ability=(live.abilitySeq||0)>renderAbility;
    renderJump=Math.max(renderJump,live.jumpSeq||0);renderAbility=Math.max(renderAbility,live.abilitySeq||0);
-   state=integrate(state,{left:live.left,right:live.right,jump,ability},geometry(level,world),level.width,dt);
+   const gravity=level?.reality?.kind==='gravity'&&world?.reality?.gravityTimer>0?480:1300;
+   state=integrate(state,{left:live.left,right:live.right,jump,ability},
+    geometry(level,world,state.type),level.width,dt,gravity);
    // Never run too far ahead of the authoritative state if packets stall.
    const bound=clamp(273*estimatedDelay+45,45,160);
    state.x=clamp(state.x,baseline.x-bound,baseline.x+bound);
