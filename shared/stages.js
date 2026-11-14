@@ -191,6 +191,31 @@
     return stage;
   }
   stages.forEach(enrichStage);
+  // v15 dual-reality missions: three different co-op rules per act, Acts 2–11.
+  // Locations use the safe-floor search from the original signature engine.
+  const REALITY_HINTS={
+    mirror:'Искра видит солнечные мосты, Эхо — лунные. Зарядите личные печати способностями (F / импульс).',
+    chronicle:'Искра запускает прошлое рывком, Эхо активирует будущее импульсом за 12 секунд.',
+    gravity:'Оба одновременно встаньте на цветные печати, затем коснитесь высокого ядра в антигравитации.'
+  };
+  for(let i=9;i<stages.length;i++){
+    const variant=i%9;
+    if(![2,4,6].includes(variant))continue;
+    const stage=stages[i],kind=variant===2?'mirror':variant===4?'chronicle':'gravity';
+    const a0=safeSpot(stage,305+(i*7)%43),a1=safeSpot(stage,735+(i*11)%67);
+    const r={
+      kind,hint:REALITY_HINTS[kind],done:false,
+      anchors:[{x:a0,role:0,active:false},{x:a1,role:1,active:false}],
+      window:0,charge:0,gravityTimer:0,touched:[false,false],
+      platforms:[],core:null
+    };
+    if(kind==='mirror')r.platforms=[
+      {x:a0+52,y:GROUND-133,w:112,h:16,role:0},
+      {x:a1+52,y:GROUND-163,w:112,h:16,role:1}
+    ];
+    if(kind==='gravity')r.core={x:safeSpot(stage,1260),y:GROUND-232};
+    stage.reality=r;
+  }
   // An optional secret chapter, separate from the main 99-level campaign.
   const BONUS_STAGE=JSON.parse(JSON.stringify(stages[98]));
   BONUS_STAGE.title='Тайна сотого света';BONUS_STAGE.chapter='Истинный финал';
