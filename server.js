@@ -52,6 +52,8 @@ async function restoreRoomsCloud(){if(!cloud.active)return;
 
 const ROOM_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MAX_ROOMS=200, MAX_PAYLOAD=4096;
+// Bound stale state queued on slow mobile connections: fresh snapshots supersede old ones.
+const MAX_SNAPSHOT_BACKLOG=24_000;
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.ico':'image/x-icon','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8'};
 
 function sendFrame(socket,opcode,content=Buffer.alloc(0)){
@@ -89,7 +91,17 @@ function attachWebSocket(socket,head,onMessage,onClose){
     }
   });
   if(head&&head.length)socket.emit('data',head);
-  return {send:(data)=>sendFrame(socket,1,JSON.stringify(data)), close, ping:()=>{if(Date.now()-lastPong>32_000){socket.destroy();return;}sendFrame(socket,9,Buffer.from('alive'));}};
+  return {
+    send:(data)=>{
+      if(data?.t==='snapshot'&&socket.writableLength>MAX_SNAPSHOT_BACKLOG)return;
+      sendFrame(socket,1,JSON.stringify(data));
+    },
+    sendRaw:(payload,isSnapshot)=>{
+      if(isSnapshot&&socket.writableLength>MAX_SNAPSHOT_BACKLOG)return;
+      sendFrame(socket,1,payload);
+    },
+    close,ping:()=>{if(Date.now()-lastPong>32_000){socket.destroy();return;}sendFrame(socket,9,Buffer.from('alive'));}
+  };
 }
 function newCode(){for(let tries=0;tries<50;tries++){
   const code=Array.from(crypto.randomBytes(6),byte=>ROOM_ALPHABET[byte%ROOM_ALPHABET.length]).join('');
@@ -107,7 +119,11 @@ function countOnline(r){return r.seats.map(s=>!!s?.online);}
 function sendSeatRoom(r){const obj={t:'members',room:r.code,connected:countOnline(r),phase:r.game.phase};
   for(const s of r.seats)if(s?.online)s.peer.send(obj);
 }
-function broadcast(r,obj){for(const s of r.seats)if(s?.online)s.peer.send(obj);}
+function broadcast(r,obj){
+  // Serialize authoritative state once for both players, avoiding per-socket CPU spikes.
+  const payload=JSON.stringify(obj),isSnapshot=obj?.t==='snapshot';
+  for(const s of r.seats)if(s?.online)s.peer.sendRaw(payload,isSnapshot);
+}
 const server=http.createServer((req,res)=>{
   const authRequest=req.url?.startsWith('/api/auth/')||req.url?.startsWith('/?')&&/(?:\?|&)(?:code|error)=/.test(req.url);
   if(authRequest){auth.handle(req,res).catch(()=>{if(!res.headersSent){res.writeHead(500,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({error:'Ошибка авторизации'}));}});return;}
@@ -212,7 +228,11 @@ server.on('upgrade',(req,socket,head)=>{
       sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='input'&&room.game.phase==='playing'){
-      updateInput(room.game,role,msg);return;
+      const old=room.game.input[role];
+      const urgent=['jumpSeq','abilitySeq','bondSeq','emoteSeq'].some(k=>Number.isSafeInteger(msg[k])&&msg[k]>old[k]);
+      updateInput(room.game,role,msg);
+      if(urgent)room.urgentSnapshot=true;
+      return;
     }
     if(msg.t==='start'&&role===0&&room.seats.every(s=>s?.online)&&room.game.phase==='waiting'){
       room.game.phase='playing';initStage(room.game,room.game.stage);sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
@@ -232,9 +252,21 @@ server.on('upgrade',(req,socket,head)=>{
 });
 let lastBroadcast=0;
 const loop=setInterval(()=>{
-  for(const r of ROOMS.values()){tick(r.game,countOnline(r));r.unlockedMax=Math.max(r.unlockedMax,Math.min(98,r.game.stage));}
   lastBroadcast++;
-  if(lastBroadcast%3===0)for(const r of ROOMS.values())if(r.seats.some(s=>s?.online))broadcast(r,roomSnapshot(r));
+  for(const r of ROOMS.values()){
+    tick(r.game,countOnline(r));
+    r.unlockedMax=Math.max(r.unlockedMax,Math.min(98,r.game.stage));
+    const both=r.seats.every(s=>s?.online);
+    // 30 Hz while playing (formerly 20 Hz), with next-tick feedback on discrete actions.
+    // A disconnected/waiting room sends only 2 Hz; seat changes are sent immediately.
+    const emit=both&&r.game.phase==='playing'
+      ?lastBroadcast%2===0||r.urgentSnapshot
+      :lastBroadcast%30===0;
+    if(emit&&r.seats.some(s=>s?.online)){
+      r.urgentSnapshot=false;
+      broadcast(r,roomSnapshot(r));
+    }
+  }
 },1000/60);
 loop.unref();
 setInterval(persistRooms,12_000).unref();
