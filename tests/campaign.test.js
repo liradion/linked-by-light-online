@@ -35,6 +35,8 @@ test('normal switches must combine with the world-specific objective',()=>{
   for(let j=0;j<22;j++)tick(g,connected);
   assert.equal(g.level.gateOpen,false,`level ${i+1} should require signature too`);
   g.level.signature.done=true;
+  if(g.adventure.boss)g.adventure.boss.hp=0;
+  if(g.adventure.arcade)g.adventure.arcade.done=true;
   for(let j=0;j<16;j++)tick(g,connected);
   assert.equal(g.level.gateOpen,true,`level ${i+1} opens after signature`);
  }
