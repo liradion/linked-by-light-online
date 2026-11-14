@@ -8,7 +8,7 @@ const colors={amber:'#ffc17f',blue:'#80eff7'};
 let levelIndex=0,level=structuredClone(stageDefs[0]),P=[],camera=0,clock=0;
 let particles=[],rings=[],screenShake=0,collectibles=[],toastTimer=0;
 let room='',role=-1,token='',phase='waiting',connected=[false,false],socket=null,ready=false;
-let pendingRoom='',pendingCreate=false,connectedBefore=false,reconnectCount=0,wsTimer=null;
+let pendingRoom='',pendingCreate=false,pendingCreateStage=0,connectedBefore=false,reconnectCount=0,wsTimer=null;
 let latest=null,snapshots=[],fpsTime=performance.now(),sound=true,ac=null;
 const keys=new Set(),input={left:false,right:false,jumpSeq:0,abilitySeq:0};
 let latency=0,lastSend=0,playingOnce=false;
@@ -16,6 +16,15 @@ const qs=new URLSearchParams(location.search);const invite=qs.get('room');
 if(invite&&/^[A-Z2-9]{6}$/i.test(invite))pendingRoom=invite.toUpperCase();
 function roomToken(id){try{return localStorage.getItem('lightroom:'+id)||sessionStorage.getItem('lightroom:'+id)||'';}catch(_){return '';}}
 function saveToken(id,t){try{localStorage.setItem('lightroom:'+id,t);sessionStorage.setItem('lightroom:'+id,t);}catch(_){}}
+const CHECKPOINT_KEY='linked-light-checkpoint-v99';
+function bestStage(){try{const n=Number(localStorage.getItem(CHECKPOINT_KEY)||0);return Number.isSafeInteger(n)?Math.max(0,Math.min(stageDefs.length-1,n)):0;}catch(_){return 0;}}
+function saveCheckpoint(index){try{if(index>bestStage())localStorage.setItem(CHECKPOINT_KEY,String(index));}catch(_){}}
+function refreshCampaignMenu(){
+ const saved=bestStage(),resume=$('createBtn'),fresh=$('newCampaignBtn'),hint=$('campaignProgress');
+ if(resume)resume.textContent=saved>0?'Продолжить с уровня '+(saved+1)+' ✦':'Создать комнату ✦';
+ if(fresh)fresh.style.display=saved>0?'inline-flex':'none';
+ if(hint)hint.textContent=saved>0?'Прогресс сохранён на этом устройстве: уровень '+(saved+1)+' из '+stageDefs.length+'.':'Впереди 99 уровней в 11 мирах.';
+}
 function setError(message){$('networkError').textContent=message;}
 function wsSend(m){if(socket&&socket.readyState===WebSocket.OPEN)socket.send(JSON.stringify(m));}
 function updateStatus(){const online=socket?.readyState===WebSocket.OPEN;
@@ -34,7 +43,7 @@ function openConnection(){
   socket.addEventListener('open',()=>{
     reconnectCount=0;ready=true;connectedBefore=true;setError('');updateStatus();
     if(room||pendingRoom){const code=room||pendingRoom;wsSend({t:'join',room:code,token:token||roomToken(code)});}
-    else if(pendingCreate){wsSend({t:'create'});pendingCreate=false;}
+    else if(pendingCreate){wsSend({t:'create',stage:pendingCreateStage});pendingCreate=false;}
     else showUI();
   });
   socket.addEventListener('message',e=>{
@@ -86,6 +95,7 @@ function showUI(){
   $('slot0').textContent=connected[0]?'● В сети':'○ Нет подключения';
   $('slot1').textContent=connected[1]?'● В сети':'○ Ожидаем игрока';
   $('roomCode').textContent=room||'------';
+  refreshCampaignMenu();
   $('startBtn').disabled=!(role===0&&connected[0]&&connected[1]&&ready&&phase==='waiting');
   $('restartBtn').disabled=role!==0||!connected.every(Boolean);
   $('resetBtn').disabled=role!==0;
@@ -98,11 +108,16 @@ function showUI(){
   $('waitingBanner').classList.toggle('hidden',!room||phase!=='playing'||connected.every(Boolean));
   $('touchControls').style.visibility=!!room&&phase==='playing'?'visible':'hidden';
 }
-function createRoom(){setError('');pendingCreate=true;pendingRoom='';if(!ready)openConnection();else {wsSend({t:'create'});pendingCreate=false;}}
+function createRoom(newGame=false){
+ setError('');pendingCreate=true;pendingRoom='';pendingCreateStage=newGame?0:bestStage();
+ if(!ready)openConnection();
+ else{wsSend({t:'create',stage:pendingCreateStage});pendingCreate=false;}
+}
 function joinRoom(code){const value=(code||'').trim().toUpperCase();if(!/^[A-HJ-NP-Z2-9]{6}$/.test(value)){setError('Введите шестизначный код комнаты.');return;}
   pendingRoom=value;setError('');if(ready)wsSend({t:'join',room:value,token:roomToken(value)});else openConnection();
 }
-$('createBtn').addEventListener('click',createRoom);
+$('createBtn').addEventListener('click',()=>createRoom(false));
+$('newCampaignBtn').addEventListener('click',()=>createRoom(true));
 $('joinBtn').addEventListener('click',()=>joinRoom($('roomInput').value));
 $('roomInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();joinRoom($('roomInput').value);}});
 $('startBtn').addEventListener('click',()=>wsSend({t:'start'}));
@@ -179,6 +194,7 @@ function consumeSnapshot(s){
   const previous=latest;
   if(previous&&s.stage!==previous.stage){snapshots=[];camera=0;particles=[];rings=[];GameJuice.clear();announce('✦ Новая глава: '+stageDefs[s.stage].title,2.3);tone(600,.16,'sine',.055);}
   levelIndex=s.stage;phase=s.phase;connected=s.connected||connected;latest={...s,recvTime:performance.now()};
+  if(phase==='playing'||phase==='win')saveCheckpoint(levelIndex);
   level=structuredClone(stageDefs[levelIndex]);level.gateOpen=s.world.gateOpen;level.bridgeLatched=s.world.bridgeLatched;level.padLatched=!!s.world.padLatched;
   level.pads.forEach((p,i)=>p.pressed=!!s.world.pads[i]);
   level.walls.forEach((w,i)=>w.broken=!!s.world.walls[i]);
