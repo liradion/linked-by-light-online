@@ -184,16 +184,24 @@ canvas{position:relative;z-index:1}
 .touch-controls.compact .touch-button.pressed{box-shadow:inset 0 0 20px #adbdff4a,0 3px 9px #0008}
 .toast.visible{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 @media(prefers-reduced-motion:reduce){.brand-mark,.status-dot.online,.overlay:not(.hidden) .overlay-card{animation:none!important}*{scroll-behavior:auto!important}}
+
+/* 99-level campaign counter: compact even in iPhone landscape. */
+#actProgress{white-space:nowrap;letter-spacing:.06em}
+@media(pointer:coarse) and (orientation:landscape){
+  .chapter{font-size:8px}.chapter strong{font-size:12px}
+  .steps{gap:5px}#actProgress{font-size:9px}
+  .hud .goal{font-size:10px}
+}
 </style></head><body>
 <div class="game-shell">
 <header class="topline">
 <div class="brand"><span class="brand-mark">✦</span> СВЯЗАННЫЕ СВЕТОМ <span style="color:#797c9d;font-size:9px;letter-spacing:.06em">ONLINE CO-OP</span></div>
-<div class="steps"><span>ГЛАВА</span><span class="step active" id="step1">01</span><span class="step" id="step2">02</span><span class="step" id="step3">03</span></div>
+<div class="steps"><span id="actProgress">АКТ 01</span><span class="step active" id="step1">01</span><span class="step" id="step2">02</span><span class="step" id="step3">03</span></div>
 <div style="display:flex;gap:12px;align-items:center"><div class="statusbar"><span class="status-dot" id="statusDot"></span><span id="connectionStatus">Подключение…</span><span id="ping"></span></div><button class="mini-btn" id="soundBtn">♫ Вкл.</button><button class="mini-btn" id="resetBtn" title="Перезапуск уровня (только создатель комнаты)">↻ Уровень</button></div>
 </header>
 <div class="frame" id="frame">
 <canvas id="game" width="1200" height="650" aria-label="Кооперативная игра"></canvas>
-<div class="hud"><div class="chapter"><span id="levelLabel">ГЛАВА 01 / 03</span><strong id="levelName">Первый контакт</strong></div><div class="goal" id="objective">Объедините усилия, чтобы открыть ворота.</div></div>
+<div class="hud"><div class="chapter"><span id="levelLabel">УРОВЕНЬ 01 / 99 · АКТ 1/11</span><strong id="levelName">Первый контакт</strong></div><div class="goal" id="objective">Объедините усилия, чтобы открыть ворота.</div></div>
 <div class="toast" id="toast"></div>
 <div class="banner hidden" id="waitingBanner">Партнёр отключился. Игра остановлена.<br/>Переподключение через прежнюю ссылку сохранит его роль.</div>
 <div class="touch-controls compact" id="touchControls" aria-label="Управление на телефоне">
@@ -230,9 +238,9 @@ canvas{position:relative;z-index:1}
 <div class="menu-actions"><button class="button-secondary" id="copyBtn">Скопировать приглашение</button><button class="button-primary" id="startBtn" disabled>Начать вдвоём ✦</button></div>
 </div>
 <div id="winView">
-<div class="eyebrow">ТРИ ГЛАВЫ ПРОЙДЕНЫ</div>
+<div class="eyebrow">ВСЕ 99 УРОВНЕЙ ПРОЙДЕНЫ</div>
 <h1 class="hero-title">ВЫ СМОГЛИ.<br/><em>ВМЕСТЕ.</em></h1>
-<p class="intro-copy">Из разных городов — через все испытания. Можете пройти историю ещё раз.</p>
+<p class="intro-copy">99 уровней вместе. Через 11 миров, с одной целью. Можно начать приключение заново.</p>
 <button class="button-primary" id="restartBtn">Сыграть сначала ↻</button>
 </div>
 <div id="networkError" role="alert" aria-live="polite"></div>
@@ -244,5 +252,5 @@ canvas{position:relative;z-index:1}
 </div><div class="footer-note">Вы: <b id="myRole">не в комнате</b><div>На iPhone поверните экран горизонтально · <b>R</b> — перезапуск уровня (хост)</div></div></section>
 <div class="rotate-tip">↻ Для удобной игры на iPhone поверните экран горизонтально.</div>
 </div>
-<script src="/shared/stages.js"></script><script src="/visuals.js?v=4"></script><script src="/juice.js?v=4"></script><script src="/client.js?v=4"></script>
+<script src="/shared/stages.js?v=99"></script><script src="/visuals.js?v=99"></script><script src="/juice.js?v=4"></script><script src="/client.js?v=99"></script>
 </body></html>
