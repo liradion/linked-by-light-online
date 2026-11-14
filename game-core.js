@@ -7,7 +7,7 @@ const freshPlayer=(type,x)=>({type,x,y:GROUND-43,w:30,h:43,vx:0,vy:0,face:1,grou
 function createGame(){const g={stage:0,phase:'waiting',level:null,players:[],shards:[],tick:0,completion:0,transition:0,padTimer:0,input:[null,null]}; initStage(g,0);return g;}
 function initStage(g,index){
   g.stage=index;g.level=structuredClone(stages[index]);g.players=[freshPlayer(0,g.level.spawn[0]),freshPlayer(1,g.level.spawn[1])];
-  g.level.gateOpen=false;g.level.bridgeLatched=false;
+  g.level.gateOpen=false;g.level.bridgeLatched=false;g.level.padLatched=false;
   g.level.pads.forEach(p=>p.pressed=false);
   g.shards=g.level.shards.map(x=>false);g.completion=0;g.transition=0;g.padTimer=0;
   // Последнее состояние ввода не переносится между главами.
@@ -28,7 +28,14 @@ function updateInput(g,role,message){
   }
 }
 function clearMovement(g,role){if(role==null)return;const i=g.input[role];i.left=false;i.right=false;i.jumpQueued=false;i.abilityQueued=false;}
-function bridgeActive(g){const l=g.level;return l.bridgeLatched||(g.stage===1&&l.pads[0].pressed)||(g.stage===2&&l.crystals[0].on);}
+function bridgeActive(g){
+  const l=g.level;
+  if(l.bridgeLatched)return true;
+  if(l.bridgeTrigger==='pad-crystal')return l.pads.some(p=>p.pressed);
+  if(l.bridgeTrigger==='pad')return l.padLatched||l.pads.some(p=>p.pressed);
+  if(l.bridgeTrigger==='crystal')return l.crystals.length>0&&l.crystals.every(c=>c.on);
+  return l.bridgeTrigger==='always';
+}
 function solidRects(g){const l=g.level,out=l.platforms.map(p=>({...p,kind:'platform'}));
   for(const [a,b] of l.floor)out.push({x:a,y:GROUND,w:b-a,h:180,kind:'floor'});
   if(bridgeActive(g))l.bridges.forEach(b=>out.push({...b,kind:'bridge'}));
@@ -76,11 +83,20 @@ function stepPlayer(g,p,dt){const i=g.input[p.type], axis=Number(i.right)-Number
     if(Math.hypot(p.x+15-x,p.y+21.5-y)<32)g.shards[idx]=true;
   }});
 }
-function updateObjectives(g,dt){const l=g.level;
-  for(const pad of l.pads){pad.pressed=g.players.some(p=>p.type===pad.type&&p.x+p.w>pad.x+6&&p.x<pad.x+pad.w-6&&Math.abs(p.y+p.h-GROUND)<13);}
-  if(g.stage===0){g.padTimer=l.pads.every(p=>p.pressed)?g.padTimer+dt:0;if(g.padTimer>.22)l.gateOpen=true;}
-  if(g.stage===1&&l.crystals[0].on){l.bridgeLatched=true;l.gateOpen=true;}
-  if(g.stage===2){g.padTimer=l.crystals[0].on&&l.pads.every(p=>p.pressed)?g.padTimer+dt:0;if(g.padTimer>.22)l.gateOpen=true;}
+function updateObjectives(g,dt){
+  const l=g.level;
+  for(const pad of l.pads)
+    pad.pressed=g.players.some(p=>p.type===pad.type&&p.x+p.w>pad.x+6&&p.x<pad.x+pad.w-6&&Math.abs(p.y+p.h-GROUND)<13);
+  const simultaneous=l.pads.length>0&&l.pads.every(p=>p.pressed);
+  g.padTimer=simultaneous?g.padTimer+dt:0;
+  if(g.padTimer>.22)l.padLatched=true;
+  const crystalsDone=l.crystals.length>0&&l.crystals.every(c=>c.on);
+  const wallsDone=l.walls.every(w=>w.broken);
+  if((l.bridgeTrigger==='crystal'||l.bridgeTrigger==='pad-crystal')&&crystalsDone)l.bridgeLatched=true;
+  if(l.bridgeTrigger==='pad'&&l.padLatched)l.bridgeLatched=true;
+  const goal=l.puzzle||{pads:true};
+  if((!goal.walls||wallsDone)&&(!goal.crystals||crystalsDone)&&(!goal.pads||l.padLatched))
+    l.gateOpen=true;
 }
 function tick(g,connected){g.tick++;
   if(g.phase!=='playing'||!connected[0]||!connected[1])return;
@@ -95,6 +111,6 @@ function tick(g,connected){g.tick++;
 }
 function snapshot(g,connected){const l=g.level;
   return {t:'snapshot',tick:g.tick,stage:g.stage,phase:g.phase,players:g.players.map(p=>({x:p.x,y:p.y,vx:p.vx,vy:p.vy,face:p.face,grounded:p.grounded,cool:p.cool,dash:p.dash,abilityFx:p.abilityFx})),
-  world:{pads:l.pads.map(p=>p.pressed),walls:l.walls.map(w=>w.broken),crystals:l.crystals.map(c=>c.on),gateOpen:l.gateOpen,bridgeLatched:l.bridgeLatched,shards:g.shards},connected,transition:g.transition>0};
+  world:{pads:l.pads.map(p=>p.pressed),walls:l.walls.map(w=>w.broken),crystals:l.crystals.map(c=>c.on),gateOpen:l.gateOpen,bridgeLatched:l.bridgeLatched,padLatched:l.padLatched,shards:g.shards},connected,transition:g.transition>0};
 }
 module.exports={createGame,initStage,updateInput,clearMovement,tick,snapshot,bridgeActive};
