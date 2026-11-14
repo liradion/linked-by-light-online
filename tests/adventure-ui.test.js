@@ -27,7 +27,7 @@ test('map/home/wardrobe/story render, and local selections persist',()=>{
  let selected=-1,updated=null;
  adventure.init({bestStage:()=>45,inRoom:()=>false,send:x=>{updated=x;},startStage:n=>{selected=n;}});
  adventure.open('map');assert.equal(ids.advDialog.open,true);
- assert.equal(doc.querySelectorAll('.adv-tab').length,4);
+ assert.equal(doc.querySelectorAll('.adv-tab').length,6);
  assert.ok(ids.advDialogBody.children.length>0);
  adventure.open('home');assert.ok(ids.advFurniture);
  const homeSlot=ids.advDialogBody.children.find(n=>n.classList.contains('adv-home')).children.find(n=>n.classList.contains('adv-home-grid')).children[2];
