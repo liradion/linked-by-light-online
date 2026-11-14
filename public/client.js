@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const W=1200,H=650,GROUND=GameStages.GROUND,stageDefs=GameStages.stages;
+const W=1200,H=650,GROUND=GameStages.GROUND,stageDefs=[...GameStages.stages,GameStages.BONUS_STAGE];
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
 const overlay=$('overlay'),toastEl=$('toast');
@@ -10,14 +10,15 @@ let particles=[],rings=[],screenShake=0,collectibles=[],toastTimer=0;
 let room='',role=-1,token='',phase='waiting',connected=[false,false],socket=null,ready=false;
 let pendingRoom='',pendingCreate=false,pendingCreateStage=0,connectedBefore=false,reconnectCount=0,wsTimer=null;
 let latest=null,snapshots=[],fpsTime=performance.now(),sound=true,ac=null;
-const keys=new Set(),input={left:false,right:false,jumpSeq:0,abilitySeq:0};
+const keys=new Set(),input={left:false,right:false,jumpSeq:0,abilitySeq:0,bondSeq:0,emoteSeq:0};
+let prediction=null,lastPredStage=-1,predJumpAt=0;
 let latency=0,lastSend=0,playingOnce=false;
 const qs=new URLSearchParams(location.search);const invite=qs.get('room');
 if(invite&&/^[A-Z2-9]{6}$/i.test(invite))pendingRoom=invite.toUpperCase();
 function roomToken(id){try{return localStorage.getItem('lightroom:'+id)||sessionStorage.getItem('lightroom:'+id)||'';}catch(_){return '';}}
 function saveToken(id,t){try{localStorage.setItem('lightroom:'+id,t);sessionStorage.setItem('lightroom:'+id,t);}catch(_){}}
 const CHECKPOINT_KEY='linked-light-checkpoint-v99';
-function bestStage(){try{const n=Number(localStorage.getItem(CHECKPOINT_KEY)||0);return Number.isSafeInteger(n)?Math.max(0,Math.min(stageDefs.length-1,n)):0;}catch(_){return 0;}}
+function bestStage(){try{const n=Number(localStorage.getItem(CHECKPOINT_KEY)||0);return Number.isSafeInteger(n)?Math.max(0,Math.min(98,n)):0;}catch(_){return 0;}}
 function saveCheckpoint(index){try{if(index>bestStage())localStorage.setItem(CHECKPOINT_KEY,String(index));}catch(_){}}
 function refreshCampaignMenu(){
  const saved=bestStage(),resume=$('createBtn'),fresh=$('newCampaignBtn'),hint=$('campaignProgress');
@@ -43,7 +44,7 @@ function openConnection(){
   socket.addEventListener('open',()=>{
     reconnectCount=0;ready=true;connectedBefore=true;setError('');updateStatus();
     if(room||pendingRoom){const code=room||pendingRoom;wsSend({t:'join',room:code,token:token||roomToken(code)});}
-    else if(pendingCreate){wsSend({t:'create',stage:pendingCreateStage});pendingCreate=false;}
+    else if(pendingCreate){wsSend({t:'create',stage:pendingCreateStage,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome()});pendingCreate=false;}
     else showUI();
   });
   socket.addEventListener('message',e=>{
@@ -52,8 +53,11 @@ function openConnection(){
       room=m.room;role=m.role;token=m.token;phase=m.phase;pendingRoom='';saveToken(room,token);
       history.replaceState({},'',location.pathname+'?room='+encodeURIComponent(room));
       connected=m.connected||[false,false];$('myRole').textContent=role===0?'Искра (ведущий)':'Эхо (гость)';
+      if(m.home)GameAdventure.receiveHome(m.home);GameAdventure.onJoined(room,role);
       setError('');resetKeys();showUI();return;
     }
+    if(m.t==='home'){GameAdventure.receiveHome(m.items);return;}
+    if(m.t==='looks'){GameAdventure.receiveLooks(m.looks);return;}
     if(m.t==='members'){
       connected=m.connected||connected;phase=m.phase||phase;showUI();return;
     }
@@ -108,10 +112,10 @@ function showUI(){
   $('waitingBanner').classList.toggle('hidden',!room||phase!=='playing'||connected.every(Boolean));
   $('touchControls').style.visibility=!!room&&phase==='playing'?'visible':'hidden';
 }
-function createRoom(newGame=false){
- setError('');pendingCreate=true;pendingRoom='';pendingCreateStage=newGame?0:bestStage();
+function createRoom(newGame=false,stageOverride=null){
+ setError('');pendingCreate=true;pendingRoom='';pendingCreateStage=Number.isInteger(stageOverride)?stageOverride:(newGame?0:bestStage());
  if(!ready)openConnection();
- else{wsSend({t:'create',stage:pendingCreateStage});pendingCreate=false;}
+ else{wsSend({t:'create',stage:pendingCreateStage,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome()});pendingCreate=false;}
 }
 function joinRoom(code){const value=(code||'').trim().toUpperCase();if(!/^[A-HJ-NP-Z2-9]{6}$/.test(value)){setError('Введите шестизначный код комнаты.');return;}
   pendingRoom=value;setError('');if(ready)wsSend({t:'join',room:value,token:roomToken(value)});else openConnection();
@@ -134,7 +138,7 @@ function resetKeys(){keys.clear();input.left=false;input.right=false;
   document.querySelectorAll('.touch-button').forEach(b=>b.classList.remove('pressed'));sendInput();}
 function updateInput(){const left=role===0?'a':'arrowleft',right=role===0?'d':'arrowright';
   input.left=keys.has(left)||keys.has('touch-left');input.right=keys.has(right)||keys.has('touch-right');sendInput();}
-function activateKey(kind){if(kind==='jump')input.jumpSeq++;else input.abilitySeq++;sendInput();}
+function activateKey(kind){if(kind==='jump'){input.jumpSeq++;predJumpAt=performance.now();}else if(kind==='ability')input.abilitySeq++;else if(kind==='bond')input.bondSeq++;else if(kind==='emote')input.emoteSeq++;sendInput();}
 const prevent=new Set(['arrowleft','arrowright','arrowup','arrowdown',' ','enter']);
 window.addEventListener('keydown',e=>{
   if(document.activeElement?.tagName==='INPUT')return;
@@ -143,6 +147,7 @@ window.addEventListener('keydown',e=>{
   if(k==='r'&&role===0){wsSend({t:'resetStage'});return;}
   const left=role===0?'a':'arrowleft',right=role===0?'d':'arrowright',jump=role===0?'w':'arrowup',ability=role===0?'f':'enter';
   if(k===jump)activateKey('jump');if(k===ability)activateKey('ability');
+  if(k==='g')activateKey('bond');if(k==='t')activateKey('emote');
   if(k===left||k===right){keys.add(k);updateInput();}
 });
 window.addEventListener('keyup',e=>{keys.delete(e.key.toLowerCase());updateInput();});
@@ -152,7 +157,7 @@ document.querySelectorAll('.touch-button').forEach(btn=>{
   const k=btn.dataset.input,tag='touch-'+k;
   function down(e){e.preventDefault();if(!room||phase!=='playing')return;
     if(!keys.has(tag)){
-      keys.add(tag);btn.classList.add('pressed');if(k==='jump'||k==='ability')activateKey(k);else updateInput();
+      keys.add(tag);btn.classList.add('pressed');if(['jump','ability','bond','emote'].includes(k))activateKey(k);else updateInput();
     }
     try{btn.setPointerCapture(e.pointerId);}catch(_){/* iOS fallback */}
   }
@@ -160,15 +165,15 @@ document.querySelectorAll('.touch-button').forEach(btn=>{
   btn.addEventListener('pointerdown',down);btn.addEventListener('pointerup',up);btn.addEventListener('pointercancel',up);btn.addEventListener('lostpointercapture',()=>{keys.delete(tag);btn.classList.remove('pressed');updateInput();});
 });
 function sendInput(){if(!room||!ready||phase!=='playing')return;
-  wsSend({t:'input',left:input.left,right:input.right,jumpSeq:input.jumpSeq,abilitySeq:input.abilitySeq});lastSend=performance.now();}
+  wsSend({t:'input',left:input.left,right:input.right,jumpSeq:input.jumpSeq,abilitySeq:input.abilitySeq,bondSeq:input.bondSeq,emoteSeq:input.emoteSeq});lastSend=performance.now();}
 setInterval(()=>{if(ready&&room&&phase==='playing')sendInput();},40);
 setInterval(()=>{if(ready)wsSend({t:'ping',sent:performance.now()});},3000);
 function announce(msg,duration=2){toastEl.textContent=msg;toastEl.classList.add('visible');toastTimer=duration;}
 function tone(freq,dur=.1,kind='sine',vol=.04){if(!sound)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();const osc=ac.createOscillator(),gain=ac.createGain();osc.type=kind;osc.frequency.value=freq;gain.gain.value=vol;gain.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);osc.connect(gain);gain.connect(ac.destination);osc.start();osc.stop(ac.currentTime+dur);}catch(_){}}
 function burst(x,y,color,n=12,speed=130){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=(.25+Math.random()*.75)*speed;const ttl=.4+Math.random()*.6;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,life:ttl,ttl,r:1.5+Math.random()*3,color});}if(particles.length>500)particles.splice(0,particles.length-500);}
 function updateHUD(){
-  const act=Math.floor(levelIndex/9),segment=Math.floor((levelIndex%9)/3);
-  $('levelLabel').textContent=`УРОВЕНЬ ${String(levelIndex+1).padStart(2,'0')} / ${stageDefs.length} · АКТ ${act+1}/11`;
+  const act=Math.min(10,Math.floor(levelIndex/9)),segment=Math.floor((levelIndex%9)/3);
+  $('levelLabel').textContent=levelIndex===99?'СЕКРЕТНЫЙ УРОВЕНЬ 100':'УРОВЕНЬ '+String(levelIndex+1).padStart(2,'0')+' / 99 · АКТ '+(act+1)+'/11';
   $('levelName').textContent=level.title;
   const worldTag=$('worldTag');if(worldTag)worldTag.textContent=level.signature?.subtitle||'';
   const progress=$('actProgress');if(progress)progress.textContent=`АКТ ${String(act+1).padStart(2,'0')}`;
@@ -193,6 +198,9 @@ function updateHUD(){
        :sp.kind==='constellation'?'Порядок звёзд: '+sp.progress+'/'+total+'. Активируйте их по номерам.'
        :sp.hint+' ('+active+'/'+total+')';
     }else goal=level.hint||'Помогайте друг другу, чтобы открыть выход.';
+    const extra=latest?.world?.adventure;
+    if(extra?.boss?.hp>0&&extra.boss.active)goal='БОСС '+extra.boss.name+' · '+extra.boss.hp+'/'+extra.boss.max+' HP · атакует '+(extra.boss.next?'Эхо':'Искра');
+    else if(extra?.arcade?.started&&!extra.arcade.done)goal='МИНИ-ИГРА: '+({chase:'гонка до светового рубежа',flight:'оба пролетите через кольцо',rhythm:'активируйте два ритмических узла',sail:'держите вправо вдвоём у паруса'}[extra.arcade.kind]||'действуйте вместе');
   }
   $('objective').textContent=goal;
 }
@@ -204,7 +212,7 @@ function consumeSnapshot(s){
     const next=stageDefs[s.stage];announce('✦ Уровень '+(s.stage+1)+' — '+next.signature.subtitle,2.8);tone(600,.16,'sine',.055);}
 
   levelIndex=s.stage;phase=s.phase;connected=s.connected||connected;latest={...s,recvTime:performance.now()};
-  if(phase==='playing'||phase==='win')saveCheckpoint(levelIndex);
+  if((phase==='playing'||phase==='win')&&levelIndex<99)saveCheckpoint(levelIndex);
   level=structuredClone(stageDefs[levelIndex]);level.gateOpen=s.world.gateOpen;level.bridgeLatched=s.world.bridgeLatched;level.padLatched=!!s.world.padLatched;
   level.pads.forEach((p,i)=>p.pressed=!!s.world.pads[i]);
   level.walls.forEach((w,i)=>w.broken=!!s.world.walls[i]);
@@ -217,7 +225,7 @@ function consumeSnapshot(s){
     z.phase=data.phase||0;z.elapsed=data.elapsed||0;z.flash=data.flash||0;
   }
   collectibles=level.shards.map((x,i)=>({x,y:i%2?390:432,taken:!!s.world.shards[i]}));
-  GameJuice.snapshot(previous,s,level);
+  GameJuice.snapshot(previous,s,level);GameAdventure.onSnapshot(s);
   if(previous&&s.stage===previous.stage&&s.world.signature){
     const before=previous.world?.signature,now=s.world.signature;
     if(before){
@@ -240,7 +248,7 @@ function consumeSnapshot(s){
   if(phase==='win'&&previous?.phase!=='win'){announce('Вы прошли игру вместе!',4);tone(740,.3,'sine',.06);}
   showUI();
 }
-function renderPlayers(){
+function renderPlayers(dt){
   if(!latest){P=[{type:0,x:180,y:GROUND-43,w:30,h:43,face:1,grounded:true,cool:0,dash:0,abilityFx:0,trail:[],breathe:0},{type:1,x:250,y:GROUND-43,w:30,h:43,face:1,grounded:true,cool:0,dash:0,abilityFx:0,trail:[],breathe:1}];return;}
   const at=performance.now()-95;
   while(snapshots.length>2&&snapshots[1].recvTime<at)snapshots.shift();
@@ -255,7 +263,29 @@ function renderPlayers(){
       const lead=Math.min(.045,Math.max(0,(performance.now()-latest.recvTime)/1000));
       if(a===b){x=source.x+source.vx*lead;y=source.y+source.vy*lead;}
     }
-    return {...source,x,y,type:i,w:30,h:43,trail:[],breathe:i*2};
+    if(i===role&&phase==='playing'&&connected.every(Boolean)){
+      if(!prediction||lastPredStage!==levelIndex||Math.abs(prediction.x-source.x)>350){prediction={x:source.x,y:source.y,vy:source.vy||0};lastPredStage=levelIndex;}
+      const axis=Number(input.right)-Number(input.left);
+      const lead=Math.min(.33,Math.max(.09,latency/2000+.065));
+      const desiredV=axis*(source.dash>0?760:273);
+      prediction.x+=desiredV*dt;
+      // Bound extrapolation to the plausible commands not yet acknowledged by the server.
+      const ahead=Math.max(28,Math.abs(desiredV)*lead+32);
+      prediction.x=Math.max(source.x-ahead,Math.min(source.x+ahead,prediction.x));
+      if(!axis)prediction.x+=(source.x-prediction.x)*Math.min(1,dt*7);
+      for(const wall of level.walls.filter(w=>!w.broken).concat(level.gateOpen?[]:level.gates)){
+        if(source.x+30<=wall.x&&prediction.x+30>wall.x)prediction.x=wall.x-30;
+        if(source.x>=wall.x+wall.w&&prediction.x<wall.x+wall.w)prediction.x=wall.x+wall.w;
+      }
+      if(predJumpAt&&performance.now()-predJumpAt<180&&source.grounded){prediction.vy=-486;predJumpAt=0;}
+      prediction.vy=Math.min(950,prediction.vy+1300*dt);
+      prediction.y+=prediction.vy*dt;
+      if(source.grounded&&prediction.y>source.y){prediction.y=source.y;prediction.vy=0;}
+      prediction.y+=(source.y-prediction.y)*Math.min(1,dt*9);
+      if(Math.abs(prediction.y-source.y)>110){prediction.y=source.y;prediction.vy=source.vy;}
+      x=prediction.x;y=prediction.y;
+    }
+    return {...source,x,y,type:i,w:30,h:43,trail:[],breathe:i*2,look:GameAdventure.outfitFor(i),emote:latest?.world?.adventure?.emotes?.[i]||0};
   });
   updateHUD();
 }
@@ -266,7 +296,7 @@ function animate(ts){
   particles=particles.filter(p=>p.life>0);
   for(const r of rings){r.life-=dt;r.r+=(r.max-r.r)*dt*5.5;}rings=rings.filter(r=>r.life>0);
   screenShake=Math.max(0,screenShake-35*dt);
-  renderPlayers();
+  renderPlayers(dt);
   // Animations are visual-only; server physics and multiplayer state are unchanged.
   GameJuice.frame(dt,P,phase==='playing'&&connected.every(Boolean));
   const avg=(P[0].x+P[1].x)/2;
@@ -315,6 +345,7 @@ function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-
  // shards
  for(const item of collectibles)if(!item.taken){const y=item.y+Math.sin(clock*2+item.x)*6;glowCircle(item.x,y,24,'#f8df9140');ctx.save();ctx.translate(item.x,y);ctx.rotate(clock*.8);ctx.fillStyle='#ffe7a7';ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,r=i%2?4:12;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}ctx.closePath();ctx.fill();ctx.restore();}
  GameBiomes.signature(ctx,level,clock);
+ GameAdventure.draw(ctx,level,P,latest?.world?.adventure,clock);
  drawPortal(level.portal,GROUND-65,portalReady());
  // environmental hints
  ctx.textAlign='center';ctx.font='700 14px system-ui';ctx.fillStyle='#f5e5ff88';for(const w of level.walls)if(!w.broken)ctx.fillText('ИСКРА · F',w.x+w.w/2,w.y-22);for(const crystal of level.crystals)if(!crystal.on)ctx.fillText('ЭХО · ENTER',crystal.x,crystal.y-56);
@@ -327,5 +358,6 @@ function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-
 function drawPortal(x,y,active){GameVisuals.portal(ctx,x,y,active,clock);}
 function drawPlayer(p){GameVisuals.player(ctx,p,clock);}
 function draw(){background();if(level)drawWorld();else {ctx.fillStyle='#ffffff11';ctx.fillRect(0,544,1200,106);}if(phase==='win'){glowCircle(600,280,300,'#ffe6b720');}GameVisuals.vignette(ctx,W,H);}
+GameAdventure.init({send:wsSend,bestStage,inRoom:()=>!!room,startStage:(n)=>{if(room){if(role===0)wsSend({t:'selectStage',stage:n,secrets:GameAdventure.data().secrets.length});else announce('Уровни выбирает создатель комнаты.');}else createRoom(false,n);}});
 openConnection();showUI();requestAnimationFrame(animate);
 })();
