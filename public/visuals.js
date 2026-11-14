@@ -20,7 +20,7 @@ function hills(c,W,H,cam,stage,layer,color,base,height,par){
   c.lineTo(W+2200,H);c.closePath();c.fill();c.restore();
 }
 function background(c,s){
- const {W,H,camera:cam=0,clock:t=0,levelIndex:i=0}=s;const sc=SCENES[i]||SCENES[0];
+ const {W,H,camera:cam=0,clock:t=0,levelIndex:i=0}=s;const sc=SCENES[Math.floor(i/9)%SCENES.length];
  const sky=c.createLinearGradient(0,0,0,H);sky.addColorStop(0,sc.sky[0]);sky.addColorStop(.56,sc.sky[1]);sky.addColorStop(1,sc.sky[2]);c.fillStyle=sky;c.fillRect(0,0,W,H);
  glow(c,W*.18-cam*.035,100,330,sc.mist,.17);glow(c,W*.83-cam*.035,330,340,sc.halo,.16);
  // Wide, gently flowing celestial ribbons.
@@ -75,7 +75,7 @@ function background(c,s){
  const fog=c.createLinearGradient(0,420,0,H);fog.addColorStop(0,'#ffffff00');fog.addColorStop(1,sc.sky[0]+'99');c.fillStyle=fog;c.fillRect(0,420,W,H-420);
 }
 function terrain(c,level,index,clock,ground=544){
- const sc=SCENES[index]||SCENES[0];for(const [a,b] of level.floor){let w=b-a;
+ const sc=SCENES[Math.floor(index/9)%SCENES.length];for(const [a,b] of level.floor){let w=b-a;
   c.fillStyle=linear(c,a,ground,a,650,sc.stone,'#0b1127');c.fillRect(a,ground,w,650-ground);
   c.fillStyle=linear(c,a,ground,a,ground+13,sc.grass,sc.stone);rr(c,a,ground-5,w,12,3);c.fill();
   c.fillStyle='#fff8';c.fillRect(a,ground-6,w,1.5);
@@ -89,7 +89,7 @@ function terrain(c,level,index,clock,ground=544){
  }
 }
 function scenery(c,level,index,clock){
- const sc=SCENES[index]||SCENES[0];
+ const sc=SCENES[Math.floor(index/9)%SCENES.length];
  // Floating temple fragments at fixed places. Only scenery; they do not collide.
  for(let n=0;n<8;n++){
   const x=180+n*250, y=275+Math.sin(n*3.31)*53+Math.sin(clock*.55+n)*4;
@@ -110,7 +110,7 @@ function scenery(c,level,index,clock){
   c.fillStyle=sc.halo;c.beginPath();c.arc(x+7,467,4+Math.sin(clock*2+n)*.3,0,TAU);c.fill();c.restore();
  }
 }
-function platform(c,s,index,clock){const {x,y,w}=s;const sc=SCENES[index]||SCENES[0],bridge=s.kind==='bridge';
+function platform(c,s,index,clock){const {x,y,w}=s;const sc=SCENES[Math.floor(index/9)%SCENES.length],bridge=s.kind==='bridge';
  c.save();if(bridge){
   glow(c,x+w/2,y+6,Math.min(w*.6,120),sc.mist,.16);
   c.fillStyle='#23485f';rr(c,x,y,w,19,6);c.fill();c.fillStyle='#9cecf6';rr(c,x,y,w,6,3);c.fill();
