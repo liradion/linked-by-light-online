@@ -5,6 +5,7 @@ const DEFAULT={graphics:'auto',buttons:54,opacity:.88,lift:8,inset:12,sound:true
 const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 const $=id=>document.getElementById(id);
 let options={...DEFAULT},avg=0,jitter=0,samples=0,fps=60,frames=0,fpsElapsed=0,quality='high',onControls=()=>{},onAction=()=>{},getSession=()=>({});
+let lastSnapshotAt=0,snapshotGap=33,snapshotJitter=0,snapshotSamples=0;
 let audioCtx=null,pad=null,padGain=null,gamepadButtons=[],oldLeft=false,oldRight=false,ambientWorld=-1;
 try{const data=JSON.parse(localStorage.getItem(KEY));if(data&&typeof data==='object')options={...options,...data};}catch(_){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(options));}catch(_){}}
@@ -24,11 +25,31 @@ function net(value){if(!Number.isFinite(value)||value<0)return;
  if(!samples){avg=value;jitter=0;}else{const diff=Math.abs(value-avg);avg=avg*.83+value*.17;jitter=jitter*.82+diff*.18;}
  samples++;
 }
-function interpolationDelay(){return clamp(70+jitter*.8+avg*.07,85,235);}
+function snapshotArrived(time){
+ if(!Number.isFinite(time)||time<=0)return;
+ if(lastSnapshotAt){
+  const gap=time-lastSnapshotAt;
+  if(gap>=10&&gap<500){
+   if(snapshotSamples===0)snapshotGap=gap;
+   else{
+    const previous=snapshotGap;
+    snapshotGap=snapshotGap*.85+gap*.15;
+    snapshotJitter=snapshotJitter*.8+Math.abs(gap-previous)*.2;
+   }
+   snapshotSamples++;
+  }
+ }
+ lastSnapshotAt=time;
+}
+function interpolationDelay(){
+ // Measure incoming snapshot cadence rather than adding a fixed 85-235ms.
+ // Small safety margin grows with actual arrival jitter, not geographic RTT.
+ return clamp(Math.max(42,snapshotGap*.9)+snapshotJitter*1.4+jitter*.25,48,165);
+}
 function predictionLead(){return clamp(avg/2000+.045,.09,.35);}
-function stats(){return {rtt:Math.round(avg),jitter:Math.round(jitter),fps:Math.round(fps),quality,buffer:Math.round(interpolationDelay())};}
+function stats(){return {rtt:Math.round(avg),jitter:Math.round(jitter),fps:Math.round(fps),quality,buffer:Math.round(interpolationDelay()),snapshotHz:snapshotSamples?Math.round(1000/snapshotGap):0};}
 function sample(dt){if(!Number.isFinite(dt)||dt<=0)return;frames++;fpsElapsed+=dt;
- if(fpsElapsed>=1){fps=Math.round(frames/fpsElapsed);frames=0;fpsElapsed=0;const next=adapt();if(next!==quality){quality=next;document.documentElement.dataset.gameGraphics=quality;}const d=$('qualityStats');if(d){const s=stats();d.textContent=`FPS ${s.fps} · RTT ${s.rtt} мс · Джиттер ${s.jitter} мс · Буфер ${s.buffer} мс · ${s.quality}`;}}
+ if(fpsElapsed>=1){fps=Math.round(frames/fpsElapsed);frames=0;fpsElapsed=0;const next=adapt();if(next!==quality){quality=next;document.documentElement.dataset.gameGraphics=quality;}const d=$('qualityStats');if(d){const s=stats();d.textContent=`FPS ${s.fps} · RTT ${s.rtt} мс · Джиттер ${s.jitter} мс · Буфер ${s.buffer} мс · Снимки ${s.snapshotHz} Гц · ${s.quality}`;}}
  pollGamepad();
 }
 function pollGamepad(){if(typeof navigator.getGamepads!=='function')return;
@@ -73,5 +94,5 @@ function ambient(act){if(!pad||!audioCtx||act===ambientWorld)return;ambientWorld
 function effect(type){if(!audioCtx||!options.sound)return;const config={step:[145,.04,.006],jump:[350,.12,.016],land:[95,.1,.015],ability:[650,.23,.026],boss:[110,.33,.025],star:[920,.16,.017],rescue:[540,.26,.026]};const [freq,duration,volume]=config[type]||config.step;try{
  const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=type==='boss'?'sawtooth':'sine';osc.frequency.setValueAtTime(freq,audioCtx.currentTime);osc.frequency.exponentialRampToValueAtTime(Math.max(40,freq*.64),audioCtx.currentTime+duration);gain.gain.setValueAtTime(volume,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration);
  }catch(_){}}
-root.GameQuality={init,net,interpolationDelay,predictionLead,stats,sample,apply,ambient,effect,audioUnlock,setSound,settings:()=>({...options})};
+root.GameQuality={init,net,snapshotArrived,interpolationDelay,predictionLead,stats,sample,apply,ambient,effect,audioUnlock,setSound,settings:()=>({...options})};
 })(typeof window!=='undefined'?window:globalThis);
