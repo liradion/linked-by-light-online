@@ -69,6 +69,7 @@ test('completing both the normal puzzle and signature opens every gate',()=>{
   // Minigame and boss success are covered by separate tests; satisfy those independent gates here.
   if(g.adventure?.boss)g.adventure.boss.hp=0;
   if(g.adventure?.arcade)g.adventure.arcade.done=true;
+  if(g.level.reality)g.level.reality.done=true;
   for(const w of g.level.walls)w.broken=true;
   for(const c of g.level.crystals)c.on=true;
   if(g.level.puzzle?.pads){for(const pad of g.level.pads)at(g,pad.type,pad.x+pad.w/2);frames(g,25);}
