@@ -62,7 +62,8 @@ test('four mini-game variants are actually playable through server rules',()=>{
    }frames(g,2);
   }
   if(kind==='sail'){
-   at(g,0,m.boat-40);at(g,1,m.boat+30);g.input[0].right=true;g.input[1].right=true;frames(g,135);
+   at(g,0,m.boat-40);at(g,1,m.boat+30);g.input[0].right=true;g.input[1].right=true;
+   core.updateInput(g,1,{abilitySeq:1,left:false,right:true});frames(g,135);
   }
   assert.equal(m.done,true,kind);
  }
