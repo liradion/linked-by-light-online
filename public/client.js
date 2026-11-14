@@ -12,6 +12,7 @@ let pendingRoom='',pendingCreate=false,pendingCreateStage=0,connectedBefore=fals
 let latest=null,snapshots=[],fpsTime=performance.now(),sound=true,ac=null;
 const keys=new Set(),input={left:false,right:false,jumpSeq:0,abilitySeq:0,bondSeq:0,emoteSeq:0};
 let prediction=null,lastPredStage=-1,predJumpAt=0,lastAck=0,lastResultId='',packetSeq=0,wasOnGround=null,lastFootstep=0;
+const predictor=GameReconciliation.createPredictor();
 let latency=0,lastSend=0,playingOnce=false;
 const qs=new URLSearchParams(location.search);const invite=qs.get('room');
 if(invite&&/^[A-Z2-9]{6}$/i.test(invite))pendingRoom=invite.toUpperCase();
@@ -166,7 +167,8 @@ document.querySelectorAll('.touch-button').forEach(btn=>{
   btn.addEventListener('pointerdown',down);btn.addEventListener('pointerup',up);btn.addEventListener('pointercancel',up);btn.addEventListener('lostpointercapture',()=>{keys.delete(tag);btn.classList.remove('pressed');updateInput();});
 });
 function sendInput(){if(!room||!ready||phase!=='playing')return;
-  wsSend({t:'input',inputSeq:++packetSeq,left:input.left,right:input.right,jumpSeq:input.jumpSeq,abilitySeq:input.abilitySeq,bondSeq:input.bondSeq,emoteSeq:input.emoteSeq});lastSend=performance.now();}
+  const packet={t:'input',inputSeq:++packetSeq,left:input.left,right:input.right,jumpSeq:input.jumpSeq,abilitySeq:input.abilitySeq,bondSeq:input.bondSeq,emoteSeq:input.emoteSeq};
+  predictor.send(packet,performance.now());wsSend(packet);lastSend=performance.now();}
 setInterval(()=>{if(ready&&room&&phase==='playing')sendInput();},40);
 setInterval(()=>{if(ready)wsSend({t:'ping',sent:performance.now()});},3000);
 function announce(msg,duration=2){toastEl.textContent=msg;toastEl.classList.add('visible');toastTimer=duration;}
@@ -212,10 +214,11 @@ function consumeSnapshot(s){
   if(s.ack&&role>=0){lastAck=Math.max(lastAck,s.ack[role]||0);document.documentElement.dataset.pendingInputs=String(Math.max(0,packetSeq-lastAck));}
   if(s.result&&s.result.completed){const key=s.result.level+':'+s.result.elapsed+':'+s.result.deaths;
     if(lastResultId!==key){lastResultId=key;saveStageResult(s.result);announce('Уровень '+(s.result.level+1)+' — '+s.result.stars+' ★ · '+s.result.elapsed+' с · падений: '+s.result.deaths,3.6);GameQuality.effect('star');}}
-  if(previous&&s.stage!==previous.stage){prediction=null;lastPredStage=-1;snapshots=[];camera=0;particles=[];rings=[];GameJuice.clear();
+  if(previous&&s.stage!==previous.stage){prediction=null;lastPredStage=-1;predictor.reset();snapshots=[];camera=0;particles=[];rings=[];GameJuice.clear();
     const next=stageDefs[s.stage];GameQuality.ambient(Math.floor(s.stage/9));announce('✦ Уровень '+(s.stage+1)+' — '+next.signature.subtitle,2.8);tone(600,.16,'sine',.055);}
 
   levelIndex=s.stage;phase=s.phase;connected=s.connected||connected;latest={...s,recvTime:performance.now()};
+  if(role>=0&&phase==='playing'&&s.players?.[role])predictor.reconcile({...s.players[role],type:role,w:30,h:43},s.ack?.[role]||0,stageDefs[s.stage],s.world,s.stage,performance.now(),s.processedCommands?.[role],GameQuality.predictionLead());
   GameQuality.ambient(Math.floor(Math.min(98,s.stage)/9));
   if((phase==='playing'||phase==='win')&&levelIndex<99)saveCheckpoint(levelIndex);
   level=structuredClone(stageDefs[levelIndex]);level.gateOpen=s.world.gateOpen;level.bridgeLatched=s.world.bridgeLatched;level.padLatched=!!s.world.padLatched;
@@ -271,26 +274,7 @@ function renderPlayers(dt){
       if(a===b){x=source.x+source.vx*lead;y=source.y+source.vy*lead;}
     }
     if(i===role&&phase==='playing'&&connected.every(Boolean)){
-      if(!prediction||lastPredStage!==levelIndex||Math.abs(prediction.x-source.x)>260){prediction={x:source.x,y:source.y,vy:source.vy||0};lastPredStage=levelIndex;}
-      const axis=Number(input.right)-Number(input.left);
-      const lead=GameQuality.predictionLead();
-      const desiredV=axis*(source.dash>0?760:273);
-      prediction.x+=desiredV*dt;
-      // Bound extrapolation to the plausible commands not yet acknowledged by the server.
-      const ahead=Math.max(28,Math.abs(desiredV)*lead+32);
-      prediction.x=Math.max(source.x-ahead,Math.min(source.x+ahead,prediction.x));
-      if(!axis)prediction.x+=(source.x-prediction.x)*Math.min(1,dt*9);
-      for(const wall of level.walls.filter(w=>!w.broken).concat(level.gateOpen?[]:level.gates)){
-        if(source.x+30<=wall.x&&prediction.x+30>wall.x)prediction.x=wall.x-30;
-        if(source.x>=wall.x+wall.w&&prediction.x<wall.x+wall.w)prediction.x=wall.x+wall.w;
-      }
-      if(predJumpAt&&performance.now()-predJumpAt<180&&source.grounded){prediction.vy=-486;predJumpAt=0;}
-      prediction.vy=Math.min(950,prediction.vy+1300*dt);
-      prediction.y+=prediction.vy*dt;
-      if(source.grounded&&prediction.y>source.y){prediction.y=source.y;prediction.vy=0;}
-      prediction.y+=(source.y-prediction.y)*Math.min(1,dt*9);
-      if(Math.abs(prediction.y-source.y)>110){prediction.y=source.y;prediction.vy=source.vy;}
-      x=prediction.x;y=prediction.y;
+      const p=predictor.display(dt,input,level,latest.world,GameQuality.predictionLead());if(p){x=p.x;y=p.y;}
     }
     return {...source,x,y,type:i,w:30,h:43,trail:[],breathe:i*2,look:GameAdventure.outfitFor(i),emote:latest?.world?.adventure?.emotes?.[i]||0};
   });
@@ -376,5 +360,5 @@ function saveStageResult(result){try{const all=JSON.parse(localStorage.getItem(R
 GameQuality.init({getSession:()=>({phase,role,room}),onControls:(left,right)=>{if(left)keys.add('gamepad-left');else keys.delete('gamepad-left');if(right)keys.add('gamepad-right');else keys.delete('gamepad-right');updateInput();},onAction:activateKey});
 GameQuality.ambient(0);
 GameAdventure.init({send:wsSend,currentStage:()=>levelIndex,bestStage,inRoom:()=>!!room,startStage:(n)=>{if(room){if(role===0)wsSend({t:'selectStage',stage:n,secrets:GameAdventure.data().secrets.length});else announce('Уровни выбирает создатель комнаты.');}else createRoom(false,n);}});
-openConnection();showUI();requestAnimationFrame(animate);
+GameCloud.init();openConnection();showUI();requestAnimationFrame(animate);
 })();
