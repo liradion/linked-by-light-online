@@ -192,6 +192,10 @@ canvas{position:relative;z-index:1}
   .steps{gap:5px}#actProgress{font-size:9px}
   .hud .goal{font-size:10px}
 }
+
+/* Chapter individuality and mobile legibility */
+.world-tag{display:inline-block;margin-top:4px;color:#ffe0b9;font-size:10px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+@media(pointer:coarse) and (orientation:landscape){.world-tag{font-size:7px;margin-top:2px}.chapter{min-width:0}.chapter strong{font-size:11px;max-width:220px}.goal{max-width:35%;font-size:10px}}
 </style></head><body>
 <div class="game-shell">
 <header class="topline">
@@ -201,7 +205,7 @@ canvas{position:relative;z-index:1}
 </header>
 <div class="frame" id="frame">
 <canvas id="game" width="1200" height="650" aria-label="Кооперативная игра"></canvas>
-<div class="hud"><div class="chapter"><span id="levelLabel">УРОВЕНЬ 01 / 99 · АКТ 1/11</span><strong id="levelName">Первый контакт</strong></div><div class="goal" id="objective">Объедините усилия, чтобы открыть ворота.</div></div>
+<div class="hud"><div class="chapter"><span id="levelLabel">УРОВЕНЬ 01 / 99 · АКТ 1/11</span><strong id="levelName">Первый контакт</strong><span class="world-tag" id="worldTag">Пробуждение</span></div><div class="goal" id="objective">Объедините усилия, чтобы открыть ворота.</div></div>
 <div class="toast" id="toast"></div>
 <div class="banner hidden" id="waitingBanner">Партнёр отключился. Игра остановлена.<br/>Переподключение через прежнюю ссылку сохранит его роль.</div>
 <div class="touch-controls compact" id="touchControls" aria-label="Управление на телефоне">
@@ -253,5 +257,5 @@ canvas{position:relative;z-index:1}
 </div><div class="footer-note">Вы: <b id="myRole">не в комнате</b><div>На iPhone поверните экран горизонтально · <b>R</b> — перезапуск уровня (хост)</div></div></section>
 <div class="rotate-tip">↻ Для удобной игры на iPhone поверните экран горизонтально.</div>
 </div>
-<script src="/shared/stages.js?v=99"></script><script src="/visuals.js?v=99"></script><script src="/juice.js?v=4"></script><script src="/client.js?v=100"></script>
+<script src="/shared/stages.js?v=6"></script><script src="/biomes.js?v=6"></script><script src="/visuals.js?v=6"></script><script src="/juice.js?v=6"></script><script src="/client.js?v=6"></script>
 </body></html>
