@@ -191,7 +191,14 @@
     return stage;
   }
   stages.forEach(enrichStage);
-  const result = { GROUND, stages, ACTS, SIGNATURES, SIGNATURE_HINTS };
+  // An optional secret chapter, separate from the main 99-level campaign.
+  const BONUS_STAGE=JSON.parse(JSON.stringify(stages[98]));
+  BONUS_STAGE.title='Тайна сотого света';BONUS_STAGE.chapter='Истинный финал';
+  BONUS_STAGE.levelSubtitle='Последняя тайна';BONUS_STAGE.bonus=true;
+  BONUS_STAGE.objective='Откройте все одиннадцать секретов и победите Последнюю Тень.';
+  BONUS_STAGE.hint=BONUS_STAGE.objective;
+  BONUS_STAGE.signature.variant=8;BONUS_STAGE.signature.finale=true;
+  const result = { GROUND, stages, BONUS_STAGE, ACTS, SIGNATURES, SIGNATURE_HINTS };
   if (typeof module !== 'undefined' && module.exports) module.exports = result;
   if (root) root.GameStages = result;
 })(typeof window !== 'undefined' ? window : null);
