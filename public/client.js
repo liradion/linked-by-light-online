@@ -151,20 +151,35 @@ setInterval(()=>{if(ready)wsSend({t:'ping',sent:performance.now()});},3000);
 function announce(msg,duration=2){toastEl.textContent=msg;toastEl.classList.add('visible');toastTimer=duration;}
 function tone(freq,dur=.1,kind='sine',vol=.04){if(!sound)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();const osc=ac.createOscillator(),gain=ac.createGain();osc.type=kind;osc.frequency.value=freq;gain.gain.value=vol;gain.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);osc.connect(gain);gain.connect(ac.destination);osc.start();osc.stop(ac.currentTime+dur);}catch(_){}}
 function burst(x,y,color,n=12,speed=130){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=(.25+Math.random()*.75)*speed;const ttl=.4+Math.random()*.6;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,life:ttl,ttl,r:1.5+Math.random()*3,color});}if(particles.length>500)particles.splice(0,particles.length-500);}
-function updateHUD(){ $('levelLabel').textContent=`ГЛАВА 0${levelIndex+1} / 03`; $('levelName').textContent=level.title;
-  for(let i=0;i<3;i++)$('step'+(i+1)).className='step'+(i===levelIndex?' active':i<levelIndex?' complete':'');
+function updateHUD(){
+  const act=Math.floor(levelIndex/9),segment=Math.floor((levelIndex%9)/3);
+  $('levelLabel').textContent=`УРОВЕНЬ ${String(levelIndex+1).padStart(2,'0')} / ${stageDefs.length} · АКТ ${act+1}/11`;
+  $('levelName').textContent=level.title;
+  const progress=$('actProgress');if(progress)progress.textContent=`АКТ ${String(act+1).padStart(2,'0')}`;
+  for(let i=0;i<3;i++)$('step'+(i+1)).className='step'+(i===segment?' active':i<segment?' complete':'');
   $('amberStatus').textContent=P[0]?.cool>0?'· '+P[0].cool.toFixed(1)+' c':'· Рывок готов';
   $('blueStatus').textContent=P[1]?.cool>0?'· '+P[1].cool.toFixed(1)+' c':'· Импульс готов';
-  if(levelIndex===0)$('objective').textContent=level.gateOpen?'Ворота открыты — оба в портал!':`Плиты активны: ${level.pads.filter(p=>p.pressed).length}/2`;
-  if(levelIndex===1)$('objective').textContent=level.gateOpen?'Мост закреплён — оба в портал!':!level.walls[0].broken?'Искра: разбейте стену рывком.':!level.crystals[0].on?'Искра держит плиту. Эхо пробуждает кристалл.':'Идите к порталу.';
-  if(levelIndex===2)$('objective').textContent=level.gateOpen?'Последняя дверь открыта!':!level.walls[0].broken?'Искра: пробей стену.':!level.crystals[0].on?'Эхо: активируй кристалл.':`Одновременно встаньте на плиты: ${level.pads.filter(p=>p.pressed).length}/2`;
+  let goal='Ворота открыты! Доберитесь до портала вдвоём.';
+  if(!level.gateOpen){
+    const wall=level.walls.find(w=>!w.broken);
+    const crystal=level.crystals.find(c=>!c.on);
+    if(wall)goal='Искра: разрушьте светящуюся стену рывком (F).';
+    else if(crystal)goal=level.bridgeTrigger==='pad-crystal'
+      ?'Искра держит плиту, пока Эхо заряжает кристалл за мостом.'
+      :'Эхо: активируйте кристалл импульсом.';
+    else if(level.puzzle?.pads&&!level.padLatched)
+      goal=`Встаньте одновременно на плиты: ${level.pads.filter(p=>p.pressed).length}/${level.pads.length}`;
+    else goal=level.hint||'Помогайте друг другу, чтобы открыть выход.';
+  }
+  $('objective').textContent=goal;
 }
+
 function consumeSnapshot(s){
   if(latest&&s.tick<latest.tick)return;
   const previous=latest;
   if(previous&&s.stage!==previous.stage){snapshots=[];camera=0;particles=[];rings=[];GameJuice.clear();announce('✦ Новая глава: '+stageDefs[s.stage].title,2.3);tone(600,.16,'sine',.055);}
   levelIndex=s.stage;phase=s.phase;connected=s.connected||connected;latest={...s,recvTime:performance.now()};
-  level=structuredClone(stageDefs[levelIndex]);level.gateOpen=s.world.gateOpen;level.bridgeLatched=s.world.bridgeLatched;
+  level=structuredClone(stageDefs[levelIndex]);level.gateOpen=s.world.gateOpen;level.bridgeLatched=s.world.bridgeLatched;level.padLatched=!!s.world.padLatched;
   level.pads.forEach((p,i)=>p.pressed=!!s.world.pads[i]);
   level.walls.forEach((w,i)=>w.broken=!!s.world.walls[i]);
   level.crystals.forEach((c,i)=>c.on=!!s.world.crystals[i]);
@@ -215,7 +230,12 @@ function animate(ts){
   camera+=(target-camera)*(1-Math.exp(-dt*4.65));
   draw();requestAnimationFrame(animate);
 }
-function bridgeActive(){return level.bridgeLatched||(levelIndex===1&&level.pads[0].pressed)||(levelIndex===2&&level.crystals[0].on);}
+function bridgeActive(){
+ if(level.bridgeLatched)return true;
+ if(level.bridgeTrigger==='pad-crystal'||level.bridgeTrigger==='pad')return level.pads.some(p=>p.pressed)||level.bridgeTrigger==='pad'&&level.padLatched;
+ if(level.bridgeTrigger==='crystal')return level.crystals.length>0&&level.crystals.every(c=>c.on);
+ return level.bridgeTrigger==='always';
+}
 function portalReady(){return level.gateOpen;}
 function roundRect(x,y,w,h,r,fill){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill)ctx.fill();}
 function gradient(x0,y0,x1,y1,stops){const g=ctx.createLinearGradient(x0,y0,x1,y1);for(const [s,c] of stops)g.addColorStop(s,c);return g;}
