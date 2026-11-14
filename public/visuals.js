@@ -2,10 +2,8 @@
 (function (root) {
 'use strict';
 const TAU = Math.PI * 2;
-const SCENES = [
-  {sky:['#080b25','#18234c','#55415f'],mist:'#a28fef',halo:'#f3abca',moon:'#f1defc',stone:'#39375e',grass:'#a9f3d2',far:'#1b274b',near:'#1b1d3a',gold:'#f4c69d'},
-  {sky:['#041626','#123953','#31747c'],mist:'#86e6d5',halo:'#83d8db',moon:'#b5f9ed',stone:'#284b61',grass:'#b6eac3',far:'#14344d',near:'#102c42',gold:'#d5e5a5'},
-  {sky:['#170e29','#3d234f','#8c5268'],mist:'#e2a6df',halo:'#ffb99a',moon:'#fff0c7',stone:'#67445f',grass:'#e7bdd4',far:'#3b244a',near:'#2b203e',gold:'#ffd19e'}
+const SCENES = root.GameBiomes?.PALETTES || [
+ {sky:['#080b25','#18234c','#55415f'],mist:'#a28fef',halo:'#f3abca',moon:'#f1defc',stone:'#39375e',grass:'#a9f3d2',far:'#1b274b',near:'#1b1d3a',gold:'#f4c69d'}
 ];
 const mix=(a,b,t)=>a+(b-a)*t;
 function hash(n){const q=Math.sin(n*127.1+11.73)*43758.5453;return q-Math.floor(q);}
@@ -47,7 +45,8 @@ function background(c,s){
  hills(c,W,H,cam,i,1,sc.far,510,155,.12);
  hills(c,W,H,cam,i,2,'#1b284cb8',535,126,.25);
  hills(c,W,H,cam,i,3,sc.near,562,110,.39);
- // Village silhouettes, arched windows and suspended lanterns.
+ // Only the home valley and neon city retain the silhouettes of distant buildings.
+ if(Math.floor(i/9)===0||Math.floor(i/9)===6){
  c.save();c.translate(-cam*.40,0);
  for(let n=-1;n<22;n++){
   const x=n*105+hash(n+500)*38;const h=57+hash(n+23)*93;const y=544-h;
@@ -59,6 +58,7 @@ function background(c,s){
   }
  }
  c.restore();
+ }
  c.save();c.translate(-cam*.27,0);
  for(let n=0;n<10;n++){
   const x=150+n*194,y=-7,h=72+hash(n+222)*89;
