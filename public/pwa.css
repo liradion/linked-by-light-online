@@ -1,0 +1,13 @@
+.install-game-btn{border:1px solid #8e83ba;background:#25203ebd;color:#eae4ff;border-radius:11px;padding:8px 12px;font-size:11px;letter-spacing:.02em;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 0 15px #c5a2ff20}
+.install-game-btn:hover{background:#3e325f}
+.install-game-btn[hidden]{display:none!important}
+.install-game-dialog{border:1px solid #8b83ae;background:linear-gradient(155deg,#25223b,#11192c);color:#f2edff;border-radius:20px;box-shadow:0 25px 80px #000b;padding:0;width:min(400px,calc(100vw - 30px));max-height:min(88dvh,620px);overflow:auto}
+.install-game-dialog::backdrop{background:#020612c9;backdrop-filter:blur(5px)}
+.install-game-content{padding:21px 22px 23px}.install-game-content h2{font-size:18px;margin:0 0 10px}
+.install-game-content p{font-size:13px;line-height:1.55;color:#b7c8e8}
+.install-game-content strong{color:#fff}.install-game-content ol{padding-left:19px;color:#d8ddf8;font-size:13px;line-height:1.8}
+.install-game-content .install-game-close{font:inherit;font-size:13px;border-radius:12px;padding:10px 20px;background:#7a68ad;color:#fff;border:0;cursor:pointer;margin-top:10px}
+.install-game-content .install-game-hint{font-size:11px;color:#a8a8c1;margin:15px 0 0}
+@media(pointer:coarse) and (orientation:landscape){.install-game-btn{font-size:10px;padding:5px 9px}}
+@media(display-mode:standalone){body{overscroll-behavior:none}html{overscroll-behavior:none} .game-shell{max-width:100%}}
+@supports(padding:max(1px,2px)){@media(display-mode:standalone) and (orientation:landscape){body{padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right));padding-bottom:max(5px,env(safe-area-inset-bottom))}}}
