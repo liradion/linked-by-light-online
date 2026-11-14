@@ -39,7 +39,7 @@ test('третья глава: кристалл и две плиты необх�
  const g=createGame();initStage(g,2);g.phase='playing';g.level.signature.done=true;
  putOnPlate(g.players[0],g.level.pads[0]);putOnPlate(g.players[1],g.level.pads[1]);
  run(g,20);assert.equal(g.level.gateOpen,false);
- g.level.crystals[0].on=true;run(g,20);
+ g.level.crystals[0].on=true;g.adventure.arcade.done=true;run(g,20);
  assert.equal(g.level.gateOpen,true);
 });
 
