@@ -54,7 +54,13 @@ function newCode(){for(let tries=0;tries<50;tries++){
   const code=Array.from(crypto.randomBytes(6),byte=>ROOM_ALPHABET[byte%ROOM_ALPHABET.length]).join('');
   if(!ROOMS.has(code))return code;
 }throw Error('unable to create room');}
-const newSeat=()=>({token:crypto.randomBytes(24).toString('hex'),peer:null,online:false});
+const allowedFurniture=['lamp','plant','sofa','shelf','star','rug','aquarium','telescope'];
+const allowedSkins=['classic','sunset','aurora','royal','forest','galaxy'];
+const allowedPets=['none','fox','owl','moth','cat','orb'];
+const newSeat=()=>({token:crypto.randomBytes(24).toString('hex'),peer:null,online:false,look:{skin:'classic',pet:'none'}});
+function cleanLook(x){return {skin:allowedSkins.includes(x?.skin)?x.skin:'classic',pet:allowedPets.includes(x?.pet)?x.pet:'none'};}
+function cleanHome(x){if(!Array.isArray(x))return [];return x.slice(0,12).map(v=>({item:allowedFurniture.includes(v?.item)?v.item:'lamp',slot:Number.isInteger(v?.slot)?Math.max(0,Math.min(11,v.slot)):0}));}
+function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[]};}
 function countOnline(r){return r.seats.map(s=>!!s?.online);}
 function sendSeatRoom(r){const obj={t:'members',room:r.code,connected:countOnline(r),phase:r.game.phase};
   for(const s of r.seats)if(s?.online)s.peer.send(obj);
@@ -93,9 +99,9 @@ server.on('upgrade',(req,socket,head)=>{
     const seat=r.seats[index];if(seat.online&&seat.peer){try{seat.peer.close();}catch(_){}}
     room=r;role=index;seat.online=true;seat.peer=peer;r.lastActivity=Date.now();
     // После обновления страницы счётчики нажатий в браузере начинаются с нуля.
-    r.game.input[role].jumpSeq=0;r.game.input[role].abilitySeq=0;clearMovement(r.game,role);
-    peer.send({t:'joined',room:r.code,role,token:seat.token,phase:r.game.phase,connected:countOnline(r)});
-    peer.send(snapshot(r.game,countOnline(r)));
+    r.game.input[role].jumpSeq=0;r.game.input[role].abilitySeq=0;r.game.input[role].bondSeq=0;r.game.input[role].emoteSeq=0;clearMovement(r.game,role);
+    peer.send({t:'joined',room:r.code,role,token:seat.token,phase:r.game.phase,connected:countOnline(r),home:r.home||[]});
+    peer.send(roomSnapshot(r));
     sendSeatRoom(r);
   };
   peer=attachWebSocket(socket,head,msg=>{
@@ -106,9 +112,9 @@ server.on('upgrade',(req,socket,head)=>{
       if(ROOMS.size>=MAX_ROOMS)return error('Сервер заполнен. Попробуйте позже.');
       const code=newCode(),game=createGame();
       // Progress is supplied by the host's browser; rooms still run one authoritative server state.
-      const saved=Number.isSafeInteger(msg.stage)?Math.max(0,Math.min(stages.length-1,msg.stage)):0;
+      const saved=Number.isSafeInteger(msg.stage)?Math.max(0,Math.min(msg.stage===99&&msg.secrets===11?99:98,msg.stage)):0;
       if(saved>0)initStage(game,saved);
-      const r={code,seats:[newSeat(),null],game,lastActivity:Date.now()};
+      const r={code,seats:[newSeat(),null],game,home:cleanHome(msg.home),unlockedMax:saved,lastActivity:Date.now()};
       ROOMS.set(code,r);attach(r,0);return;
     }
     if(msg.t==='join'){
@@ -122,11 +128,25 @@ server.on('upgrade',(req,socket,head)=>{
     }
     if(!room||room.seats[role]?.peer!==peer)return;
     room.lastActivity=Date.now();
+    if(msg.t==='customize'){
+      room.seats[role].look=cleanLook(msg);broadcast(room,{t:'looks',looks:room.seats.map(s=>s?.look||null)});return;
+    }
+    if(msg.t==='home'&&Array.isArray(msg.items)){
+      room.home=cleanHome(msg.items);broadcast(room,{t:'home',items:room.home});return;
+    }
+    if(msg.t==='selectStage'&&role===0&&room.seats.every(s=>s?.online)){
+      const target=msg.stage;
+      if(!Number.isSafeInteger(target)||target<0||target>99)return error('Неверный номер уровня.');
+      if(target>room.unlockedMax&&(target!==99||msg.secrets!==11))return error('Уровень ещё не открыт.');
+      if(target===99&&msg.secrets!==11)return error('Сначала найдите все 11 секретных рун.');
+      initStage(room.game,target);room.game.phase='playing';
+      sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
+    }
     if(msg.t==='input'&&room.game.phase==='playing'){
       updateInput(room.game,role,msg);return;
     }
     if(msg.t==='start'&&role===0&&room.seats.every(s=>s?.online)&&room.game.phase==='waiting'){
-      room.game.phase='playing';initStage(room.game,room.game.stage);sendSeatRoom(room);broadcast(room,snapshot(room.game,countOnline(room)));return;
+      room.game.phase='playing';initStage(room.game,room.game.stage);sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='restart'&&role===0&&room.seats.every(s=>s?.online)){
       initStage(room.game,0);room.game.phase='playing';sendSeatRoom(room);broadcast(room,snapshot(room.game,countOnline(room)));return;
@@ -143,9 +163,9 @@ server.on('upgrade',(req,socket,head)=>{
 });
 let lastBroadcast=0;
 const loop=setInterval(()=>{
-  for(const r of ROOMS.values())tick(r.game,countOnline(r));
+  for(const r of ROOMS.values()){tick(r.game,countOnline(r));r.unlockedMax=Math.max(r.unlockedMax,Math.min(98,r.game.stage));}
   lastBroadcast++;
-  if(lastBroadcast%3===0)for(const r of ROOMS.values())if(r.seats.some(s=>s?.online))broadcast(r,snapshot(r.game,countOnline(r)));
+  if(lastBroadcast%3===0)for(const r of ROOMS.values())if(r.seats.some(s=>s?.online))broadcast(r,roomSnapshot(r));
 },1000/60);
 loop.unref();
 setInterval(()=>{for(const r of ROOMS.values())for(const seat of r.seats)if(seat?.online)seat.peer.ping();},10_000).unref();
