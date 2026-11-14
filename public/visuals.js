@@ -126,7 +126,16 @@ function platform(c,s,index,clock){const {x,y,w}=s;const sc=SCENES[Math.floor(in
   for(let q=x+27;q<x+w-10;q+=92){c.strokeStyle=sc.grass+'9e';c.lineWidth=1.3;c.beginPath();c.moveTo(q,y);c.lineTo(q-6,y-9);c.moveTo(q,y);c.lineTo(q+6,y-11);c.stroke();}
  }c.restore();}
 function player(c,p,clock){
- const type=p.type||0,col=type?'#86eff4':'#ffc084',outline=type?'#1c526c':'#743d67';
+ const type=p.type||0,skin=p.look?.skin||'classic';
+ const themes={
+  classic:['#86eff4','#ffc084','#46b6dc','#f3a26c','#227d9e','#b76178'],
+  sunset:['#ffd8a3','#ffba79','#d98fdd','#ffbe83','#8f4ba7','#9c5770'],
+  aurora:['#8dffe4','#79ffcc','#48c3a6','#50d7bf','#286e86','#2d8e93'],
+  royal:['#ded0ff','#ffe1a8','#877cef','#c4a1ef','#403f91','#7c4b91'],
+  forest:['#d2f4ab','#e2f69e','#8cbf72','#aecf6d','#466d4a','#737d3a'],
+  galaxy:['#c1a9ff','#e8a7e6','#8d77d5','#af73b9','#3e397f','#704079']};
+ const t=themes[skin]||themes.classic;
+ const col=type?t[0]:t[1],outline=type?t[4]:t[5];
  const anim=p.anim||{},run=anim.run||0,land=anim.land||0;
  const bob=p.grounded?(Math.sin(clock*2.4+(p.breathe||0))*1.1+Math.abs(Math.sin(anim.stride||0))*run*2):0;
  const x=p.x+(p.w||30)/2,y=p.y+(p.h||43)+bob;
@@ -138,7 +147,7 @@ function player(c,p,clock){
  c.rotate((anim.lean||0)+Math.sin(clock*1.7+(p.breathe||0))*.012);
  c.scale(1+land*.12-stretch*.4,1-land*.13+stretch);
  // Sky-colored scarf floats behind the body.
- c.save();c.scale(face,1);c.fillStyle=type?'#43c8d1':'#ef747d';
+ c.save();c.scale(face,1);c.fillStyle=skin==='classic'?(type?'#43c8d1':'#ef747d'):col;
  const flutter=Math.sin(clock*(6+run*7))*(4+run*7);
  c.beginPath();c.moveTo(-5,-36);c.quadraticCurveTo(-25,-38+flutter,-37-run*6,-28+flutter*.7);c.lineTo(-25,-24+flutter*.55);c.quadraticCurveTo(-11,-26,-4,-26);c.closePath();c.fill();c.restore();
  // Simple readable feet animated only while moving.
@@ -146,10 +155,10 @@ function player(c,p,clock){
  rr(c,-16,-10+Math.max(-5,stride),12,14,5);c.fill();
  rr(c,5,-10+Math.max(-5,-stride),12,14,5);c.fill();
  // Animated arms (behind the coat).
- const arm=anim.airborne?-4:Math.sin(anim.stride||0)*run*5;
+ const arm=p.emote>0?Math.sin(clock*8)*9-7:anim.airborne?-4:Math.sin(anim.stride||0)*run*5;
  rr(c,-24,-38+arm,10,25,5);c.fill();rr(c,14,-38-arm,10,25,5);c.fill();
  // Outer coat / body silhouette.
- c.strokeStyle=outline;c.lineWidth=3;c.fillStyle=linear(c,0,-52,0,0,type?'#46b6dc':'#f3a26c',type?'#227d9e':'#b76178');
+ c.strokeStyle=outline;c.lineWidth=3;c.fillStyle=linear(c,0,-52,0,0,type?t[2]:t[3],type?t[4]:t[5]);
  rr(c,-19,-48,38,45,15);c.fill();c.stroke();
  c.fillStyle=type?'#8feef4':'#ffe0a7';rr(c,-14,-45,28,28,12);c.fill();
  // Hood/hair crown with small distinctive horn/antenna.
