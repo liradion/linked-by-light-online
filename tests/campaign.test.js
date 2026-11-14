@@ -74,3 +74,17 @@ test('simulation still pauses when remote player is disconnected',()=>{
   for(let i=0;i<40;i++)tick(g,[true,false]);
   assert.equal(g.players[0].x,x);
 });
+
+test('paired crystals remain separate challenges',()=>{
+  const pairs=stages.filter(s=>s.crystals.length===2);
+  assert.ok(pairs.length>=15,'expect recurring double-crystal puzzles');
+  for(const s of pairs)
+    assert.ok(Math.abs(s.crystals[1].x-s.crystals[0].x)>350,s.title+' has overlapping pulse reach');
+});
+test('a resumed mid-campaign room advances to the following level',()=>{
+  const g=createGame();initStage(g,57);g.phase='playing';g.level.gateOpen=true;
+  for(const p of g.players){p.x=g.level.portal-15;p.y=GROUND-43;p.vx=0;p.vy=0;p.grounded=true;}
+  for(let t=0;t<120;t++)tick(g,online);
+  assert.equal(g.stage,58);
+  assert.equal(g.phase,'playing');
+});
