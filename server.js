@@ -9,6 +9,34 @@ const {stages}=require('./shared/stages');
 const PORT=Number(process.env.PORT)||3000;
 const PUBLIC=path.join(__dirname,'public');
 const ROOMS=new Map();
+// Optional persistent session storage: point SAVE_DIR to a mounted durable disk.
+// Free Render containers have ephemeral filesystems, so this does not imply cloud backup there.
+const SAVE_DIR=process.env.SAVE_DIR||'';
+const SAVE_FILE=SAVE_DIR?path.join(SAVE_DIR,'linked-light-rooms-v11.json'):'';
+function persistRooms(){if(!SAVE_FILE)return;
+ try{fs.mkdirSync(SAVE_DIR,{recursive:true});const rooms=Array.from(ROOMS.values()).map(r=>({
+  code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
+  home:r.home||[],unlockedMax:r.unlockedMax,lastActivity:r.lastActivity,story:r.story||null}));
+  const temp=SAVE_FILE+'.'+process.pid+'.tmp';fs.writeFileSync(temp,JSON.stringify({version:11,rooms}),'utf8');fs.renameSync(temp,SAVE_FILE);
+ }catch(e){console.warn('Session persistence failed:',e.message);}}
+function restoreRooms(){if(!SAVE_FILE||!fs.existsSync(SAVE_FILE))return;
+ try{const raw=fs.readFileSync(SAVE_FILE,'utf8');if(raw.length>8_000_000)throw Error('oversized session file');
+  const parsed=JSON.parse(raw);if(parsed?.version!==11||!Array.isArray(parsed.rooms))return;
+  for(const saved of parsed.rooms.slice(0,200)){
+   if(!/^[A-HJ-NP-Z2-9]{6}$/.test(saved.code||''))continue;
+   if(!saved.game||!Number.isSafeInteger(saved.game.stage)||saved.game.stage<0||saved.game.stage>99)continue;
+   const seats=(saved.seats||[]).slice(0,2).map(seat=>seat&&/^[0-9a-f]{48}$/.test(seat.token||'')?{token:seat.token,peer:null,online:false,look:cleanLook(seat.look)}:null);
+   if(seats.length!==2||!seats[0])continue;
+   const game=createGame();initStage(game,saved.game.stage);
+   // Restore only expected game state fields; avoid stale socket and input queues.
+   for(const key of ['players','shards','tick','padTimer','completion','transition','stats','lastResult','level'])
+    if(saved.game[key]!==undefined)game[key]=saved.game[key];
+   game.phase=saved.game.phase==='win'?'win':saved.game.phase==='playing'?'playing':'waiting';
+   game.input.forEach(i=>{i.left=false;i.right=false;});
+   ROOMS.set(saved.code,{code:saved.code,seats,game,home:cleanHome(saved.home),unlockedMax:Math.max(0,Math.min(98,Number(saved.unlockedMax)||0)),lastActivity:Date.now(),story:saved.story||null});
+  }
+ }catch(e){console.warn('Unable to restore rooms:',e.message);}}
+
 const ROOM_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MAX_ROOMS=200, MAX_PAYLOAD=4096;
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.ico':'image/x-icon','.json':'application/json; charset=utf-8'};
@@ -60,7 +88,8 @@ const allowedPets=['none','fox','owl','moth','cat','orb'];
 const newSeat=()=>({token:crypto.randomBytes(24).toString('hex'),peer:null,online:false,look:{skin:'classic',pet:'none'}});
 function cleanLook(x){return {skin:allowedSkins.includes(x?.skin)?x.skin:'classic',pet:allowedPets.includes(x?.pet)?x.pet:'none'};}
 function cleanHome(x){if(!Array.isArray(x))return [];return x.slice(0,12).map(v=>({item:allowedFurniture.includes(v?.item)?v.item:'lamp',slot:Number.isInteger(v?.slot)?Math.max(0,Math.min(11,v.slot)):0}));}
-function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[]};}
+function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[],story:r.story||null};}
+restoreRooms();
 function countOnline(r){return r.seats.map(s=>!!s?.online);}
 function sendSeatRoom(r){const obj={t:'members',room:r.code,connected:countOnline(r),phase:r.game.phase};
   for(const s of r.seats)if(s?.online)s.peer.send(obj);
@@ -131,6 +160,13 @@ server.on('upgrade',(req,socket,head)=>{
     if(msg.t==='customize'){
       room.seats[role].look=cleanLook(msg);broadcast(room,{t:'looks',looks:room.seats.map(s=>s?.look||null)});return;
     }
+    if(msg.t==='storyChoice'){
+      const act=msg.act,choice=msg.choice;
+      if(!Number.isSafeInteger(act)||act<0||act>10||![0,1].includes(choice))return;
+      if(room.game.stage!==99&&Math.floor(room.game.stage/9)!==act)return;
+      room.story={act,choice,role,stamp:Date.now()};
+      broadcast(room,{t:'storyChoice',...room.story});return;
+    }
     if(msg.t==='home'&&Array.isArray(msg.items)){
       room.home=cleanHome(msg.items);broadcast(room,{t:'home',items:room.home});return;
     }
@@ -168,6 +204,8 @@ const loop=setInterval(()=>{
   if(lastBroadcast%3===0)for(const r of ROOMS.values())if(r.seats.some(s=>s?.online))broadcast(r,roomSnapshot(r));
 },1000/60);
 loop.unref();
+setInterval(persistRooms,12_000).unref();
+process.on('SIGTERM',()=>{persistRooms();server.close();});
 setInterval(()=>{for(const r of ROOMS.values())for(const seat of r.seats)if(seat?.online)seat.peer.ping();},10_000).unref();
 setInterval(()=>{const now=Date.now();for(const [key,r] of ROOMS){if(!r.seats.some(s=>s?.online)&&now-r.lastActivity>30*60_000)ROOMS.delete(key);}},60_000).unref();
 server.listen(PORT,'0.0.0.0',()=>console.log(`Linked by Light online: http://localhost:${PORT}`));
