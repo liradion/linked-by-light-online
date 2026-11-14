@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const crypto=require('node:crypto');
 const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./game-core');
+const {stages}=require('./shared/stages');
 const PORT=Number(process.env.PORT)||3000;
 const PUBLIC=path.join(__dirname,'public');
 const ROOMS=new Map();
@@ -103,7 +104,11 @@ server.on('upgrade',(req,socket,head)=>{
     if(msg.t==='create'){
       if(room)return error('Вы уже в комнате.');
       if(ROOMS.size>=MAX_ROOMS)return error('Сервер заполнен. Попробуйте позже.');
-      const code=newCode(),r={code,seats:[newSeat(),null],game:createGame(),lastActivity:Date.now()};
+      const code=newCode(),game=createGame();
+      // Progress is supplied by the host's browser; rooms still run one authoritative server state.
+      const saved=Number.isSafeInteger(msg.stage)?Math.max(0,Math.min(stages.length-1,msg.stage)):0;
+      if(saved>0)initStage(game,saved);
+      const r={code,seats:[newSeat(),null],game,lastActivity:Date.now()};
       ROOMS.set(code,r);attach(r,0);return;
     }
     if(msg.t==='join'){
@@ -121,7 +126,7 @@ server.on('upgrade',(req,socket,head)=>{
       updateInput(room.game,role,msg);return;
     }
     if(msg.t==='start'&&role===0&&room.seats.every(s=>s?.online)&&room.game.phase==='waiting'){
-      room.game.phase='playing';initStage(room.game,0);sendSeatRoom(room);broadcast(room,snapshot(room.game,countOnline(room)));return;
+      room.game.phase='playing';initStage(room.game,room.game.stage);sendSeatRoom(room);broadcast(room,snapshot(room.game,countOnline(room)));return;
     }
     if(msg.t==='restart'&&role===0&&room.seats.every(s=>s?.online)){
       initStage(room.game,0);room.game.phase='playing';sendSeatRoom(room);broadcast(room,snapshot(room.game,countOnline(room)));return;
