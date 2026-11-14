@@ -7,6 +7,7 @@ const crypto=require('node:crypto');
 const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./game-core');
 const {stages}=require('./shared/stages');
 const cloud=require('./cloud-store');
+const pwaIcons=require('./pwa-icons');
 const {createAuth}=require('./auth-server');
 const auth=createAuth({cloud});
 const PORT=Number(process.env.PORT)||3000;
@@ -51,7 +52,7 @@ async function restoreRoomsCloud(){if(!cloud.active)return;
 
 const ROOM_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MAX_ROOMS=200, MAX_PAYLOAD=4096;
-const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.ico':'image/x-icon','.json':'application/json; charset=utf-8'};
+const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.ico':'image/x-icon','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8'};
 
 function sendFrame(socket,opcode,content=Buffer.alloc(0)){
   if(socket.destroyed||!socket.writable)return;
@@ -116,13 +117,21 @@ const server=http.createServer((req,res)=>{
     res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
     res.end(JSON.stringify({ok:true}));return;
   }
+  // Real PNG app icons generated once by the server (no binary assets or CDN).
+  const iconSize=pathname==='/icons/icon-192.png'?192:pathname==='/icons/icon-512.png'?512:pathname==='/apple-touch-icon.png'?180:0;
+  if(iconSize){
+    try{res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'});
+      res.end(pwaIcons.render(iconSize));}
+    catch(_){if(!res.headersSent){res.writeHead(500);res.end('icon unavailable');}}
+    return;
+  }
   let file;
   if(pathname==='/shared/stages.js')file=path.join(__dirname,'shared','stages.js');
   else if(pathname==='/'||pathname==='/index.html')file=path.join(PUBLIC,'index.html');
   else if(/^\/[a-zA-Z0-9._-]+$/.test(pathname))file=path.join(PUBLIC,pathname.slice(1));
   else{res.writeHead(404);res.end('Not found');return;}
   fs.readFile(file,(err,data)=>{if(err){res.writeHead(404);res.end('Not found');return;}
-    res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=()','Content-Security-Policy':"default-src 'self'; connect-src 'self' ws: wss:; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"});res.end(data);
+    res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':pathname==='/sw.js'?'no-store':'no-cache',...(pathname==='/sw.js'?{'Service-Worker-Allowed':'/'}:{}),'X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=()','Content-Security-Policy':"default-src 'self'; connect-src 'self' ws: wss:; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"});res.end(data);
   });
 });
 server.on('upgrade',(req,socket,head)=>{
