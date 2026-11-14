@@ -1,6 +1,9 @@
 /* Account sign-in is optional: the original anonymous 2-player game still works. */
 (function(root){'use strict';
 let auth={enabled:false,authenticated:false,user:null},busy=false,notice=()=>{},timer;
+const LAST_ACCOUNT_KEY='linked-light-last-google-account-v13';
+function otherAccount(){try{const old=localStorage.getItem(LAST_ACCOUNT_KEY);return !!(old&&auth.user?.id&&old!==auth.user.id);}catch(_){return false;}}
+function markAccount(){try{if(auth.user?.id)localStorage.setItem(LAST_ACCOUNT_KEY,auth.user.id);}catch(_){}}
 const $=id=>document.getElementById(id);
 async function call(path,body){const init={cache:'no-store',credentials:'same-origin'};
  if(body!==undefined){init.method='POST';init.headers={'Content-Type':'application/json'};init.body=JSON.stringify(body);}
@@ -19,6 +22,7 @@ function update(){const sign=$('googleSignIn'),logout=$('googleSignOut'),sync=$(
 }
 async function check(){try{auth=await call('me');}catch(_){auth={enabled:false,authenticated:false,user:null};}update();return auth;}
 async function syncAccount(){if(busy||!auth.authenticated||!root.GameAdventure||!root.GameCloud)return false;
+ if(otherAccount()){notice('На устройстве ранее использовался другой Google-аккаунт. Для защиты прогресса откройте отдельный профиль браузера.');return false;}
  busy=true;notice('Синхронизация с Google…');
  try{
   let remote=await call('profile');let local=root.GameAdventure.profilePayload();
@@ -26,9 +30,9 @@ async function syncAccount(){if(busy||!auth.authenticated||!root.GameAdventure||
    const merged=remote.payload?root.GameCloud.merge(local,remote.payload):local;
    if(remote.payload)root.GameAdventure.importProfile(merged);
    if(remote.payload&&JSON.stringify(remote.payload)===JSON.stringify(merged)){
-    notice('Прогресс Google актуален');return true;
+    markAccount();notice('Прогресс Google актуален');return true;
    }
-   try{await call('profile',{revision:remote.revision,payload:merged});notice('Прогресс привязан к Google-аккаунту');return true;}
+   try{await call('profile',{revision:remote.revision,payload:merged});markAccount();notice('Прогресс привязан к Google-аккаунту');return true;}
    catch(e){if(e.status!==409)throw e;remote=await call('profile');local=root.GameAdventure.profilePayload();}
   }
   throw Error('Обнаружен конфликт сохранения, попробуйте ещё раз');
