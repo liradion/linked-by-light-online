@@ -59,7 +59,7 @@
     const crystalPositions=[];
     if(crystalCount){
       // Bridge-crystals must lie before the first gap so a player can reach them.
-      if(trigger==='crystal'){crystalPositions.push(first-163);if(crystalCount>1)crystalPositions.push(first-68);}
+      if(trigger==='crystal'){if(crystalCount>1)crystalPositions.push(310+(drift%31));crystalPositions.push(first-112);}
       else if(challenge===5)crystalPositions.push(first+gap+135);
       else if(challenge===7)crystalPositions.push(first+gap+130);
       else crystalPositions.push(first-130);
