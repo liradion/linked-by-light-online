@@ -8,12 +8,12 @@ const ARCADE=['chase','flight','rhythm','sail'];
 function init(g){
  const idx=g.stage,act=Math.min(10,Math.floor(idx/9)),variant=idx%9,l=g.level;
  const isBoss=variant===8||idx===99;
- const boss=isBoss?{name:BOSS_NAMES[idx===99?11:act],x:l.gates[0].x-156,y:GROUND-80,hp:idx===99?8:3+Math.floor(act/3),max:idx===99?8:3+Math.floor(act/3),next:0,active:false,attack:0,warning:0,flash:0,style:act,pattern:act%3}:null;
+ const boss=isBoss?{name:BOSS_NAMES[idx===99?11:act],x:l.gates[0].x-156,y:GROUND-80,hp:idx===99?8:3+Math.floor(act/3),max:idx===99?8:3+Math.floor(act/3),next:0,active:false,attack:0,warning:0,flash:0,phase:1,style:act,pattern:act%3}:null;
  let kind=null;
  if(idx!==99&&[2,4,5,6].includes(variant)){
   kind=variant===2?'chase':variant===4?'flight':variant===5?'sail':'rhythm';
  }
- g.adventure={boss,bond:{power:.35,active:0,shield:0,hearts:0},emotes:[0,0],emoteKinds:[0,0],pet:{x:Math.min(l.width-360,620+act*11),collected:false,act,visible:variant===4},secret:{x:Math.min(l.width-385,1320+act*9),y:GROUND-76,collected:false,act,visible:variant===7},arcade:kind?{kind,done:false,started:false,timer:kind==='chase'?29:0,progress:0,boat:Math.max(150,l.gates[0].x-690),hunter:Math.max(90,l.gates[0].x-1300),ringX:l.gates[0].x-335,flightHits:[false,false],rhythm:[false,false],rhythmTime:0}:null};
+ g.adventure={boss,bond:{power:.35,active:0,shield:0,hearts:0},emotes:[0,0],emoteKinds:[0,0],pet:{x:Math.min(l.width-360,620+act*11),collected:false,act,visible:variant===4},secret:{x:Math.min(l.width-385,1320+act*9),y:GROUND-76,collected:false,act,visible:variant===7},arcade:kind?{kind,done:false,started:false,timer:kind==='chase'?29:0,progress:0,boat:Math.max(150,l.gates[0].x-690),hunter:Math.max(90,l.gates[0].x-1300),ringX:l.gates[0].x-335,flightHits:[false,false],rhythm:[false,false],rhythmTime:0,boost:0}:null};
 }
 function baseComplete(g){
  const l=g.level,goal=l.puzzle||{pads:true};
@@ -22,7 +22,8 @@ function baseComplete(g){
 function onAbility(g,p){
  const a=g.adventure;if(!a)return;
  const boss=a.boss;
- if(boss&&boss.active&&boss.hp>0&&p.type===boss.next&&dist(p,boss.x,boss.y)<190){boss.hp--;boss.next=1-boss.next;boss.flash=.55;boss.attack=0;if(boss.hp===0)boss.active=false;}
+ if(boss&&boss.active&&boss.hp>0&&p.type===boss.next&&dist(p,boss.x,boss.y)<190){boss.hp--;boss.next=1-boss.next;boss.flash=.55;boss.attack=0;boss.phase=boss.hp<=boss.max/3?3:boss.hp<=boss.max*2/3?2:1;boss.pattern=(boss.style+boss.phase-1)%3;if(boss.hp===0)boss.active=false;}
+ if(a.arcade?.kind==='sail'&&a.arcade.started&&!a.arcade.done&&p.type===1&&dist(p,a.arcade.boat,GROUND-43)<155){a.arcade.boost=2.2;}
  if(a.arcade?.kind==='rhythm'&&a.arcade.started&&!a.arcade.done){
   const m=a.arcade,mark=m.ringX+(p.type?125:0);
   if(dist(p,mark,GROUND-35)<130){m.rhythm[p.type]=true;m.rhythmTime=3.4;}
@@ -62,7 +63,7 @@ function update(g,dt){
  a.bond.power=clamp(a.bond.power+(Math.abs(p0.x-p1.x)<250?.064:.015)*dt,0,1);
  for(let i=0;i<2;i++)a.emotes[i]=Math.max(0,a.emotes[i]-dt);
  if(boss&&boss.hp>0){boss.active=base;boss.flash=Math.max(0,boss.flash-dt);
-  if(boss.active){boss.attack+=dt;if(boss.attack>4.8){boss.warning=1.1;boss.attack=0;}
+  if(boss.active){boss.attack+=dt;if(boss.attack>Math.max(2.1,4.8-boss.phase*.64)){boss.warning=Math.max(.68,1.28-boss.phase*.17);boss.attack=0;}
    if(boss.warning>0){boss.warning-=dt;if(boss.warning<=0&&a.bond.shield<=0){
     for(const p of g.players){const nearBoss=dist(p,boss.x,GROUND-43)<165;const beam=Math.abs(p.x-boss.x)<80;const targetZone=Math.abs(p.x-(boss.x-110))<80;const danger=boss.pattern===0?nearBoss:boss.pattern===1?beam:targetZone;if(danger){p.x=l.spawn[p.type];p.y=GROUND-43;p.vx=0;p.vy=0;}}
    }}
@@ -79,8 +80,10 @@ function update(g,dt){
    case 'flight':if(mode.flightHits.every(Boolean))mode.done=true;break;
    case 'rhythm':if(mode.rhythmTime>0){mode.rhythmTime-=dt;if(mode.rhythm.every(Boolean))mode.done=true;if(mode.rhythmTime<=0)mode.rhythm=[false,false];}break;
    case 'sail':{
+    mode.boost=Math.max(0,mode.boost-dt);
     const onboard=g.players.every(p=>Math.abs(p.x-mode.boat)<135&&Math.abs(p.y+p.h-GROUND)<60);
-    if(onboard&&g.input.every(i=>i.right)){mode.progress+=dt*145;mode.boat+=dt*145;for(const p of g.players){p.x=mode.boat+(p.type?31:-55);p.vx=145;}}
+    // Искра управляет курсом, Эхо заряжает парус импульсом.
+    if(onboard&&g.input[0].right&&mode.boost>0){mode.progress+=dt*145;mode.boat+=dt*145;for(const p of g.players){p.x=mode.boat+(p.type?31:-55);p.vx=145;}}
     if(mode.progress>250)mode.done=true;
     break;
    }
