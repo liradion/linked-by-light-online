@@ -19,7 +19,7 @@ const BOSS_NAMES=['Сонный Великан','Лесной Хранитель
 const SKINS=[['classic','Классика','✦'],['sunset','Закат','☀'],['aurora','Сияние','◈'],['royal','Корона','♛'],['forest','Лес','❀'],['galaxy','Галактика','✧']];
 const PETS=[['none','Без питомца','·'],['fox','Лисёнок','🦊'],['owl','Совёнок','🦉'],['moth','Мотылёк','🦋'],['cat','Котик','🐈'],['orb','Светлячок','✨']];
 const FURN=[['lamp','Лампа','💡'],['plant','Растение','🌿'],['sofa','Диван','🛋️'],['shelf','Книги','📚'],['star','Звезда','⭐'],['rug','Ковёр','🧶'],['aquarium','Аквариум','🐠'],['telescope','Телескоп','🔭']];
-const initial={secrets:[],pets:[],skin:'classic',pet:'none',home:[{item:'lamp',slot:0},{item:'plant',slot:4}],achievements:[],shards:0,choices:{}};
+const initial={secrets:[],pets:[],skin:'classic',pet:'none',home:[{item:'lamp',slot:0},{item:'plant',slot:4}],achievements:[],shards:0,choices:{},homeUpdatedAt:0,lookUpdatedAt:0};
 function load(){try{let x=JSON.parse(localStorage.getItem(DATA_KEY));if(x&&typeof x==='object')return {...initial,...x,secrets:Array.isArray(x.secrets)?x.secrets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],pets:Array.isArray(x.pets)?x.pets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],home:Array.isArray(x.home)?x.home.slice(0,12):initial.home,choices:x.choices&&typeof x.choices==='object'&&!Array.isArray(x.choices)?x.choices:{}};}catch(_){}return {...initial};}
 let data=load(),callbacks={},lastBossPhase=0,lastStage=-1,lastPet=false,lastSecret=false,lastHearts=0,sharedHome=null,serverLooks=[null,null],lastSaveTime=0;
 const $=id=>document.getElementById(id),save=()=>{try{localStorage.setItem(DATA_KEY,JSON.stringify(data));}catch(_){}};
@@ -39,7 +39,7 @@ function button(label,cb,css=''){const b=el('button','adv-button '+css,label);b.
 function progressChanged(){save();if($('advDialog')?.open)renderDialog();}
 function getProfile(){return {skin:data.skin,pet:data.pet};}
 function getHome(){return data.home;}
-function receiveHome(items){if(!Array.isArray(items))return;sharedHome=items.slice(0,12);data.home=sharedHome;progressChanged();}
+function receiveHome(items){if(!Array.isArray(items))return;sharedHome=items.slice(0,12);data.home=sharedHome;data.homeUpdatedAt=Date.now();progressChanged();}
 function receiveLooks(looks){if(Array.isArray(looks))serverLooks=looks;}
 function outfitFor(i){return serverLooks[i]||getProfile();}
 function onJoined(room,role){if(role>=0){callbacks.send?.({t:'customize',...getProfile()});}
@@ -62,14 +62,14 @@ function onSnapshot(s){
  lastBossPhase=ex.boss?.phase||0;
  if(s.stage!==lastStage){lastStage=s.stage;if(s.stage%9===0&&s.stage<99)cinematic(act);lastPet=!!ex.pet?.collected;lastSecret=!!ex.secret?.collected;const scene=STORY[Math.min(10,act)];announce(s.stage===99?'Секретная глава: свет сильнее тьмы.':(s.stage%9===0?scene[0]+' '+scene[1]:'Испытание '+(s.stage%9+1)+' · '+scene[1]));}
 }
-function storeHome(items){data.home=items;sharedHome=items;progressChanged();callbacks.send?.({t:'home',items});}
+function storeHome(items){data.home=items;data.homeUpdatedAt=Date.now();sharedHome=items;progressChanged();callbacks.send?.({t:'home',items});}
 function setSkin(skin){if(!SKINS.some(s=>s[0]===skin))return;
  if(skin!=='classic'&&countUnlocked()<SKINS.findIndex(s=>s[0]===skin)*9-1)return;
- data.skin=skin;progressChanged();callbacks.send?.({t:'customize',...getProfile()});}
+ data.skin=skin;data.lookUpdatedAt=Date.now();progressChanged();callbacks.send?.({t:'customize',...getProfile()});}
 function setPet(pet){if(!PETS.some(s=>s[0]===pet))return;
  const index=PETS.findIndex(s=>s[0]===pet);
  if(index>0&&data.pets.length<index)return;
- data.pet=pet;progressChanged();callbacks.send?.({t:'customize',...getProfile()});}
+ data.pet=pet;data.lookUpdatedAt=Date.now();progressChanged();callbacks.send?.({t:'customize',...getProfile()});}
 function renderMap(rootEl){
  rootEl.append(el('p','adv-description','Открытые уровни можно переигрывать вдвоём. Создатель выбирает уровень перед созданием новой комнаты.'));
  const acts=el('div','adv-map');
@@ -112,7 +112,8 @@ function renderDialogue(rootEl){const act=Math.min(10,Math.floor((callbacks.curr
   data.choices[act]=index;progressChanged();callbacks.send?.({t:'storyChoice',act,choice:index});announce('«'+answer+'»');
  },data.choices[act]===index?'chosen':'');choices.append(b);});rootEl.append(choices);
 }
-function exportProfile(){const payload={version:11,adventure:data,checkpoint:callbacks.bestStage?.()||0,records:readRecords()};
+function profilePayload(){return {version:11,adventure:JSON.parse(JSON.stringify(data)),checkpoint:callbacks.bestStage?.()||0,records:readRecords()};}
+function exportProfile(){const payload=profilePayload();
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob);
  const a=document.createElement('a');a.href=url;a.download='svyazannye-svetom-save.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
@@ -120,7 +121,7 @@ function importProfile(obj){if(!obj||obj.version!==11||!obj.adventure||typeof ob
  const a=obj.adventure;const skin=SKINS.some(v=>v[0]===a.skin)?a.skin:'classic',pet=PETS.some(v=>v[0]===a.pet)?a.pet:'none';
  data={...initial,secrets:Array.from(new Set((Array.isArray(a.secrets)?a.secrets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),pets:Array.from(new Set((Array.isArray(a.pets)?a.pets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),
  skin,pet,home:Array.isArray(a.home)?a.home.filter(e=>FURN.some(x=>x[0]===e.item)&&Number.isInteger(e.slot)&&e.slot>=0&&e.slot<12).slice(0,12):initial.home,
- achievements:Array.isArray(a.achievements)?a.achievements.filter(x=>typeof x==='string'&&x.length<=40).slice(0,50):[],shards:Math.max(0,Math.min(99999,Number(a.shards)||0)),choices:{}};
+ achievements:Array.isArray(a.achievements)?a.achievements.filter(x=>typeof x==='string'&&x.length<=40).slice(0,50):[],shards:Math.max(0,Math.min(99999,Number(a.shards)||0)),choices:{},homeUpdatedAt:Number.isSafeInteger(a.homeUpdatedAt)&&a.homeUpdatedAt>=0?a.homeUpdatedAt:0,lookUpdatedAt:Number.isSafeInteger(a.lookUpdatedAt)&&a.lookUpdatedAt>=0?a.lookUpdatedAt:0};
  if(a.choices&&typeof a.choices==='object')for(const [k,v] of Object.entries(a.choices))if(/^\d{1,2}$/.test(k)&&Number(k)<=10&&[0,1].includes(v))data.choices[k]=v;
  const cp=Number(obj.checkpoint);if(Number.isSafeInteger(cp)&&cp>=0&&cp<=98){try{localStorage.setItem('linked-light-checkpoint-v99',String(cp));}catch(_){}}
  if(obj.records&&typeof obj.records==='object'){
@@ -181,5 +182,5 @@ function draw(ctx,level,players,extra,clock){if(!extra)return;
  if(players)players.forEach((p,i)=>{const look=outfitFor(i);if(look.pet==='none')return;const sym=PETS.find(z=>z[0]===look.pet)?.[2]||'✨';ctx.save();ctx.font='22px system-ui';ctx.textAlign='center';ctx.globalAlpha=.8;ctx.fillText(sym,p.x+(i?-21:52),p.y-5+Math.sin(clock*5+i)*6);ctx.restore();});
  if(extra.emotes?.length)extra.emotes.forEach((duration,i)=>{if(duration>0&&players[i]){const p=players[i];ctx.save();ctx.font='bold 26px system-ui';ctx.textAlign='center';ctx.fillText((['♡','✋','♫'])[extra.emoteKinds?.[i]||0],p.x+15,p.y-89-Math.sin(clock*7)*8);ctx.restore();}});
 }
-root.GameAdventure={init,open,onJoined,onSnapshot,storyChoice,receiveHome,receiveLooks,getProfile,getHome,outfitFor,draw,data:()=>data,safeStage,BOSS_NAMES};
+root.GameAdventure={init,open,onJoined,onSnapshot,storyChoice,receiveHome,receiveLooks,getProfile,getHome,outfitFor,draw,data:()=>data,safeStage,BOSS_NAMES,profilePayload,importProfile};
 })(typeof window!=='undefined'?window:globalThis);
