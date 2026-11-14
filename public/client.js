@@ -170,6 +170,7 @@ function updateHUD(){
   const act=Math.floor(levelIndex/9),segment=Math.floor((levelIndex%9)/3);
   $('levelLabel').textContent=`УРОВЕНЬ ${String(levelIndex+1).padStart(2,'0')} / ${stageDefs.length} · АКТ ${act+1}/11`;
   $('levelName').textContent=level.title;
+  const worldTag=$('worldTag');if(worldTag)worldTag.textContent=level.signature?.subtitle||'';
   const progress=$('actProgress');if(progress)progress.textContent=`АКТ ${String(act+1).padStart(2,'0')}`;
   for(let i=0;i<3;i++)$('step'+(i+1)).className='step'+(i===segment?' active':i<segment?' complete':'');
   $('amberStatus').textContent=P[0]?.cool>0?'· '+P[0].cool.toFixed(1)+' c':'· Рывок готов';
@@ -184,7 +185,14 @@ function updateHUD(){
       :'Эхо: активируйте кристалл импульсом.';
     else if(level.puzzle?.pads&&!level.padLatched)
       goal=`Встаньте одновременно на плиты: ${level.pads.filter(p=>p.pressed).length}/${level.pads.length}`;
-    else goal=level.hint||'Помогайте друг другу, чтобы открыть выход.';
+    else if(level.signature&&!level.signature.done){
+      const sp=level.signature;
+      const total=sp.pairs.length||sp.nodes.length||1;
+      const active=sp.pairs.length?sp.pairs.filter(p=>p.active).length:sp.nodes.filter(n=>n.active).length;
+      goal=sp.kind==='clock'?(sp.window>0?'Пока идут часы, ОБА перейдите временную дверь. Осталось '+Math.ceil(sp.window)+' с.':'Эхо: запусти часы импульсом. Дверь откроется на время.')
+       :sp.kind==='constellation'?'Порядок звёзд: '+sp.progress+'/'+total+'. Активируйте их по номерам.'
+       :sp.hint+' ('+active+'/'+total+')';
+    }else goal=level.hint||'Помогайте друг другу, чтобы открыть выход.';
   }
   $('objective').textContent=goal;
 }
@@ -192,15 +200,36 @@ function updateHUD(){
 function consumeSnapshot(s){
   if(latest&&s.tick<latest.tick)return;
   const previous=latest;
-  if(previous&&s.stage!==previous.stage){snapshots=[];camera=0;particles=[];rings=[];GameJuice.clear();announce('✦ Новая глава: '+stageDefs[s.stage].title,2.3);tone(600,.16,'sine',.055);}
+  if(previous&&s.stage!==previous.stage){snapshots=[];camera=0;particles=[];rings=[];GameJuice.clear();
+    const next=stageDefs[s.stage];announce('✦ Уровень '+(s.stage+1)+' — '+next.signature.subtitle,2.8);tone(600,.16,'sine',.055);}
+
   levelIndex=s.stage;phase=s.phase;connected=s.connected||connected;latest={...s,recvTime:performance.now()};
   if(phase==='playing'||phase==='win')saveCheckpoint(levelIndex);
   level=structuredClone(stageDefs[levelIndex]);level.gateOpen=s.world.gateOpen;level.bridgeLatched=s.world.bridgeLatched;level.padLatched=!!s.world.padLatched;
   level.pads.forEach((p,i)=>p.pressed=!!s.world.pads[i]);
   level.walls.forEach((w,i)=>w.broken=!!s.world.walls[i]);
   level.crystals.forEach((c,i)=>c.on=!!s.world.crystals[i]);
+  if(level.signature&&s.world.signature){
+    const data=s.world.signature,z=level.signature;
+    z.nodes.forEach((n,i)=>n.active=!!data.nodes[i]);
+    z.pairs.forEach((p,i)=>p.active=!!data.pairs[i]);
+    z.progress=data.progress||0;z.done=!!data.done;z.window=data.window||0;
+    z.phase=data.phase||0;z.elapsed=data.elapsed||0;z.flash=data.flash||0;
+  }
   collectibles=level.shards.map((x,i)=>({x,y:i%2?390:432,taken:!!s.world.shards[i]}));
   GameJuice.snapshot(previous,s,level);
+  if(previous&&s.stage===previous.stage&&s.world.signature){
+    const before=previous.world?.signature,now=s.world.signature;
+    if(before){
+      now.nodes.forEach((active,i)=>{
+        if(active&&!before.nodes[i]){
+          const n=level.signature.nodes[i];burst(n.x,n.y-12,n.role===0?colors.amber:colors.blue,11,75);
+          tone(n.role===0?560:740,.12,'sine',.027);
+        }
+      });
+      if(!before.done&&now.done){announce('✦ Особенность мира пройдена!',1.65);tone(980,.2,'sine',.04);}
+    }
+  }
   if(previous&&s.stage===previous.stage){
     if(!previous.world.gateOpen&&s.world.gateOpen){announce('✦ Ворота открыты! Оба к порталу.',2);tone(550,.2,'sine',.05);screenShake=7;}
     for(let i=0;i<level.walls.length;i++)if(!previous.world.walls[i]&&s.world.walls[i]){const w=level.walls[i];burst(w.x,w.y+w.h/2,colors.amber,30,200);screenShake=11;tone(180,.2,'sawtooth',.05);}
@@ -256,8 +285,11 @@ function portalReady(){return level.gateOpen;}
 function roundRect(x,y,w,h,r,fill){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill)ctx.fill();}
 function gradient(x0,y0,x1,y1,stops){const g=ctx.createLinearGradient(x0,y0,x1,y1);for(const [s,c] of stops)g.addColorStop(s,c);return g;}
 function glowCircle(x,y,r,color,alpha=1){ctx.save();ctx.globalAlpha=alpha;const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,color);g.addColorStop(1,'#0000');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore();}
-function background(){GameVisuals.background(ctx,{W,H,camera,clock,levelIndex});}
-function drawPlatform(p){GameVisuals.platform(ctx,p,levelIndex,clock);}
+function background(){
+ GameVisuals.background(ctx,{W,H,camera,clock,levelIndex});
+ GameBiomes.background(ctx,level,levelIndex,clock,camera);
+}
+function drawPlatform(p){GameVisuals.platform(ctx,p,levelIndex,clock);GameBiomes.platform(ctx,p,levelIndex,clock);}
 function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-.5)*screenShake),0);
  // thin skyline hanging structures
  for(let x=170;x<level.width;x+=365){ctx.strokeStyle='#cbccff17';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,-10);ctx.lineTo(x,70+Math.sin(x)*18);ctx.stroke();glowCircle(x,76,11,'#b9aaff66');}
@@ -282,6 +314,7 @@ function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-
  for(const crystal of level.crystals){const c=crystal.on?'#9ffff5':'#76baf7';glowCircle(crystal.x,crystal.y,crystal.on?105:65,c,crystal.on?.35:.18);ctx.save();ctx.translate(crystal.x,crystal.y+Math.sin(clock*2)*4);ctx.rotate(Math.sin(clock*.7)*.1);ctx.fillStyle=crystal.on?'#c9fff4':'#9fc9f9';ctx.shadowBlur=crystal.on?30:14;ctx.shadowColor=c;ctx.beginPath();ctx.moveTo(0,-23);ctx.lineTo(16,0);ctx.lineTo(0,25);ctx.lineTo(-16,0);ctx.closePath();ctx.fill();ctx.strokeStyle='#f3ffff';ctx.lineWidth=1.4;ctx.stroke();ctx.restore();}
  // shards
  for(const item of collectibles)if(!item.taken){const y=item.y+Math.sin(clock*2+item.x)*6;glowCircle(item.x,y,24,'#f8df9140');ctx.save();ctx.translate(item.x,y);ctx.rotate(clock*.8);ctx.fillStyle='#ffe7a7';ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,r=i%2?4:12;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}ctx.closePath();ctx.fill();ctx.restore();}
+ GameBiomes.signature(ctx,level,clock);
  drawPortal(level.portal,GROUND-65,portalReady());
  // environmental hints
  ctx.textAlign='center';ctx.font='700 14px system-ui';ctx.fillStyle='#f5e5ff88';for(const w of level.walls)if(!w.broken)ctx.fillText('ИСКРА · F',w.x+w.w/2,w.y-22);for(const crystal of level.crystals)if(!crystal.on)ctx.fillText('ЭХО · ENTER',crystal.x,crystal.y-56);
