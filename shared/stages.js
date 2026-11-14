@@ -104,7 +104,94 @@
   classic[2].puzzle={pads:true,crystals:true};classic[2].bridgeTrigger='crystal';
   classic.forEach((stage,i)=>{stage.act=1;stage.chapter=ACTS[0][0];stage.challenge=i;});
   const stages=classic.concat(Array.from({length:96},(_,offset)=>makeStage(offset+3)));
-  const result = { GROUND, stages, ACTS };
+
+  // World signature engine: one new cooperative interaction in every chapter.
+  // Signatures are data only, so the server and both browsers see identical geometry.
+  const SIGNATURES=['flowers','forest','tide','wind','constellation','prism','city','river','clock','relay','heart'];
+  const TWISTS=['Пробуждение','Второй голос','Скрытый путь','Новая высота','Точное время','Сила доверия','Два ключа','На расстоянии','Сердце мира'];
+  const SIGNATURE_HINTS={
+    flowers:'Прикоснитесь к световым цветам, чтобы разбудить тропу.',
+    forest:'Эхо будит спящие семена импульсом; вырастут световые ветви.',
+    tide:'Оба героя заряжают лунные фонари во время яркого прилива.',
+    wind:'Поднимайтесь по воздушным потокам и соберите небесные перья.',
+    constellation:'Эхо включает звёзды строго по номерам. Ошибка сбрасывает узор.',
+    prism:'Искра заряжает янтарные призмы рывком, Эхо — голубые импульсом.',
+    city:'Включайте городские генераторы способностями соответствующих героев.',
+    river:'Одновременно вставайте у двух речных якорей, чтобы закрепить поток.',
+    clock:'Эхо запускает часы; доберитесь вдвоём до контрольной линии до истечения времени.',
+    relay:'Один держит дальний сигнал, второй отвечает у маяка. Заряжайте цепь по этапам.',
+    heart:'Пробудите ядра способностями героев, а двойные — находясь рядом вдвоём.'
+  };
+  function safeSpot(stage,desired){
+    // Search real walkable ground: never put a switch inside a pit, spike or wall.
+    const desiredX=Math.max(190,Math.min(stage.width-295,desired));
+    let best=null,bestScore=Infinity;
+    for(const [a,b] of stage.floor){
+      for(let x=Math.max(190,a+49);x<=Math.min(stage.width-295,b-49);x+=8){
+        if(stage.walls.some(w=>x>w.x-48&&x<w.x+w.w+48))continue;
+        if(stage.hazards.some(h=>x>h.x-66&&x<h.x+h.w+66))continue;
+        const score=Math.abs(x-desiredX);
+        if(score<bestScore){best=x;bestScore=score;}
+      }
+    }
+    return Math.round(best??desiredX);
+  }
+  function enrichStage(stage,index){
+    const act=Math.floor(index/9),variant=index%9;
+    const kind=SIGNATURES[act],scale=variant===8?2:0;
+    const s={kind,variant,finale:variant===8,elapsed:0,progress:0,
+      subtitle:TWISTS[variant],hint:SIGNATURE_HINTS[kind],nodes:[],zones:[],pairs:[],platforms:[],
+      done:false,window:0,phase:0,hold:0};
+    const node=(x,mode,role=null,y=GROUND-35)=>({x:safeSpot(stage,x),y,mode,role,active:false,hold:0});
+    const n=Math.min(5,1+Math.floor(variant/3)+scale);
+    const positions=[292,750,1200,1502,1730].map((x,i)=>safeSpot(stage,x+(variant*11+i*17)%31));
+    switch(kind){
+      case 'flowers':
+        s.nodes=positions.slice(0,Math.min(4,n+1)).map((x,i)=>node(x,'flower',i%2));break;
+      case 'forest':
+        s.nodes=positions.slice(0,Math.min(4,n+1)).map(x=>node(x,'seed',1));
+        s.platforms=s.nodes.map((b,i)=>({x:b.x+43,y:GROUND-110-(i%2)*32,w:91,h:13,linked:i}));break;
+      case 'tide':
+        s.period=7.5-(variant%3)*.4;
+        s.nodes=positions.slice(0,Math.min(4,n+1)).map((x,i)=>node(x,'moon',i%2));
+        s.platforms=positions.slice(0,Math.min(3,n)).map((x,i)=>({x:x+70,y:GROUND-110,w:102,h:14,linked:-1,move:'tide',offset:i}));break;
+      case 'wind':
+        s.zones=positions.slice(0,Math.min(4,n+1)).map((x,i)=>({x:x-54,y:GROUND-218,w:130,h:230,dir:i%2?1:-1,force:1650+variant*55}));
+        s.nodes=s.zones.map((z,i)=>node(z.x+z.w/2,'feather',null,GROUND-88-(i%2)*6));break;
+      case 'constellation':
+        s.nodes=positions.slice(0,Math.min(4,n+2)).map(x=>node(x,'star',1));
+        {const seq=s.nodes.map((_,i)=>i),shift=variant%seq.length;const reversed=variant%2===1;
+          const shuffled=seq.slice(shift).concat(seq.slice(0,shift));if(reversed)shuffled.reverse();
+          shuffled.forEach((id,ordinal)=>s.nodes[id].order=ordinal+1);}break;
+      case 'prism':
+        s.nodes=positions.slice(0,Math.min(5,n+2)).map((x,i)=>node(x,'prism',i%2));break;
+      case 'city':
+        s.nodes=positions.slice(0,Math.min(5,n+2)).map((x,i)=>node(x,'power',i%2));
+        s.platforms=s.nodes.slice(0,3).map((o,i)=>({x:o.x+30,y:GROUND-96,w:92,h:14,linked:i,move:'lift',offset:i}));break;
+      case 'river':
+        s.zones=positions.slice(0,Math.min(3,n+1)).map((x,i)=>({x:x-55,y:GROUND-95,w:155,h:100,dir:i%2?-1:1,force:120+variant*14}));
+        s.pairs=Array.from({length:Math.min(3,1+Math.floor(variant/4)+scale)},(_,i)=>({
+          x0:safeSpot(stage,260+i*145),x1:safeSpot(stage,700+i*175),active:false,hold:0
+        }));break;
+      case 'clock':
+        s.period=22-(variant%4)*2;
+        s.nodes=[node(340+variant*13,'clock',1)];
+        s.barrier={x:safeSpot(stage,1170+variant*14),y:GROUND-193,w:28,h:193};break;
+      case 'relay':
+        s.pairs=Array.from({length:Math.min(4,1+Math.floor(variant/3)+scale)},(_,i)=>({
+          x0:safeSpot(stage,280+i*150),x1:safeSpot(stage,690+i*260),active:false,hold:0
+        }));break;
+      case 'heart':
+        s.nodes=positions.slice(0,Math.min(5,n+2)).map((x,i)=>node(x,i%3===2?'duo':i%3===0?'spark':'echo',i%3===0?0:i%3===1?1:null));break;
+    }
+    stage.signature=s;
+    stage.signatureHint=s.hint;
+    stage.levelSubtitle=TWISTS[variant];
+    stage.campaignFinale=variant===8;
+    return stage;
+  }
+  stages.forEach(enrichStage);
+  const result = { GROUND, stages, ACTS, SIGNATURES, SIGNATURE_HINTS };
   if (typeof module !== 'undefined' && module.exports) module.exports = result;
   if (root) root.GameStages = result;
 })(typeof window !== 'undefined' ? window : null);
