@@ -213,7 +213,7 @@
       {x:a0+52,y:GROUND-133,w:112,h:16,role:0},
       {x:a1+52,y:GROUND-163,w:112,h:16,role:1}
     ];
-    if(kind==='gravity')r.core={x:safeSpot(stage,1260),y:GROUND-232};
+    if(kind==='gravity')r.core={x:safeSpot(stage,1370),y:GROUND-232};
     stage.reality=r;
   }
   // An optional secret chapter, separate from the main 99-level campaign.
