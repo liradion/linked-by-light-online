@@ -95,7 +95,7 @@ function showUI(){
   $('slot0').textContent=connected[0]?'● В сети':'○ Нет подключения';
   $('slot1').textContent=connected[1]?'● В сети':'○ Ожидаем игрока';
   $('roomCode').textContent=room||'------';
-  refreshCampaignMenu();
+  if(!room)refreshCampaignMenu();
   $('startBtn').disabled=!(role===0&&connected[0]&&connected[1]&&ready&&phase==='waiting');
   $('restartBtn').disabled=role!==0||!connected.every(Boolean);
   $('resetBtn').disabled=role!==0;
