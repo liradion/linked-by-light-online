@@ -90,3 +90,15 @@ test('reality timers and movement stop while partner disconnected',()=>{
  assert.equal(r.window,before);
  assert.equal(game.snapshot(g,[true,false]).world.reality.window,Math.ceil(before*10)/10);
 });
+
+test('all ten antigravity cores are reachable by an actual boosted jump',()=>{
+ for(let i=0;i<stages.length;i++){
+  if(stages[i].reality?.kind!=='gravity')continue;
+  const g=make(i),r=g.level.reality; r.gravityTimer=14;
+  const p=g.players[0];p.x=r.core.x-15;p.y=GROUND-43;p.vx=p.vy=0;p.grounded=true;
+  g.players[1].x=r.anchors[1].x-15;g.players[1].y=GROUND-43;
+  g.input[0].jumpQueued=true;
+  for(let t=0;t<130&&!r.touched[0];t++)game.tick(g,ONLINE);
+  assert.equal(r.touched[0],true,'boosted jump could not reach core on level '+(i+1));
+ }
+});
