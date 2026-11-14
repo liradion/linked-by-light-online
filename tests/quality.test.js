@@ -6,9 +6,9 @@ const online=[true,true];
 function game(index=0){const g=createGame();initStage(g,index);g.phase='playing';return g;}
 function at(g,i,x,y=GROUND-43){Object.assign(g.players[i],{x,y,vy:0,vx:0,grounded:true,cool:0});}
 test('input acknowledgements are authoritative and monotonic',()=>{
- const g=game();updateInput(g,0,{inputSeq:3,right:true});assert.equal(snapshot(g,online).ack[0],3);
+ const g=game();updateInput(g,0,{inputSeq:3,right:true});assert.equal(snapshot(g,online).ack[0],0);tick(g,online);assert.equal(snapshot(g,online).ack[0],3);
  updateInput(g,0,{inputSeq:1,right:true});assert.equal(snapshot(g,online).ack[0],3);
- updateInput(g,0,{inputSeq:15,right:true});assert.equal(snapshot(g,online).ack[0],15);
+ updateInput(g,0,{inputSeq:15,right:true});assert.equal(snapshot(g,online).ack[0],3);tick(g,online);assert.equal(snapshot(g,online).ack[0],15);
 });
 test('boss has three distinct attack phases as alternating abilities land',()=>{
  const g=game(98);g.level.signature.done=true;for(const w of g.level.walls)w.broken=true;for(const c of g.level.crystals)c.on=true;g.level.padLatched=true;
