@@ -7,6 +7,8 @@ const crypto=require('node:crypto');
 const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./game-core');
 const {stages}=require('./shared/stages');
 const cloud=require('./cloud-store');
+const {createAuth}=require('./auth-server');
+const auth=createAuth({cloud});
 const PORT=Number(process.env.PORT)||3000;
 const PUBLIC=path.join(__dirname,'public');
 const ROOMS=new Map();
@@ -106,11 +108,13 @@ function sendSeatRoom(r){const obj={t:'members',room:r.code,connected:countOnlin
 }
 function broadcast(r,obj){for(const s of r.seats)if(s?.online)s.peer.send(obj);}
 const server=http.createServer((req,res)=>{
+  const authRequest=req.url?.startsWith('/api/auth/')||req.url?.startsWith('/?')&&/(?:\?|&)(?:code|error)=/.test(req.url);
+  if(authRequest){auth.handle(req,res).catch(()=>{if(!res.headersSent){res.writeHead(500,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({error:'Ошибка авторизации'}));}});return;}
   if(req.url?.startsWith('/api/cloud/')){cloud.handle(req,res);return;}
   const pathname=new URL(req.url,'http://localhost').pathname;
   if(pathname==='/health'){
     res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
-    res.end(JSON.stringify({ok:true,rooms:ROOMS.size}));return;
+    res.end(JSON.stringify({ok:true}));return;
   }
   let file;
   if(pathname==='/shared/stages.js')file=path.join(__dirname,'shared','stages.js');
@@ -118,7 +122,7 @@ const server=http.createServer((req,res)=>{
   else if(/^\/[a-zA-Z0-9._-]+$/.test(pathname))file=path.join(PUBLIC,pathname.slice(1));
   else{res.writeHead(404);res.end('Not found');return;}
   fs.readFile(file,(err,data)=>{if(err){res.writeHead(404);res.end('Not found');return;}
-    res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; connect-src 'self' ws: wss:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'"});res.end(data);
+    res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=()','Content-Security-Policy':"default-src 'self'; connect-src 'self' ws: wss:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"});res.end(data);
   });
 });
 server.on('upgrade',(req,socket,head)=>{
@@ -133,6 +137,11 @@ server.on('upgrade',(req,socket,head)=>{
   socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+accept+'\r\n\r\n');
   socket.setNoDelay(true);
   let room=null,role=-1,peer;
+  let packetWindow=Date.now(),packetCount=0;
+  const opCounts=new Map();
+  function rateExceeded(action,limit){const now=Date.now(),entry=opCounts.get(action)||{start:now,count:0};
+    if(now-entry.start>=60000){entry.start=now;entry.count=0;}
+    entry.count++;opCounts.set(action,entry);return entry.count>limit;}
   const error=message=>peer.send({t:'error',message});
   const attach=(r,index)=>{
     if(room)return error('Вы уже находитесь в комнате.');
@@ -146,8 +155,11 @@ server.on('upgrade',(req,socket,head)=>{
   };
   peer=attachWebSocket(socket,head,msg=>{
     if(!msg||typeof msg!=='object'||Array.isArray(msg))return;
+    const now=Date.now();if(now-packetWindow>=2000){packetWindow=now;packetCount=0;}
+    if(++packetCount>240){peer.close(1008);return;}
     if(msg.t==='ping'){peer.send({t:'pong',sent:Number.isFinite(msg.sent)?msg.sent:0});return;}
     if(msg.t==='create'){
+      if(rateExceeded('create',8))return error('Слишком много комнат за минуту.');
       if(room)return error('Вы уже в комнате.');
       if(ROOMS.size>=MAX_ROOMS)return error('Сервер заполнен. Попробуйте позже.');
       const code=newCode(),game=createGame();
@@ -158,6 +170,7 @@ server.on('upgrade',(req,socket,head)=>{
       ROOMS.set(code,r);attach(r,0);return;
     }
     if(msg.t==='join'){
+      if(rateExceeded('join',24))return error('Слишком много попыток входа.');
       if(room)return error('Вы уже в комнате.');
       const code=typeof msg.room==='string'?msg.room.trim().toUpperCase():'';
       const r=ROOMS.get(code);if(!r)return error('Комната не найдена. Проверьте код.');
