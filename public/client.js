@@ -169,8 +169,8 @@ document.querySelectorAll('.touch-button').forEach(btn=>{
 function sendInput(){if(!room||!ready||phase!=='playing')return;
   const packet={t:'input',inputSeq:++packetSeq,left:input.left,right:input.right,jumpSeq:input.jumpSeq,abilitySeq:input.abilitySeq,bondSeq:input.bondSeq,emoteSeq:input.emoteSeq};
   predictor.send(packet,performance.now());wsSend(packet);lastSend=performance.now();}
-setInterval(()=>{if(ready&&room&&phase==='playing')sendInput();},40);
-setInterval(()=>{if(ready)wsSend({t:'ping',sent:performance.now()});},3000);
+setInterval(()=>{if(ready&&room&&phase==='playing')sendInput();},25);
+setInterval(()=>{if(ready)wsSend({t:'ping',sent:performance.now()});},1000);
 function announce(msg,duration=2){toastEl.textContent=msg;toastEl.classList.add('visible');toastTimer=duration;}
 function tone(freq,dur=.1,kind='sine',vol=.04){if(!sound||!GameQuality.settings().sound)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();const osc=ac.createOscillator(),gain=ac.createGain();osc.type=kind;osc.frequency.value=freq;gain.gain.value=vol;gain.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);osc.connect(gain);gain.connect(ac.destination);osc.start();osc.stop(ac.currentTime+dur);}catch(_){}}
 function burst(x,y,color,n=12,speed=130){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=(.25+Math.random()*.75)*speed;const ttl=.4+Math.random()*.6;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,life:ttl,ttl,r:1.5+Math.random()*3,color});}if(particles.length>500)particles.splice(0,particles.length-500);}
@@ -226,7 +226,9 @@ function consumeSnapshot(s){
   if(previous&&s.stage!==previous.stage){prediction=null;lastPredStage=-1;predictor.reset();snapshots=[];camera=0;particles=[];rings=[];GameJuice.clear();
     const next=stageDefs[s.stage];GameQuality.ambient(Math.floor(s.stage/9));announce('✦ Уровень '+(s.stage+1)+' — '+(next.reality?{mirror:'Две реальности',chronicle:'Прошлое и будущее',gravity:'Антигравитация'}[next.reality.kind]:next.signature.subtitle),2.8);tone(600,.16,'sine',.055);}
 
-  levelIndex=s.stage;phase=s.phase;connected=s.connected||connected;latest={...s,recvTime:performance.now()};
+  levelIndex=s.stage;phase=s.phase;connected=s.connected||connected;
+  const receivedAt=performance.now();GameQuality.snapshotArrived(receivedAt);
+  latest={...s,recvTime:receivedAt};
   if(role>=0&&phase==='playing'&&s.players?.[role])predictor.reconcile({...s.players[role],type:role,w:30,h:43},s.ack?.[role]||0,stageDefs[s.stage],s.world,s.stage,performance.now(),s.processedCommands?.[role],GameQuality.predictionLead());
   GameQuality.ambient(Math.floor(Math.min(98,s.stage)/9));
   if((phase==='playing'||phase==='win')&&levelIndex<99)saveCheckpoint(levelIndex);
