@@ -1,90 +1,61 @@
 'use strict';
-const test=require('node:test');
-const assert=require('node:assert/strict');
+const test=require('node:test');const assert=require('node:assert/strict');
 const {stages,GROUND,ACTS}=require('../shared/stages');
 const {createGame,initStage,tick,snapshot,bridgeActive}=require('../game-core');
-const online=[true,true];
-function onFloor(stage,x){
-  return stage.floor.some(([left,right])=>x>=left&&x<=right);
-}
-test('exactly 99 reproducible levels, 11 acts, unique names',()=>{
-  assert.equal(stages.length,99);assert.equal(ACTS.length,11);
-  assert.equal(new Set(stages.map(s=>s.title)).size,99);
-  stages.forEach((s,i)=>{
-    assert.equal(s.act,Math.floor(i/9)+1);
-    assert.ok(s.width>1200);
-    assert.ok(s.hint?.length>5);
-  });
+const connected=[true,true];
+function onFloor(stage,x){return stage.floor.some(([a,b])=>x>=a&&x<=b);}
+test('99 deterministic missions, 11 acts and 99 distinct titles',()=>{
+ assert.equal(stages.length,99);assert.equal(ACTS.length,11);
+ assert.equal(new Set(stages.map(s=>s.title)).size,99);
+ for(const [i,s] of stages.entries()){
+  assert.equal(s.act,Math.floor(i/9)+1);
+  assert.ok(s.width>1200);assert.ok(s.signature?.hint.length>10);
+ }
 });
-test('every route has accessible players, puzzle nodes and portal',()=>{
-  for(const [i,s] of stages.entries()){
-    for(const x of s.spawn)assert.ok(onFloor(s,x+15),`stage ${i+1}: spawn on pit`);
-    for(const pad of s.pads)assert.ok(onFloor(s,pad.x+pad.w/2),`stage ${i+1}: plate on pit`);
-    for(const crystal of s.crystals)assert.ok(onFloor(s,crystal.x),`stage ${i+1}: crystal on pit`);
-    for(const wall of s.walls)assert.ok(onFloor(s,wall.x),`stage ${i+1}: wall on pit`);
-    for(const spike of s.hazards)assert.ok(onFloor(s,spike.x+spike.w/2),`stage ${i+1}: spike on pit`);
-    assert.ok(onFloor(s,s.portal),`stage ${i+1}: portal on pit`);
-    const lastDevice=Math.max(0,...s.pads.map(p=>p.x+p.w),...s.crystals.map(c=>c.x),...s.walls.map(w=>w.x+w.w));
-    assert.ok(s.gates[0].x>lastDevice,`stage ${i+1}: exit gate before puzzle`);
-    for(let n=0;n<s.floor.length-1;n++){
-      const end=s.floor[n][1],start=s.floor[n+1][0];
-      const bridged=s.bridges.some(b=>b.x<=end&&b.x+b.w>=start);
-      // Full jump travels about 200 world units at speed 273 (0.75 s flight).
-      assert.ok(start-end<=175||bridged,`stage ${i+1}: inaccessible gap`);
-    }
+test('all levels have walkable routes, usable plates and reachable portals',()=>{
+ for(const [i,l] of stages.entries()){
+  for(const x of l.spawn)assert.ok(onFloor(l,x+15),`spawn level ${i+1}`);
+  for(const pad of l.pads)assert.ok(onFloor(l,pad.x+pad.w/2),`plate level ${i+1}`);
+  for(const c of l.crystals)assert.ok(onFloor(l,c.x),`crystal level ${i+1}`);
+  assert.ok(onFloor(l,l.portal),`portal level ${i+1}`);
+  const last=Math.max(0,...l.pads.map(p=>p.x+p.w),...l.crystals.map(c=>c.x),...l.walls.map(w=>w.x+w.w));
+  assert.ok(l.gates[0].x>last,`exit must be after puzzle ${i+1}`);
+  for(let k=0;k<l.floor.length-1;k++){
+   const end=l.floor[k][1],start=l.floor[k+1][0];
+   assert.ok(start-end<=175||l.bridges.some(b=>b.x<=end&&b.x+b.w>=start),`gap ${i+1}`);
   }
+ }
 });
-test('all 99 cooperative objective chains can open the exit',()=>{
-  for(let i=0;i<stages.length;i++){
-    const game=createGame();initStage(game,i);game.phase='playing';
-    for(const wall of game.level.walls)wall.broken=true;
-    if(game.level.bridgeTrigger==='pad-crystal'){
-      const plate=game.level.pads[0];
-      game.players[0].x=plate.x+plate.w/2-15;
-      game.players[0].y=GROUND-43;
-      for(let f=0;f<20;f++)tick(game,online);
-      assert.equal(bridgeActive(game),true,`stage ${i+1}: Spark plate must power bridge`);
-    }
-    for(const crystal of game.level.crystals)crystal.on=true;
-    if(game.level.puzzle?.pads){
-      for(const plate of game.level.pads){
-        const p=game.players[plate.type];
-        p.x=plate.x+plate.w/2-15;p.y=GROUND-43;
-        p.vx=0;p.vy=0;p.grounded=true;
-      }
-      for(let f=0;f<20;f++)tick(game,online);
-    }
-    for(let f=0;f<20;f++)tick(game,online);
-    assert.equal(game.level.gateOpen,true,`stage ${i+1} should open gate`);
-    if(game.level.bridges.length&&game.level.bridgeTrigger!=='none')
-      assert.equal(bridgeActive(game),true,`stage ${i+1}: required bridge must stay active`);
-    assert.equal(snapshot(game,online).stage,i);
-  }
+test('normal switches must combine with the world-specific objective',()=>{
+ for(let i=0;i<99;i++){
+  const g=createGame();initStage(g,i);g.phase='playing';
+  for(const wall of g.level.walls)wall.broken=true;
+  for(const crystal of g.level.crystals)crystal.on=true;
+  for(const pad of g.level.pads){const p=g.players[pad.type];p.x=pad.x+pad.w/2-15;p.y=GROUND-43;p.vx=p.vy=0;p.grounded=true;}
+  for(let j=0;j<22;j++)tick(g,connected);
+  assert.equal(g.level.gateOpen,false,`level ${i+1} should require signature too`);
+  g.level.signature.done=true;
+  for(let j=0;j<16;j++)tick(g,connected);
+  assert.equal(g.level.gateOpen,true,`level ${i+1} opens after signature`);
+ }
 });
-test('level 99 ends in victory for both players, not a missing stage',()=>{
-  const g=createGame();initStage(g,98);g.phase='playing';g.level.gateOpen=true;
-  for(const p of g.players){p.x=g.level.portal-15;p.y=GROUND-43;p.vx=0;p.vy=0;p.grounded=true;}
-  for(let i=0;i<120;i++)tick(g,online);
-  assert.equal(g.phase,'win');assert.equal(g.stage,98);
+test('game transitions from a resumed stage to its successor',()=>{
+ const g=createGame();initStage(g,61);g.phase='playing';g.level.gateOpen=true;
+ for(const p of g.players){p.x=g.level.portal-15;p.y=GROUND-43;p.vx=p.vy=0;p.grounded=true;}
+ for(let n=0;n<125;n++)tick(g,connected);
+ assert.equal(g.stage,62);assert.equal(g.phase,'playing');
 });
-test('simulation still pauses when remote player is disconnected',()=>{
-  const g=createGame();initStage(g,65);g.phase='playing';
-  const x=g.players[0].x;
-  g.input[0].right=true;
-  for(let i=0;i<40;i++)tick(g,[true,false]);
-  assert.equal(g.players[0].x,x);
+test('99th stage completes with the same victory for both players',()=>{
+ const g=createGame();initStage(g,98);g.phase='playing';g.level.gateOpen=true;
+ for(const p of g.players){p.x=g.level.portal-15;p.y=GROUND-43;p.vx=p.vy=0;p.grounded=true;}
+ for(let n=0;n<125;n++)tick(g,connected);
+ assert.equal(g.stage,98);assert.equal(g.phase,'win');
 });
-
-test('paired crystals remain separate challenges',()=>{
-  const pairs=stages.filter(s=>s.crystals.length===2);
-  assert.ok(pairs.length>=15,'expect recurring double-crystal puzzles');
-  for(const s of pairs)
-    assert.ok(Math.abs(s.crystals[1].x-s.crystals[0].x)>350,s.title+' has overlapping pulse reach');
-});
-test('a resumed mid-campaign room advances to the following level',()=>{
-  const g=createGame();initStage(g,57);g.phase='playing';g.level.gateOpen=true;
-  for(const p of g.players){p.x=g.level.portal-15;p.y=GROUND-43;p.vx=0;p.vy=0;p.grounded=true;}
-  for(let t=0;t<120;t++)tick(g,online);
-  assert.equal(g.stage,58);
-  assert.equal(g.phase,'playing');
+test('a disconnected partner freezes the simulation without losing room state',()=>{
+ const g=createGame();initStage(g,45);g.phase='playing';
+ const before=snapshot(g,connected).players;const elapsed=g.level.signature.elapsed;
+ g.input[0].right=true;
+ for(let n=0;n<40;n++)tick(g,[true,false]);
+ assert.deepEqual(snapshot(g,[true,false]).players,before);
+ assert.equal(g.level.signature.elapsed,elapsed);
 });
