@@ -1,5 +1,6 @@
 'use strict';
-const { stages, GROUND } = require('./shared/stages');
+const { stages, GROUND, BONUS_STAGE } = require('./shared/stages');
+const adventure=require('./adventure-core');
 const worlds=require('./world-mechanics');
 const DT=1/60, WIDTH=1200, HEIGHT=650;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -7,20 +8,20 @@ const overlaps=(a,b)=>a.x < b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y
 const freshPlayer=(type,x)=>({type,x,y:GROUND-43,w:30,h:43,vx:0,vy:0,face:1,grounded:false,coyote:0,jumpBuffer:0,dash:0,cool:0,abilityFx:0});
 function createGame(){const g={stage:0,phase:'waiting',level:null,players:[],shards:[],tick:0,completion:0,transition:0,padTimer:0,input:[null,null]}; initStage(g,0);return g;}
 function initStage(g,index){
-  g.stage=index;g.level=structuredClone(stages[index]);g.players=[freshPlayer(0,g.level.spawn[0]),freshPlayer(1,g.level.spawn[1])];
+  g.stage=index;g.level=structuredClone(index===99?BONUS_STAGE:stages[index]);g.players=[freshPlayer(0,g.level.spawn[0]),freshPlayer(1,g.level.spawn[1])];
   g.level.gateOpen=false;g.level.bridgeLatched=false;g.level.padLatched=false;
   g.level.pads.forEach(p=>p.pressed=false);
   g.shards=g.level.shards.map(x=>false);g.completion=0;g.transition=0;g.padTimer=0;
   // Последнее состояние ввода не переносится между главами.
   g.input=[makeInput(),makeInput()];
-  worlds.initWorld(g);
+  worlds.initWorld(g);adventure.init(g);
 }
-const makeInput=()=>({left:false,right:false,jumpQueued:false,abilityQueued:false,jumpSeq:0,abilitySeq:0});
+const makeInput=()=>({left:false,right:false,jumpQueued:false,abilityQueued:false,bondQueued:false,emoteQueued:false,jumpSeq:0,abilitySeq:0,bondSeq:0,emoteSeq:0});
 function updateInput(g,role,message){
   if(![0,1].includes(role))return;
   let i=g.input[role];
   i.left=message.left===true;i.right=message.right===true;
-  for(const [seqField,queued] of [['jumpSeq','jumpQueued'],['abilitySeq','abilityQueued']]){
+  for(const [seqField,queued] of [['jumpSeq','jumpQueued'],['abilitySeq','abilityQueued'],['bondSeq','bondQueued'],['emoteSeq','emoteQueued']]){
     const value=message[seqField];
     if(Number.isSafeInteger(value)&&value>=0&&value<=1_000_000_000&&value>i[seqField]){
       // Ограничение очереди: одна команда за обновление, без накопления повторов.
@@ -29,7 +30,7 @@ function updateInput(g,role,message){
     }
   }
 }
-function clearMovement(g,role){if(role==null)return;const i=g.input[role];i.left=false;i.right=false;i.jumpQueued=false;i.abilityQueued=false;}
+function clearMovement(g,role){if(role==null)return;const i=g.input[role];i.left=false;i.right=false;i.jumpQueued=false;i.abilityQueued=false;i.bondQueued=false;i.emoteQueued=false;}
 function bridgeActive(g){
   const l=g.level;
   if(l.bridgeLatched)return true;
@@ -57,7 +58,7 @@ function stepPlayer(g,p,dt){const i=g.input[p.type], axis=Number(i.right)-Number
       for(const c of g.level.crystals){if(!c.on&&Math.hypot(c.x-cx,c.y-cy)<175)c.on=true;}
     }
   }
-  if(abilityFired)worlds.onAbility(g,p);
+  if(abilityFired){worlds.onAbility(g,p);adventure.onAbility(g,p);}
   i.abilityQueued=false;
   if(i.jumpQueued)p.jumpBuffer=.14;else p.jumpBuffer=Math.max(0,p.jumpBuffer-dt);
   i.jumpQueued=false;
@@ -69,7 +70,7 @@ function stepPlayer(g,p,dt){const i=g.input[p.type], axis=Number(i.right)-Number
   if(p.dash>0){p.dash=Math.max(0,p.dash-dt);p.vx=p.face*760;}
   else{const target=axis*273;p.vx+=clamp(target-p.vx,-2450*dt,2450*dt);}
   p.vy=Math.min(950,p.vy+1300*dt);
-  worlds.worldForces(g,p,dt);
+  worlds.worldForces(g,p,dt);adventure.forces(g,p,dt);
   const solids=solidRects(g);
   p.x+=p.vx*dt;
   for(const s of solids)if(overlaps(p,s)){
@@ -85,8 +86,9 @@ function stepPlayer(g,p,dt){const i=g.input[p.type], axis=Number(i.right)-Number
     }else if(p.vy<0){p.y=s.y+s.h;p.vy=0;}
     else if(p.x+p.w/2<s.x+s.w/2)p.x=s.x-p.w;else p.x=s.x+s.w;
   }
-  for(const h of g.level.hazards)if(overlaps(p,{...h,y:h.y+3,h:h.h-3})){respawn(g,p);break;}
+  for(const h of g.level.hazards)if(g.adventure.bond.shield<=0&&overlaps(p,{...h,y:h.y+3,h:h.h-3})){respawn(g,p);break;}
   if(p.y>HEIGHT+120)respawn(g,p);
+  adventure.afterStep(g,p);
   g.level.shards.forEach((x,idx)=>{if(!g.shards[idx]){
     const y=idx%2?390:432;
     if(Math.hypot(p.x+15-x,p.y+21.5-y)<32)g.shards[idx]=true;
@@ -104,7 +106,7 @@ function updateObjectives(g,dt){
   if((l.bridgeTrigger==='crystal'||l.bridgeTrigger==='pad-crystal')&&crystalsDone)l.bridgeLatched=true;
   if(l.bridgeTrigger==='pad'&&l.padLatched)l.bridgeLatched=true;
   const goal=l.puzzle||{pads:true};
-  if((!goal.walls||wallsDone)&&(!goal.crystals||crystalsDone)&&(!goal.pads||l.padLatched)&&worlds.complete(g))
+  if((!goal.walls||wallsDone)&&(!goal.crystals||crystalsDone)&&(!goal.pads||l.padLatched)&&worlds.complete(g)&&adventure.canExit(g))
     l.gateOpen=true;
 }
 function tick(g,connected){g.tick++;
@@ -115,13 +117,15 @@ function tick(g,connected){g.tick++;
   // Fixed timestep: world mechanics also run authoritatively on the server.
   worlds.advanceWorld(g,DT);
   for(const p of g.players)stepPlayer(g,p,DT);
+  for(const p of g.players)adventure.onInput(g,p,g.input[p.type]);
   worlds.updateWorld(g,DT);
+  adventure.update(g,DT);
   updateObjectives(g,DT);
   const both=g.players.every(p=>Math.abs(p.x+15-g.level.portal)<70&&p.y+p.h>400);
   if(g.level.gateOpen&&both){g.completion+=DT;if(g.completion>.58)g.transition=.85;}else g.completion=0;
 }
 function snapshot(g,connected){const l=g.level;
   return {t:'snapshot',tick:g.tick,stage:g.stage,phase:g.phase,players:g.players.map(p=>({x:p.x,y:p.y,vx:p.vx,vy:p.vy,face:p.face,grounded:p.grounded,cool:p.cool,dash:p.dash,abilityFx:p.abilityFx})),
-  world:{pads:l.pads.map(p=>p.pressed),walls:l.walls.map(w=>w.broken),crystals:l.crystals.map(c=>c.on),gateOpen:l.gateOpen,bridgeLatched:l.bridgeLatched,padLatched:l.padLatched,shards:g.shards,signature:worlds.worldSnapshot(g)},connected,transition:g.transition>0};
+  world:{pads:l.pads.map(p=>p.pressed),walls:l.walls.map(w=>w.broken),crystals:l.crystals.map(c=>c.on),gateOpen:l.gateOpen,bridgeLatched:l.bridgeLatched,padLatched:l.padLatched,shards:g.shards,signature:worlds.worldSnapshot(g),adventure:adventure.snapshot(g)},connected,transition:g.transition>0};
 }
 module.exports={createGame,initStage,updateInput,clearMovement,tick,snapshot,bridgeActive};
