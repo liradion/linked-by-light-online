@@ -11,6 +11,7 @@ function enableSolvedPuzzle(g){
  if(g.level.signature){g.level.signature.done=true;g.level.signature.nodes.forEach(n=>n.active=true);g.level.signature.pairs.forEach(n=>n.active=true);}
  if(g.adventure.boss)g.adventure.boss.hp=0;
  if(g.adventure.arcade)g.adventure.arcade.done=true;
+ if(g.level.reality)g.level.reality.done=true;
 }
 function stepPlayers(g){
  const l=g.level;
