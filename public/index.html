@@ -4,6 +4,7 @@
 <meta name="theme-color" content="#080b19"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <title>Связанные светом — онлайн для двоих</title>
+<link rel="stylesheet" href="/adventure.css?v=10"/>
 <style>
 :root { color-scheme: dark; --orange:#ffbb6e; --aqua:#70e9f3; --soft:#b9bcd4; --white:#f5f3ff; --panel:#171d33cc; --panel-border:#585b7a70; --panel-shadow:0 18px 36px #05091455; }
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#080b19;color:var(--white)}
@@ -220,6 +221,7 @@ canvas{position:relative;z-index:1}
   <div class="touch-cluster action-cluster" aria-label="Действия">
     <button class="touch-button" data-input="jump" aria-label="Прыжок">↑</button>
     <button class="touch-button" data-input="ability" aria-label="Способность">✦</button>
+    <div class="adv-extra-controls"><button class="touch-button" data-input="bond" aria-label="Энергетическая связь">🔗</button><button class="touch-button" data-input="emote" aria-label="Эмоция">♡</button></div>
   </div>
 </div>
 <div class="overlay" id="overlay" data-view="menu"><div class="overlay-card"><div class="mobile-connection" id="mobileConnection" data-status="offline"><span id="mobileConnectionText">Подключение к серверу…</span></div>
@@ -243,7 +245,7 @@ canvas{position:relative;z-index:1}
 <div class="menu-actions"><button class="button-secondary" id="copyBtn">Скопировать приглашение</button><button class="button-primary" id="startBtn" disabled>Начать вдвоём ✦</button></div>
 </div>
 <div id="winView">
-<div class="eyebrow">ВСЕ 99 УРОВНЕЙ ПРОЙДЕНЫ</div>
+<div class="eyebrow">99 УРОВНЕЙ ПРОЙДЕНЫ · СЕКРЕТНЫЙ 100-Й ОТКРЫВАЕТСЯ ЗА 11 ТАЙН</div>
 <h1 class="hero-title">ВЫ СМОГЛИ.<br/><em>ВМЕСТЕ.</em></h1>
 <p class="intro-copy">99 уровней вместе. Через 11 миров, с одной целью. Можно начать приключение заново.</p>
 <button class="button-primary" id="restartBtn">Сыграть сначала ↻</button>
@@ -252,10 +254,10 @@ canvas{position:relative;z-index:1}
 </div></div>
 </div>
 <section class="info-bottom"><div class="players">
-<div class="player-stat"><div class="avatar orange">✦</div><div class="stat-lines"><strong>Искра <span id="amberStatus">· Рывок готов</span></strong><div>A / D — ходить · W — прыжок · F — рывок</div></div></div>
-<div class="player-stat"><div class="avatar blue">◈</div><div class="stat-lines"><strong>Эхо <span id="blueStatus">· Импульс готов</span></strong><div>← / → — ходить · ↑ — прыжок · Enter — импульс</div></div></div>
+<div class="player-stat"><div class="avatar orange">✦</div><div class="stat-lines"><strong>Искра <span id="amberStatus">· Рывок готов</span></strong><div>A / D — ходить · W — прыжок · F — рывок · G — связь · T — эмоция</div></div></div>
+<div class="player-stat"><div class="avatar blue">◈</div><div class="stat-lines"><strong>Эхо <span id="blueStatus">· Импульс готов</span></strong><div>← / → — ходить · ↑ — прыжок · Enter — импульс · G — связь · T — эмоция</div></div></div>
 </div><div class="footer-note">Вы: <b id="myRole">не в комнате</b><div>На iPhone поверните экран горизонтально · <b>R</b> — перезапуск уровня (хост)</div></div></section>
 <div class="rotate-tip">↻ Для удобной игры на iPhone поверните экран горизонтально.</div>
 </div>
-<script src="/shared/stages.js?v=6"></script><script src="/biomes.js?v=6"></script><script src="/visuals.js?v=6"></script><script src="/juice.js?v=6"></script><script src="/client.js?v=6"></script>
+<script src="/shared/stages.js?v=10"></script><script src="/biomes.js?v=6"></script><script src="/visuals.js?v=6"></script><script src="/juice.js?v=6"></script><script src="/adventure.js?v=10"></script><script src="/client.js?v=10"></script>
 </body></html>
