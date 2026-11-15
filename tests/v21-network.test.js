@@ -34,7 +34,7 @@ test('v21 genuine WebSocket campaign, story, home, gallery and reconnection',{ti
   assert.ok(html.indexOf('/shared/v21-stages.js')<html.indexOf('/v21.js'));
   assert.ok(html.indexOf('/v21.js')<html.indexOf('/client.js?v=21'));
   host=await link(port);host.send({t:'hello',protocol:3});
-  host.send({t:'create',stage:112});const joined=await take(host,m=>m.t==='joined');
+  host.send({t:'create',stage:112,unlockedV21:['v21-01','v21-02']});const joined=await take(host,m=>m.t==='joined');
   assert.equal(joined.role,0);assert.equal(joined.protocol,3);
   guest=await link(port);guest.send({t:'hello',protocol:3});
   guest.send({t:'join',room:joined.room});const invited=await take(guest,m=>m.t==='joined');
@@ -73,6 +73,12 @@ test('v21 genuine WebSocket campaign, story, home, gallery and reconnection',{ti
   assert.equal(JSON.stringify(gallery.items).includes(joined.room),false);
   guest.send({t:'v21Weekly'});const board=await take(guest,m=>m.t==='v21WeeklyBoard');
   assert.ok(board.target>=112&&board.target<=121);
+  host.send({t:'selectStage',stage:113});
+  await take(host,m=>m.t==='snapshot'&&m.stage===113);
+  const unlockedLetters=await take(guest,m=>m.t==='v21Private'&&m.data?.letters?.length===1);
+  assert.equal(unlockedLetters.data.letters[0].body,'До встречи на рассвете');
+  await sleep(90);
+  assert.equal(observer.messages.some(m=>m.t==='v21Private'),false);
   guest.close();await sleep(80);
   rejoined=await link(port);rejoined.send({t:'hello',protocol:3});
   rejoined.send({t:'join',room:joined.room,token:invited.token});
@@ -81,7 +87,7 @@ test('v21 genuine WebSocket campaign, story, home, gallery and reconnection',{ti
   assert.equal(recovered.data.garden.growth,1);
   assert.equal(recovered.data.painting[17],4);
   assert.equal(recovered.data.painting[22],3);
-  assert.equal((await take(rejoined,m=>m.t==='v21Private')).data.letters.length,0);
+  assert.equal((await take(rejoined,m=>m.t==='v21Private')).data.letters.length,1);
  }finally{
   for(const client of [host,guest,observer,stale,rejoined])try{client?.close();}catch(_){}
   server.kill('SIGTERM');
