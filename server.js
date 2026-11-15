@@ -147,7 +147,7 @@ const server=http.createServer((req,res)=>{
     return;
   }
   let file;
-  if(pathname==='/shared/stages.js')file=path.join(__dirname,'shared','stages.js');
+  if(pathname==='/shared/stages.js'||pathname==='/shared/v20-stages.js')file=path.join(__dirname,'shared',pathname.slice('/shared/'.length));
   else if(pathname==='/'||pathname==='/index.html')file=path.join(PUBLIC,'index.html');
   else if(/^\/[a-zA-Z0-9._-]+$/.test(pathname))file=path.join(PUBLIC,pathname.slice(1));
   else{res.writeHead(404);res.end('Not found');return;}
