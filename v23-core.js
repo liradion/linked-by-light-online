@@ -22,6 +22,7 @@ function init(g){
 function platforms(g,role){
  const z=g.v23;if(!z)return [];
  const {anchor,goal}=g.level.v23,out=[];
+ if(z.branch===1)out.push({x:anchor+300,y:390,w:175,h:17,kind:'v23-story-route'});
  if(z.kind==='gravity-duet'&&z.gravity[0]===-1&&role===0)out.push({x:anchor+100,y:260,w:690,h:15,kind:'v23-ceiling'});
  if(z.kind==='resize'&&role===1&&z.scale[1]!==0.5)out.push({x:anchor+250,y:GROUND-138,w:24,h:138,kind:'v23-tunnel'});
  if(z.kind==='resize'&&z.scale[0]===2)out.push({x:anchor+460,y:468,w:175,h:18,kind:'v23-giant'});
@@ -47,6 +48,11 @@ function platforms(g,role){
 function beforeStep(g,dt){
  const z=g.v23;if(!z)return;
  if(z.timer>0)z.timer=Math.max(0,z.timer-dt);
+ if(z.kind==='boss-dragon'&&z.timer===0&&z.boss?.shield){z.boss.shield=false;z.boss.stunned=false;}
+ if(z.boss&&!z.boss.stunned&&g.tick%240===0){
+  const target=g.players[(Math.floor(g.tick/240))%2];
+  if(near(target,z.goal,380)){target.vx+=target.x<z.goal?-180:180;target.vy=-270;}
+ }
  if(z.kind==='pendulum'&&z.swing!==0)z.swing+=dt*2.1;
  if(z.kind==='water'&&z.water.direction!==0){
   for(const p of g.players)if(p.x>z.anchor&&p.x<z.goal){
@@ -169,12 +175,14 @@ function action(g,role,kind,raw={}){
   z.path.walker++;return ok('Пройдено секций '+z.path.walker+'/4');
  }
  if(z.boss&&kind==='boss_guard'){
+  if(['boss-mirror','boss-titan'].includes(z.kind))return deny('Для этого хранителя нужна особая ловушка или печать');
   if(role!==1||!near(p,c.goal,390))return deny('Эхо должен остановить атаки хранителя');
   z.boss.shield=true;z.boss.stunned=true;z.timer=5;
   return ok('Защита хранителя нарушена');
  }
  if(z.boss&&kind==='boss_strike'){
   if(role!==0||!near(p,c.goal,390)||!z.boss.shield)return deny('Искра атакует лишь после сигнала Эха');
+  if(z.kind==='boss-dragon'&&z.timer===0)return deny('Временное окно Дракона уже закрылось');
   if(z.boss.hp<=0)return deny('Хранитель уже побеждён');
   if(z.boss.lastHit>0&&g.tick-z.boss.lastHit<25)return deny('Удар не восстановился');
   z.boss.hp--;z.boss.shield=false;z.boss.stunned=false;z.boss.lastHit=g.tick;
@@ -192,7 +200,7 @@ function action(g,role,kind,raw={}){
 }
 function snapshot(g){
  const z=g.v23;if(!z)return null;
- return {kind:z.kind,done:z.done,step:z.step,round:z.round,roles:z.roles.slice(),phase:z.phase,mode:z.mode,
+ return {kind:z.kind,branch:z.branch||0,done:z.done,step:z.step,round:z.round,roles:z.roles.slice(),phase:z.phase,mode:z.mode,
   gravity:z.gravity.slice(),timer:z.timer,beam:z.beam,mirror:z.mirror,scale:z.scale.slice(),swing:z.swing,
   shadow:z.shadow.slice(),switches:z.switches.slice(),water:{...z.water},
   magnet:{x:z.magnet.x,polarity:z.magnet.polarity.slice()},rhythm:{progress:z.rhythm.progress},
