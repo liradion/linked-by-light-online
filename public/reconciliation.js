@@ -5,7 +5,8 @@ const DT=1/60;
 const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 const overlaps=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
 function geometry(level,world,role){
- const r=(level.platforms||[]).map(x=>({...x}));
+ const r=(level.platforms||[]).map(p=>({...p,
+  x:p.temporal&&Number.isFinite(world?.v20?.time?.platformX)?world.v20.time.platformX:p.x}));
  for(const [a,b] of level.floor||[])r.push({x:a,y:544,w:b-a,h:180});
  const bridge=!!world?.bridgeLatched||level.bridgeTrigger==='always'||
  (level.bridgeTrigger==='crystal'&&world?.crystals?.length&&world.crystals.every(Boolean))||
@@ -17,6 +18,10 @@ function geometry(level,world,role){
  // Mirror ledges have collision only in the owner's reality once unlocked.
  if(level?.reality?.kind==='mirror'&&world?.reality?.anchors?.[role]){
   for(const p of level.reality.platforms||[])if(p.role===role)r.push({...p});
+ }
+ if(level?.v20&&world?.v20&&['phase','combo'].includes(world.v20.kind)){
+  if(role===0&&world.v20.phase?.flags?.[0])r.push({x:900,y:438,w:112,h:18});
+  if(role===1&&world.v20.phase?.state!=='light')r.push({x:1340,y:438,w:112,h:18});
  }
  return r;
 }
