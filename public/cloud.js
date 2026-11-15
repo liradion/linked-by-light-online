@@ -24,6 +24,30 @@ function mergeV20(a,b){
    decor:[...(right.house?.decor||[]),...(left.house?.decor||[])].slice(0,6)
   }};
 }
+function mergeV21(a,b){
+ const x=a&&typeof a==='object'?a:{},y=b&&typeof b==='object'?b:{};
+ const union=(p,q,n)=>Array.from(new Set([...(Array.isArray(p)?p:[]),...(Array.isArray(q)?q:[])])).slice(-n);
+ const records={...(y.weeklyRecords||{})};
+ for(const [week,seconds] of Object.entries(x.weeklyRecords||{}))
+  if(!Number.isFinite(records[week])||seconds<records[week])records[week]=seconds;
+ const entries=[...(x.diary||[]),...(y.diary||[])],seen=new Set();
+ const diary=entries.filter(v=>{
+  if(!v||typeof v.title!=='string')return false;
+  const key=[v.stage,v.kind].join(':');if(seen.has(key))return false;seen.add(key);return true;
+ }).slice(-40);
+ const stageRecords={...(y.records||{})};
+ for(const [key,entry] of Object.entries(x.records||{})){
+  const old=stageRecords[key];if(!old||entry.stars>old.stars||entry.stars===old.stars&&entry.elapsed<old.elapsed)stageRecords[key]=entry;
+ }
+ return {schemaVersion:1,records:stageRecords,unlockedStages:union(x.unlockedStages,y.unlockedStages,10),
+  completed:union(x.completed,y.completed,122),trophies:union(x.trophies,y.trophies,64),
+  seasons:union(x.seasons,y.seasons,16),aquarium:union(x.aquarium,y.aquarium,5),
+  diary,weeklyRecords:records,garden:{
+   steps:Math.max(x.garden?.steps||0,y.garden?.steps||0),
+   growth:Math.max(x.garden?.growth||0,y.garden?.growth||0)
+  },melody:(y.melody?.length||0)>=(x.melody?.length||0)?y.melody||[]:x.melody,
+  painting:Array.isArray(y.painting)&&y.painting.length===64?y.painting:x.painting||Array(64).fill(-1)};
+}
 function merge(a,b){if(!a||a.version!==11)return b;if(!b||b.version!==11)return a;
  const keys=new Set([...(a.adventure?.secrets||[]),...(b.adventure?.secrets||[])]);
  const pets=new Set([...(a.adventure?.pets||[]),...(b.adventure?.pets||[])]);
@@ -32,7 +56,7 @@ function merge(a,b){if(!a||a.version!==11)return b;if(!b||b.version!==11)return 
   if(!records[k]||v.stars>records[k].stars||v.stars===records[k].stars&&v.elapsed<records[k].elapsed)records[k]=v;
  }
  return {...b,checkpoint:Math.max(a.checkpoint||0,b.checkpoint||0),records,
-  adventure:{...b.adventure,v20:mergeV20(a.adventure?.v20,b.adventure?.v20),secrets:Array.from(keys),pets:Array.from(pets),achievements:Array.from(achievements),
+  adventure:{...b.adventure,v21:mergeV21(a.adventure?.v21,b.adventure?.v21),v20:mergeV20(a.adventure?.v20,b.adventure?.v20),secrets:Array.from(keys),pets:Array.from(pets),achievements:Array.from(achievements),
   shards:Math.max(a.adventure?.shards||0,b.adventure?.shards||0),
   memories:(()=>{
    const all=[...(b.adventure?.memories||[]),...(a.adventure?.memories||[])],seen=new Set();
