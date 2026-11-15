@@ -28,6 +28,7 @@ function saveSettings(){try{localStorage.setItem(storage,JSON.stringify(settings
 function applySettings(){
  const r=document.documentElement;
  for(const [key,value] of Object.entries(settings))r.dataset[key]=value?'true':'false';
+ if(typeof GameQuality!=='undefined'&&GameQuality.setReducedMotion)GameQuality.setReducedMotion(settings.reducedMotion);
 }
 function sync(){
  if(!dialog?.open)return;
