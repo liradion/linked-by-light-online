@@ -114,7 +114,7 @@ function createPublicBeta(options={}){
  function moderateGallery(items,id,decision){
   if(!/^[a-f0-9]{12}$/.test(id||'')||!['approve','reject','hide'].includes(decision))return null;
   const found=(items||[]).find(x=>x.id===id);if(!found)return null;
-  if(decision==='approve'){found.status='approved';found.hidden=false;record('moderationApproved');}
+  if(decision==='approve'){found.status='approved';found.hidden=false;found.reports=[];record('moderationApproved');}
   else{found.status='rejected';found.hidden=true;record('moderationRejected');}
   return {id:found.id,status:found.status};
  }
