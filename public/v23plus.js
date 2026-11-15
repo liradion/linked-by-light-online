@@ -253,6 +253,42 @@ function draw(ctx,level,players,z,time,who,stats){
  if(z.branch===1){ctx.fillStyle='#b6c1f9b3';ctx.fillRect(c.anchor+300,390,175,17);}
  if(z.kind==='boss-perception')ctx.fillText(who===0?'✦ Видимое слабое место':'◈ Заметный защитный контур',c.goal,310);
  const plat=(x,y,w,h,col)=>{ctx.fillStyle=col;ctx.fillRect(x,y,w,h);};
+ if(z.kind==='gravity-duet'){
+  ctx.strokeStyle='#a8eaffaa';ctx.lineWidth=3;
+  for(let i=0;i<7;i++){
+   const x=c.anchor+120+i*88,y=320+Math.sin(time*2+i)*18;
+   ctx.beginPath();ctx.moveTo(x,y+35);ctx.lineTo(x,y);ctx.moveTo(x-7,y+9);ctx.lineTo(x,y);ctx.lineTo(x+7,y+9);ctx.stroke();
+  }
+ }
+ if(z.kind==='prism'){
+  const prismX=[c.anchor+250,c.anchor+460,c.anchor+670];
+  ctx.lineWidth=3;ctx.strokeStyle='#ffeab6';ctx.beginPath();ctx.moveTo(c.anchor,473);
+  ctx.lineTo(c.anchor+140+z.beam*190,395-(z.mirror%3)*14);ctx.stroke();
+  prismX.forEach((x,i)=>{ctx.save();ctx.translate(x,418);ctx.rotate(Math.PI/4+time*.1);
+    ctx.fillStyle=i<z.step?'#95ffec':'#a4b5f09a';ctx.fillRect(-15,-15,30,30);ctx.restore();});
+ }
+ if(z.kind==='rhythm'){
+  for(let i=0;i<4;i++){
+   const x=c.anchor+150+i*125,h=48+Math.sin(time*4+i)*14;
+   ctx.fillStyle=i<z.rhythm.progress?'#98f9cf':'#a8abdc77';
+   ctx.fillRect(x,495-h,43,h);
+  }
+ }
+ if(z.kind==='water'){
+  ctx.strokeStyle='#71d6efbb';ctx.lineWidth=5;
+  ctx.beginPath();
+  for(let i=0;i<=22;i++){const x=c.anchor+i*39,y=524+Math.sin(time*3+i*.65)*5;if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+  ctx.stroke();ctx.fillStyle='#c8f1ff';ctx.fillText(z.water.direction===1?'➜ ТЕЧЕНИЕ':z.water.direction===-1?'⬅ ТЕЧЕНИЕ':'◈ ВОДА',c.anchor+350,515);
+ }
+ if(z.kind==='magnets'){
+  for(let i=0;i<2;i++){
+   const x=c.anchor+140+i*150,y=487;
+   ctx.strokeStyle=i===0?'#eeb1a1':'#a4d9ee';ctx.lineWidth=5;
+   ctx.beginPath();ctx.arc(x,y,24,Math.PI*.25,Math.PI*1.75);ctx.stroke();
+   ctx.fillStyle='#fff';ctx.fillText(z.magnet.polarity[i]>0?'+':z.magnet.polarity[i]<0?'−':'○',x,y+6);
+  }
+ }
+
  if(z.kind==='gravity-duet'&&z.gravity[0]===-1)plat(c.anchor+100,260,690,15,'#aeebfc8d');
  if(z.kind==='resize'){
   if(z.scale[1]!==.5)plat(c.anchor+250,406,24,138,'#bba1f3a0');
@@ -275,6 +311,26 @@ function draw(ctx,level,players,z,time,who,stats){
   const x=c.goal;
   ctx.fillStyle=z.boss.shield?'#8fe9f2':'#d18cdf';
   ctx.shadowBlur=25;ctx.shadowColor='#d9b1ff';ctx.beginPath();ctx.arc(x,410,55,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  if(z.kind==='boss-spider'){
+   ctx.strokeStyle='#eecafa';ctx.lineWidth=7;
+   for(let i=0;i<8;i++){const angle=i*Math.PI/4+time*.15;
+    ctx.beginPath();ctx.moveTo(x+Math.cos(angle)*32,410+Math.sin(angle)*28);
+    ctx.lineTo(x+Math.cos(angle)*102,405+Math.sin(angle)*75);ctx.stroke();}
+  }else if(z.kind==='boss-dragon'){
+   ctx.fillStyle='#a4a2ee88';ctx.beginPath();ctx.moveTo(x-26,402);ctx.lineTo(x-140,340+Math.sin(time*2)*15);ctx.lineTo(x-99,445);
+   ctx.lineTo(x,434);ctx.lineTo(x+140,340+Math.sin(time*2)*15);ctx.lineTo(x+99,445);ctx.closePath();ctx.fill();
+  }else if(z.kind==='boss-mirror'){
+   ctx.strokeStyle='#f9e2ff';ctx.lineWidth=3;ctx.strokeRect(x-94,332,188,150);
+   ctx.save();ctx.globalAlpha=.35;ctx.translate(2*x,0);ctx.scale(-1,1);
+   ctx.beginPath();ctx.arc(x,410,40+Math.sin(time*2)*8,0,Math.PI*2);ctx.stroke();ctx.restore();
+  }else if(z.kind==='boss-titan'){
+   ctx.fillStyle='#b7b6cf8a';ctx.fillRect(x-74,458,54,76);ctx.fillRect(x+20,458,54,76);
+   for(let i=0;i<4;i++){ctx.fillStyle=i<4-z.boss.hp?'#89ffdb':'#ecbafa';
+    ctx.fillRect(x-44+i*26,460,19,19);}
+  }else if(z.kind==='boss-perception'){
+   ctx.strokeStyle='#fff';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(x,405,58,32,0,0,Math.PI*2);ctx.stroke();
+   ctx.fillStyle='#181d45';ctx.beginPath();ctx.arc(x,405,14+Math.sin(time*3)*4,0,Math.PI*2);ctx.fill();
+  }
   ctx.fillStyle='#221c43';ctx.fillText('Босс · '+z.boss.hp+'/'+z.boss.max,x,415);
  }
  }
