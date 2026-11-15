@@ -154,6 +154,19 @@ test('server-only completed stage awards diary, firefly, medal once',()=>{
  assert.equal(r.v21World.diary.length,1);
 });
 
+test('trail bridge is physically necessary to cross asymmetric floor gap',()=>{
+ const game=setup(112),c=game.level.v21;
+ assert.equal(game.level.floor.length,2);
+ assert.ok(game.level.floor[0][1]<game.level.floor[1][0]);
+ const bridge=v21.platformRects(game,0).find(x=>x.kind==='v21-spark-route');
+ assert.ok(bridge);
+ assert.equal(v21.platformRects(game,1).some(x=>x.kind==='v21-spark-route'),false);
+ const renderer=require('../public/reconciliation.js');
+ const host=renderer.geometry(game.level,{v21:v21.snapshot(game)},0);
+ const guest=renderer.geometry(game.level,{v21:v21.snapshot(game)},1);
+ assert.ok(host.some(x=>x.x===bridge.x));
+ assert.equal(guest.some(x=>x.x===bridge.x&&x.w===bridge.w),false);
+});
 test('orb form requires both players and adds a real extra platform',()=>{
  const game=setup(116),anchor=game.level.v21.anchor,goal=game.level.v21.goal;
  park(game,0,anchor);park(game,1,anchor+440);
