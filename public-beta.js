@@ -20,7 +20,7 @@ const normalizeFeedback=(raw,now=Date.now())=>{
  const kind=FEEDBACK_TYPES.has(raw.kind)?raw.kind:null;
  const message=safeText(raw.message,800);
  const platform=PLATFORM_TYPES.has(raw.platform)?raw.platform:'other';
- const stage=Number.isInteger(raw.stage)&&raw.stage>=0&&raw.stage<=121?raw.stage:null;
+ const stage=Number.isInteger(raw.stage)&&raw.stage>=0&&raw.stage<=136?raw.stage:null;
  const rating=Number.isInteger(raw.rating)&&raw.rating>=1&&raw.rating<=5?raw.rating:null;
  if(!kind||message.length<10||message.length>800)return null;
  return {id:crypto.randomBytes(8).toString('hex'),kind,message,platform,stage,rating,created:now};
@@ -33,7 +33,7 @@ const cleanFeedback=raw=>(Array.isArray(raw)?raw:[]).slice(-MAX_REPORTS).flatMap
  return [{id:entry.id,kind:entry.kind,message,
   platform:PLATFORM_TYPES.has(entry.platform)?entry.platform:'other',
   rating:Number.isInteger(entry.rating)&&entry.rating>=1&&entry.rating<=5?entry.rating:null,
-  stage:Number.isInteger(entry.stage)&&entry.stage>=0&&entry.stage<=121?entry.stage:null,
+  stage:Number.isInteger(entry.stage)&&entry.stage>=0&&entry.stage<=136?entry.stage:null,
   created:Number.isFinite(entry.created)?entry.created:0}];
 });
 function createPublicBeta(options={}){
@@ -83,7 +83,7 @@ function createPublicBeta(options={}){
    players+=online;
    if(online)activeRooms++;
   }
-  return {version:'22.0.0',beta:true,playersOnline:players,roomsOnline:activeRooms,
+  return {version:'26.0.0',beta:true,playersOnline:players,roomsOnline:activeRooms,
    roomCapacity:maxRooms,cloudConfigured:!!storage.cloudConfigured,
    diskConfigured:!!storage.diskConfigured,
    durableRooms:!!storage.cloudConfigured||!!storage.diskConfigured,
