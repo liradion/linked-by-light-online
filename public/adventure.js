@@ -19,8 +19,8 @@ const BOSS_NAMES=['Сонный Великан','Лесной Хранитель
 const SKINS=[['classic','Классика','✦'],['sunset','Закат','☀'],['aurora','Сияние','◈'],['royal','Корона','♛'],['forest','Лес','❀'],['galaxy','Галактика','✧']];
 const PETS=[['none','Без питомца','·'],['fox','Лисёнок','🦊'],['owl','Совёнок','🦉'],['moth','Мотылёк','🦋'],['cat','Котик','🐈'],['orb','Светлячок','✨']];
 const FURN=[['lamp','Лампа','💡'],['plant','Растение','🌿'],['sofa','Диван','🛋️'],['shelf','Книги','📚'],['star','Звезда','⭐'],['rug','Ковёр','🧶'],['aquarium','Аквариум','🐠'],['telescope','Телескоп','🔭'],['fireplace','Камин','🔥'],['frame','Фото','🖼️'],['garden','Сад','🪴'],['piano','Пианино','🎹']];
-const initial={secrets:[],pets:[],skin:'classic',pet:'none',home:[{item:'lamp',slot:0},{item:'plant',slot:4}],achievements:[],shards:0,choices:{},homeUpdatedAt:0,lookUpdatedAt:0};
-function load(){try{let x=JSON.parse(localStorage.getItem(DATA_KEY));if(x&&typeof x==='object')return {...initial,...x,secrets:Array.isArray(x.secrets)?x.secrets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],pets:Array.isArray(x.pets)?x.pets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],home:Array.isArray(x.home)?x.home.slice(0,16):initial.home,choices:x.choices&&typeof x.choices==='object'&&!Array.isArray(x.choices)?x.choices:{}};}catch(_){}return {...initial};}
+const initial={secrets:[],pets:[],skin:'classic',pet:'none',home:[{item:'lamp',slot:0},{item:'plant',slot:4}],achievements:[],shards:0,choices:{},daily:{day:'',completed:[]},homeUpdatedAt:0,lookUpdatedAt:0};
+function load(){try{let x=JSON.parse(localStorage.getItem(DATA_KEY));if(x&&typeof x==='object')return {...initial,...x,secrets:Array.isArray(x.secrets)?x.secrets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],pets:Array.isArray(x.pets)?x.pets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],home:Array.isArray(x.home)?x.home.slice(0,16):initial.home,choices:x.choices&&typeof x.choices==='object'&&!Array.isArray(x.choices)?x.choices:{},daily:x.daily&&typeof x.daily==='object'?{day:String(x.daily.day||'').slice(0,10),completed:Array.isArray(x.daily.completed)?x.daily.completed.filter(v=>['stage','duet','stars'].includes(v)):[]}:initial.daily};}catch(_){}return {...initial};}
 let data=load(),callbacks={},lastBossPhase=0,lastStage=-1,lastPet=false,lastSecret=false,lastHearts=0,sharedHome=null,serverLooks=[null,null],lastSaveTime=0;
 const $=id=>document.getElementById(id),save=()=>{try{localStorage.setItem(DATA_KEY,JSON.stringify(data));}catch(_){}};
 const ownHome=()=>sharedHome||data.home;
@@ -47,6 +47,11 @@ function onJoined(room,role){if(role>=0){callbacks.send?.({t:'customize',...getP
 }
 function onSnapshot(s){
  if(!s?.world)return;
+ const day=new Date().toISOString().slice(0,10);
+ if(data.daily?.day!==day)data.daily={day,completed:[]};
+ const finish=id=>{if(!data.daily.completed.includes(id)){data.daily.completed.push(id);data.shards=Math.min(99999,(data.shards||0)+5);progressChanged();announce('Ежедневная цель: +5 ✦');}};
+ if(!s.customLevel&&s.result?.completed){finish('stage');if(s.result.stars===3)finish('stars');}
+ if((s.world.expansion?.duets||0)>0){finish('duet');if(!data.achievements.includes('duet')){data.achievements.push('duet');progressChanged();}}
  if(s.looks)receiveLooks(s.looks);if(s.home&&JSON.stringify(s.home)!==JSON.stringify(ownHome()))receiveHome(s.home);
  const ex=s.world.adventure;
  if(!ex)return;
@@ -121,7 +126,7 @@ function importProfile(obj){if(!obj||obj.version!==11||!obj.adventure||typeof ob
  const a=obj.adventure;const skin=SKINS.some(v=>v[0]===a.skin)?a.skin:'classic',pet=PETS.some(v=>v[0]===a.pet)?a.pet:'none';
  data={...initial,secrets:Array.from(new Set((Array.isArray(a.secrets)?a.secrets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),pets:Array.from(new Set((Array.isArray(a.pets)?a.pets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),
  skin,pet,home:Array.isArray(a.home)?a.home.filter(e=>FURN.some(x=>x[0]===e.item)&&Number.isInteger(e.slot)&&e.slot>=0&&e.slot<16).slice(0,16):initial.home,
- achievements:Array.isArray(a.achievements)?a.achievements.filter(x=>typeof x==='string'&&x.length<=40).slice(0,50):[],shards:Math.max(0,Math.min(99999,Number(a.shards)||0)),choices:{},homeUpdatedAt:Number.isSafeInteger(a.homeUpdatedAt)&&a.homeUpdatedAt>=0?a.homeUpdatedAt:0,lookUpdatedAt:Number.isSafeInteger(a.lookUpdatedAt)&&a.lookUpdatedAt>=0?a.lookUpdatedAt:0};
+ achievements:Array.isArray(a.achievements)?a.achievements.filter(x=>typeof x==='string'&&x.length<=40).slice(0,50):[],shards:Math.max(0,Math.min(99999,Number(a.shards)||0)),choices:{},daily:{day:typeof a.daily?.day==='string'?a.daily.day.slice(0,10):'',completed:Array.isArray(a.daily?.completed)?a.daily.completed.filter(v=>['stage','duet','stars'].includes(v)):[]},homeUpdatedAt:Number.isSafeInteger(a.homeUpdatedAt)&&a.homeUpdatedAt>=0?a.homeUpdatedAt:0,lookUpdatedAt:Number.isSafeInteger(a.lookUpdatedAt)&&a.lookUpdatedAt>=0?a.lookUpdatedAt:0};
  if(a.choices&&typeof a.choices==='object')for(const [k,v] of Object.entries(a.choices))if(/^\d{1,2}$/.test(k)&&Number(k)<=10&&[0,1].includes(v))data.choices[k]=v;
  const cp=Number(obj.checkpoint);if(Number.isSafeInteger(cp)&&cp>=0&&cp<=98){try{localStorage.setItem('linked-light-checkpoint-v99',String(cp));}catch(_){}}
  if(obj.records&&typeof obj.records==='object'){
@@ -143,6 +148,12 @@ function renderJournal(rootEl){
   for(const [key,name] of [['together','♡ Общая эмоция'],['keeper','🐾 Друг животных'],['archivist','✧ Хранитель тайн']]){awards.append(el('div','adv-award'+(data.achievements.includes(key)?' earned':''),name));}
   rootEl.append(el('h3',null,'🏆 Достижения'));rootEl.append(awards);
  rootEl.append(el('div','adv-mini',`Открыто секретов: ${data.secrets.length}/11 · Питомцев: ${data.pets.length}/11 · Побеждено боссов: ${data.achievements.filter(x=>x.startsWith('boss')).length}/11.`));
+ const daily=el('div','adv-journal-entry');daily.append(el('h3','☀ Испытания дня · '+new Date().toISOString().slice(0,10)));
+ for(const [key,name] of [['stage','Пройти один уровень'],['duet','Выполнить резонанс вдвоём'],['stars','Получить три звезды']]){
+   daily.append(el('p',((data.daily?.completed||[]).includes(key)&&data.daily?.day===new Date().toISOString().slice(0,10)?'✓ ':'○ ')+name));
+ }
+ daily.append(el('p','За каждое испытание: +5 световых осколков · Всего: '+(data.shards||0)));
+ rootEl.append(daily);
 }
 function renderDialog(){const holder=$('advDialogBody');if(!holder)return;holder.replaceChildren();const tab=$('advDialog').dataset.tab||'map';
  for(const b of document.querySelectorAll('.adv-tab'))b.classList.toggle('chosen',b.dataset.tab===tab);
