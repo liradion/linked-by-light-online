@@ -8,7 +8,7 @@ const colors={amber:'#ffc17f',blue:'#80eff7'};
 let levelIndex=0,level=structuredClone(stageDefs[0]),P=[],camera=0,clock=0;
 let particles=[],rings=[],screenShake=0,collectibles=[],toastTimer=0;
 let room='',role=-1,token='',phase='waiting',connected=[false,false],socket=null,ready=false;
-let pendingRoom='',pendingCreate=false,pendingCreateStage=0,connectedBefore=false,reconnectCount=0,wsTimer=null;
+let pendingRoom='',pendingCreate=false,pendingCreateStage=0,pendingBlueprint=null,connectedBefore=false,reconnectCount=0,wsTimer=null;
 let latest=null,snapshots=[],fpsTime=performance.now(),sound=true,ac=null;
 const keys=new Set(),input={left:false,right:false,jumpSeq:0,abilitySeq:0,bondSeq:0,emoteSeq:0};
 let prediction=null,lastPredStage=-1,predJumpAt=0,lastAck=0,lastResultId='',packetSeq=0,wasOnGround=null,lastFootstep=0;
@@ -45,7 +45,7 @@ function openConnection(){
   socket.addEventListener('open',()=>{
     reconnectCount=0;ready=true;connectedBefore=true;setError('');updateStatus();
     if(room||pendingRoom){const code=room||pendingRoom;wsSend({t:'join',room:code,token:token||roomToken(code)});}
-    else if(pendingCreate){wsSend({t:'create',stage:pendingCreateStage,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome()});pendingCreate=false;}
+    else if(pendingCreate){wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome()});pendingCreate=false;pendingBlueprint=null;}
     else showUI();
   });
   socket.addEventListener('message',e=>{
@@ -54,10 +54,12 @@ function openConnection(){
       room=m.room;role=m.role;token=m.token;phase=m.phase;pendingRoom='';saveToken(room,token);
       history.replaceState({},'',location.pathname+'?room='+encodeURIComponent(room));
       connected=m.connected||[false,false];$('myRole').textContent=role===0?'Искра (ведущий)':'Эхо (гость)';
-      if(m.home)GameAdventure.receiveHome(m.home);GameAdventure.onJoined(room,role);
+      if(m.home)GameAdventure.receiveHome(m.home);GameAdventure.onJoined(room,role);GameExpansion.onJoined(m.notes||[]);
       setError('');resetKeys();showUI();return;
     }
     if(m.t==='home'){GameAdventure.receiveHome(m.items);return;}
+    if(m.t==='note'){GameExpansion.onNote(m.note);return;}
+    if(m.t==='quick'){GameExpansion.onQuick(m);return;}
     if(m.t==='looks'){GameAdventure.receiveLooks(m.looks);return;}
     if(m.t==='storyChoice'){GameAdventure.storyChoice?.(m);return;}
     if(m.t==='members'){
@@ -114,10 +116,10 @@ function showUI(){
   $('waitingBanner').classList.toggle('hidden',!room||phase!=='playing'||connected.every(Boolean));
   $('touchControls').style.visibility=!!room&&phase==='playing'?'visible':'hidden';
 }
-function createRoom(newGame=false,stageOverride=null){
- setError('');pendingCreate=true;pendingRoom='';pendingCreateStage=Number.isInteger(stageOverride)?stageOverride:(newGame?0:bestStage());
+function createRoom(newGame=false,stageOverride=null,blueprint=null){
+ setError('');pendingCreate=true;pendingRoom='';pendingBlueprint=blueprint;pendingCreateStage=Number.isInteger(stageOverride)?stageOverride:(newGame?0:bestStage());
  if(!ready)openConnection();
- else{wsSend({t:'create',stage:pendingCreateStage,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome()});pendingCreate=false;}
+ else{wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome()});pendingCreate=false;pendingBlueprint=null;}
 }
 function joinRoom(code){const value=(code||'').trim().toUpperCase();if(!/^[A-HJ-NP-Z2-9]{6}$/.test(value)){setError('Введите шестизначный код комнаты.');return;}
   pendingRoom=value;setError('');if(ready)wsSend({t:'join',room:value,token:roomToken(value)});else openConnection();
@@ -140,7 +142,7 @@ function resetKeys(){keys.clear();input.left=false;input.right=false;
   document.querySelectorAll('.touch-button').forEach(b=>b.classList.remove('pressed'));sendInput();}
 function updateInput(){const left=role===0?'a':'arrowleft',right=role===0?'d':'arrowright';
   input.left=keys.has(left)||keys.has('touch-left')||keys.has('gamepad-left');input.right=keys.has(right)||keys.has('touch-right')||keys.has('gamepad-right');sendInput();}
-function activateKey(kind){GameQuality.audioUnlock();if(kind==='jump')GameQuality.effect('jump');else if(kind==='ability')GameQuality.effect('ability');if(kind==='jump'){input.jumpSeq++;predJumpAt=performance.now();}else if(kind==='ability')input.abilitySeq++;else if(kind==='bond')input.bondSeq++;else if(kind==='emote')input.emoteSeq++;sendInput();}
+function activateKey(kind){GameExpansion.haptic(12);GameQuality.audioUnlock();if(kind==='jump')GameQuality.effect('jump');else if(kind==='ability')GameQuality.effect('ability');if(kind==='jump'){input.jumpSeq++;predJumpAt=performance.now();}else if(kind==='ability')input.abilitySeq++;else if(kind==='bond')input.bondSeq++;else if(kind==='emote')input.emoteSeq++;sendInput();}
 const prevent=new Set(['arrowleft','arrowright','arrowup','arrowdown',' ','enter']);
 window.addEventListener('keydown',e=>{
   if(document.activeElement?.tagName==='INPUT')return;
@@ -178,7 +180,7 @@ function updateHUD(){
   const act=Math.min(10,Math.floor(levelIndex/9)),segment=Math.floor((levelIndex%9)/3);
   $('levelLabel').textContent=levelIndex===99?'СЕКРЕТНЫЙ УРОВЕНЬ 100':'УРОВЕНЬ '+String(levelIndex+1).padStart(2,'0')+' / 99 · АКТ '+(act+1)+'/11';
   $('levelName').textContent=level.title;
-  const worldTag=$('worldTag');if(worldTag)worldTag.textContent=(level.signature?.subtitle||'')+(level.reality?' · '+({mirror:'Два мира',chronicle:'Время',gravity:'Антигравитация'}[level.reality.kind]||''):'');
+  const worldTag=$('worldTag');if(worldTag)worldTag.textContent=(latest?.customLevel?'🛠 Авторский уровень':level.signature?.subtitle||'')+(level.reality?' · '+({mirror:'Два мира',chronicle:'Время',gravity:'Антигравитация'}[level.reality.kind]||''):'');
   const progress=$('actProgress');if(progress)progress.textContent=`АКТ ${String(act+1).padStart(2,'0')}`;
   for(let i=0;i<3;i++)$('step'+(i+1)).className='step'+(i===segment?' active':i<segment?' complete':'');
   $('amberStatus').textContent=P[0]?.cool>0?'· '+P[0].cool.toFixed(1)+' c':'· Рывок готов';
@@ -221,7 +223,7 @@ function consumeSnapshot(s){
   if(latest&&s.tick<latest.tick)return;
   const previous=latest;
   if(s.ack&&role>=0){lastAck=Math.max(lastAck,s.ack[role]||0);document.documentElement.dataset.pendingInputs=String(Math.max(0,packetSeq-lastAck));}
-  if(s.result&&s.result.completed){const key=s.result.level+':'+s.result.elapsed+':'+s.result.deaths;
+  if(s.result&&s.result.completed&&!s.customLevel){const key=s.result.level+':'+s.result.elapsed+':'+s.result.deaths;
     if(lastResultId!==key){lastResultId=key;saveStageResult(s.result);announce('Уровень '+(s.result.level+1)+' — '+s.result.stars+' ★ · '+s.result.elapsed+' с · падений: '+s.result.deaths,3.6);GameQuality.effect('star');}}
   if(previous&&s.stage!==previous.stage){prediction=null;lastPredStage=-1;predictor.reset();snapshots=[];camera=0;particles=[];rings=[];GameJuice.clear();
     const next=stageDefs[s.stage];GameQuality.ambient(Math.floor(s.stage/9));announce('✦ Уровень '+(s.stage+1)+' — '+(next.reality?{mirror:'Две реальности',chronicle:'Прошлое и будущее',gravity:'Антигравитация'}[next.reality.kind]:next.signature.subtitle),2.8);tone(600,.16,'sine',.055);}
@@ -229,10 +231,11 @@ function consumeSnapshot(s){
   levelIndex=s.stage;phase=s.phase;connected=s.connected||connected;
   const receivedAt=performance.now();GameQuality.snapshotArrived(receivedAt);
   latest={...s,recvTime:receivedAt};
-  if(role>=0&&phase==='playing'&&s.players?.[role])predictor.reconcile({...s.players[role],type:role,w:30,h:43},s.ack?.[role]||0,stageDefs[s.stage],s.world,s.stage,performance.now(),s.processedCommands?.[role],GameQuality.predictionLead());
+  const predictedStage=s.customLevel?GameExpansion.toStage(stageDefs[0],s.customLevel):stageDefs[s.stage];
+  if(role>=0&&phase==='playing'&&s.players?.[role])predictor.reconcile({...s.players[role],type:role,w:30,h:43},s.ack?.[role]||0,predictedStage,s.world,s.stage,performance.now(),s.processedCommands?.[role],GameQuality.predictionLead());
   GameQuality.ambient(Math.floor(Math.min(98,s.stage)/9));
-  if((phase==='playing'||phase==='win')&&levelIndex<99)saveCheckpoint(levelIndex);
-  level=structuredClone(stageDefs[levelIndex]);level.gateOpen=s.world.gateOpen;level.bridgeLatched=s.world.bridgeLatched;level.padLatched=!!s.world.padLatched;
+  if(!s.customLevel&&(phase==='playing'||phase==='win')&&levelIndex<99)saveCheckpoint(levelIndex);
+  level=s.customLevel?GameExpansion.toStage(stageDefs[0],s.customLevel):structuredClone(stageDefs[levelIndex]);level.gateOpen=s.world.gateOpen;level.bridgeLatched=s.world.bridgeLatched;level.padLatched=!!s.world.padLatched;
   level.pads.forEach((p,i)=>p.pressed=!!s.world.pads[i]);
   level.walls.forEach((w,i)=>w.broken=!!s.world.walls[i]);
   level.crystals.forEach((c,i)=>c.on=!!s.world.crystals[i]);
@@ -250,7 +253,7 @@ function consumeSnapshot(s){
     r.anchors.forEach((a,i)=>a.active=!!state.anchors?.[i]);
   }
   collectibles=level.shards.map((x,i)=>({x,y:i%2?390:432,taken:!!s.world.shards[i]}));
-  GameJuice.snapshot(previous,s,level);GameAdventure.onSnapshot(s);
+  GameJuice.snapshot(previous,s,level);GameAdventure.onSnapshot(s);GameExpansion.onSnapshot(s);
   if(previous?.world?.reality&&!previous.world.reality.done&&s.world.reality?.done){
     announce('✦ Две реальности соединены!',2.6);tone(860,.22,'sine',.05);GameQuality.effect('star');
   }
@@ -275,7 +278,7 @@ function consumeSnapshot(s){
   }
   snapshots.push(latest);if(snapshots.length>12)snapshots.shift();
   if(phase==='playing')playingOnce=true;
-  if(phase==='win'&&previous?.phase!=='win'){announce('Вы прошли игру вместе!',4);tone(740,.3,'sine',.06);}
+  if(phase==='win'&&previous?.phase!=='win'){announce(s.ending?.title||'Вы прошли игру вместе!',4);tone(740,.3,'sine',.06);}
   showUI();
 }
 function renderPlayers(dt){
@@ -374,7 +377,7 @@ function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-
  ctx.restore();}
 function drawPortal(x,y,active){GameVisuals.portal(ctx,x,y,active,clock);}
 function drawPlayer(p){GameVisuals.player(ctx,p,clock);}
-function draw(){background();if(level)drawWorld();else {ctx.fillStyle='#ffffff11';ctx.fillRect(0,544,1200,106);}if(phase==='win'){glowCircle(600,280,300,'#ffe6b720');}if(GameQuality.settings().graphics!=='low')GameVisuals.vignette(ctx,W,H);}
+function draw(){background();if(level)drawWorld();else {ctx.fillStyle='#ffffff11';ctx.fillRect(0,544,1200,106);}GameExpansion.drawWeather(ctx,W,H,latest?.world?.expansion,clock,GameQuality.settings().graphics);if(phase==='win'){glowCircle(600,280,300,'#ffe6b720');}if(GameQuality.settings().graphics!=='low')GameVisuals.vignette(ctx,W,H);}
 const RESULT_KEY='linked-light-stars-v11';
 function saveStageResult(result){try{const all=JSON.parse(localStorage.getItem(RESULT_KEY)||'{}');
  const k=String(result.level),prev=all[k];if(!prev||result.stars>prev.stars||result.stars===prev.stars&&result.elapsed<prev.elapsed){all[k]={stars:result.stars,elapsed:result.elapsed,deaths:result.deaths};localStorage.setItem(RESULT_KEY,JSON.stringify(all));}}
@@ -382,5 +385,5 @@ function saveStageResult(result){try{const all=JSON.parse(localStorage.getItem(R
 GameQuality.init({getSession:()=>({phase,role,room}),onControls:(left,right)=>{if(left)keys.add('gamepad-left');else keys.delete('gamepad-left');if(right)keys.add('gamepad-right');else keys.delete('gamepad-right');updateInput();},onAction:activateKey});
 GameQuality.ambient(0);
 GameAdventure.init({send:wsSend,currentStage:()=>levelIndex,bestStage,inRoom:()=>!!room,startStage:(n)=>{if(room){if(role===0)wsSend({t:'selectStage',stage:n,secrets:GameAdventure.data().secrets.length});else announce('Уровни выбирает создатель комнаты.');}else createRoom(false,n);}});
-GameCloud.init();openConnection();showUI();requestAnimationFrame(animate);
+GameCloud.init();GameExpansion.init({send:wsSend,inRoom:()=>!!room,createCustom:b=>createRoom(false,0,b),announce});openConnection();showUI();requestAnimationFrame(animate);
 })();
