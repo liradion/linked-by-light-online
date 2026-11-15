@@ -9,3 +9,6 @@ services:
     startCommand: npm start
     healthCheckPath: /health
     autoDeployTrigger: commit
+    envVars:
+      - key: BETA_MAX_ROOMS
+        value: '5'
