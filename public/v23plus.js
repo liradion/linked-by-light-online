@@ -240,9 +240,10 @@ function access(){
  }));
 }
 function draw(ctx,level,players,z,time,who,stats){
- if(!level?.v23||!z)return;
+ ctx.save();
+ if(level?.v23&&z){
  const c=level.v23;
- ctx.save();ctx.textAlign='center';ctx.font='bold 15px system-ui';
+ ctx.textAlign='center';ctx.font='bold 15px system-ui';
  function mark(x,y,title,active=false){
   ctx.strokeStyle=active?'#8ef6de':'#ffdb9c';ctx.lineWidth=3;ctx.shadowBlur=active?12:5;ctx.shadowColor='#c8a5fa';
   ctx.beginPath();ctx.arc(x,y,25,0,Math.PI*2);ctx.stroke();
@@ -273,6 +274,7 @@ function draw(ctx,level,players,z,time,who,stats){
   ctx.fillStyle=z.boss.shield?'#8fe9f2':'#d18cdf';
   ctx.shadowBlur=25;ctx.shadowColor='#d9b1ff';ctx.beginPath();ctx.arc(x,410,55,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
   ctx.fillStyle='#221c43';ctx.fillText('Босс · '+z.boss.hp+'/'+z.boss.max,x,415);
+ }
  }
  // Local-only ghost overlay; servers send coordinates, not video.
  if(settings.ghostVisible&&replay.frames.length&&replay.stage===api.stage?.()){
