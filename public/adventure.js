@@ -19,7 +19,7 @@ const BOSS_NAMES=['Сонный Великан','Лесной Хранитель
 const SKINS=[['classic','Классика','✦'],['sunset','Закат','☀'],['aurora','Сияние','◈'],['royal','Корона','♛'],['forest','Лес','❀'],['galaxy','Галактика','✧']];
 const PETS=[['none','Без питомца','·'],['fox','Лисёнок','🦊'],['owl','Совёнок','🦉'],['moth','Мотылёк','🦋'],['cat','Котик','🐈'],['orb','Светлячок','✨']];
 const FURN=[['lamp','Лампа','💡'],['plant','Растение','🌿'],['sofa','Диван','🛋️'],['shelf','Книги','📚'],['star','Звезда','⭐'],['rug','Ковёр','🧶'],['aquarium','Аквариум','🐠'],['telescope','Телескоп','🔭'],['fireplace','Камин','🔥'],['frame','Фото','🖼️'],['garden','Сад','🪴'],['piano','Пианино','🎹']];
-const initial={v20:{schemaVersion:1,unlockedStages:[],records:{},choices:{},unlockedDecor:[],petInteractions:{}},secrets:[],pets:[],skin:'classic',pet:'none',home:[{item:'lamp',slot:0},{item:'plant',slot:4}],achievements:[],shards:0,choices:{},memories:[],daily:{day:'',completed:[]},homeUpdatedAt:0,lookUpdatedAt:0};
+const initial={v21:{schemaVersion:1,unlockedStages:[],diary:[],completed:[],trophies:[],aquarium:[],seasons:[],garden:{steps:0,growth:0},melody:[],painting:Array(64).fill(-1),weeklyRecords:{}},v20:{schemaVersion:1,unlockedStages:[],records:{},choices:{},unlockedDecor:[],petInteractions:{}},secrets:[],pets:[],skin:'classic',pet:'none',home:[{item:'lamp',slot:0},{item:'plant',slot:4}],achievements:[],shards:0,choices:{},memories:[],daily:{day:'',completed:[]},homeUpdatedAt:0,lookUpdatedAt:0};
 function cleanV20House(raw){
  const h=raw&&typeof raw==='object'?raw:{};
  const num=x=>Number.isInteger(x)?Math.max(0,Math.min(20,x)):0;
@@ -30,7 +30,8 @@ function cleanV20House(raw){
   decor:Array.isArray(h.decor)?h.decor.filter(x=>['lampion','flower','crystal'].includes(x)).slice(0,6):[]};
 }
 function cleanV20(raw){const v=raw&&typeof raw==='object'?raw:{};return {schemaVersion:1,unlockedStages:Array.from(new Set((Array.isArray(v.unlockedStages)?v.unlockedStages:[]).filter(x=>typeof x==='string'&&/^v20-(?:0[1-9]|1[0-2])$/.test(x)))).slice(0,12),records:v.records&&typeof v.records==='object'&&!Array.isArray(v.records)?Object.fromEntries(Object.entries(v.records).filter(([k,r])=>/^v20-(?:0[1-9]|1[0-2])$/.test(k)&&r&&Number.isInteger(r.stars)&&r.stars>=1&&r.stars<=3).map(([k,r])=>[k,{stars:r.stars,elapsed:Math.max(0,Number(r.elapsed)||0)}])):{},choices:v.choices&&typeof v.choices==='object'&&!Array.isArray(v.choices)?Object.fromEntries(Object.entries(v.choices).filter(([k,n])=>/^scene-(?:2|4|6|8|10|12)$/.test(k)&&[0,1].includes(n))):{},unlockedDecor:Array.from(new Set((Array.isArray(v.unlockedDecor)?v.unlockedDecor:[]).filter(x=>['lampion','flower','crystal'].includes(x)))).slice(0,3),petInteractions:{},house:cleanV20House(v.house)};}
-function load(){try{let x=JSON.parse(localStorage.getItem(DATA_KEY));if(x&&typeof x==='object')return {...initial,...x,v20:cleanV20(x.v20),secrets:Array.isArray(x.secrets)?x.secrets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],pets:Array.isArray(x.pets)?x.pets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],home:Array.isArray(x.home)?x.home.slice(0,16):initial.home,choices:x.choices&&typeof x.choices==='object'&&!Array.isArray(x.choices)?x.choices:{},memories:Array.isArray(x.memories)?x.memories.filter(v=>typeof v?.text==='string'&&v.text.length<=160).slice(-40):[],daily:x.daily&&typeof x.daily==='object'?{day:String(x.daily.day||'').slice(0,10),completed:Array.isArray(x.daily.completed)?x.daily.completed.filter(v=>['stage','duet','stars'].includes(v)):[]}:initial.daily};}catch(_){}return {...initial};}
+function cleanV21(raw){const z=raw&&typeof raw==='object'?raw:{},arr=(x,n)=>(Array.isArray(x)?x:[]).filter(y=>typeof y==='string'&&y.length<=75).slice(-n);return {schemaVersion:1,unlockedStages:arr(z.unlockedStages,10).filter(x=>/^v21-(0[1-9]|10)$/.test(x)),completed:arr(z.completed,122),trophies:arr(z.trophies,64),aquarium:arr(z.aquarium,5).filter(x=>['ember','moon','pearl','mist','nebula'].includes(x)),seasons:arr(z.seasons,16),diary:(Array.isArray(z.diary)?z.diary:[]).filter(e=>e&&e.type==='event'&&typeof e.title==='string').slice(-40).map(e=>({type:'event',kind:String(e.kind||'').slice(0,25),title:e.title.slice(0,75),stage:Number.isInteger(e.stage)?Math.max(0,Math.min(121,e.stage)):0,day:String(e.day||'').slice(0,10)})),garden:{steps:Math.max(0,Math.min(24,Number(z.garden?.steps)||0)),growth:Math.max(0,Math.min(12,Number(z.garden?.growth)||0))},melody:(Array.isArray(z.melody)?z.melody:[]).filter(x=>Number.isInteger(x?.note)&&x.note>=0&&x.note<=7&&[0,1].includes(x.role)).slice(0,16),painting:Array.from({length:64},(_,i)=>Number.isInteger(z.painting?.[i])&&z.painting[i]>=-1&&z.painting[i]<=5?z.painting[i]:-1),weeklyRecords:z.weeklyRecords&&typeof z.weeklyRecords==='object'&&!Array.isArray(z.weeklyRecords)?Object.fromEntries(Object.entries(z.weeklyRecords).filter(([k,v])=>/^\d{4}-W\d{2}$/.test(k)&&Number.isFinite(v)&&v>0).slice(-10)):{}};}
+function load(){try{let x=JSON.parse(localStorage.getItem(DATA_KEY));if(x&&typeof x==='object')return {...initial,...x,v20:cleanV20(x.v20),v21:cleanV21(x.v21),secrets:Array.isArray(x.secrets)?x.secrets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],pets:Array.isArray(x.pets)?x.pets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],home:Array.isArray(x.home)?x.home.slice(0,16):initial.home,choices:x.choices&&typeof x.choices==='object'&&!Array.isArray(x.choices)?x.choices:{},memories:Array.isArray(x.memories)?x.memories.filter(v=>typeof v?.text==='string'&&v.text.length<=160).slice(-40):[],daily:x.daily&&typeof x.daily==='object'?{day:String(x.daily.day||'').slice(0,10),completed:Array.isArray(x.daily.completed)?x.daily.completed.filter(v=>['stage','duet','stars'].includes(v)):[]}:initial.daily};}catch(_){}return {...initial};}
 let data=load(),callbacks={},lastBossPhase=0,lastStage=-1,lastPet=false,lastSecret=false,lastHearts=0,sharedHome=null,serverLooks=[null,null],lastSaveTime=0;
 const $=id=>document.getElementById(id),save=()=>{try{localStorage.setItem(DATA_KEY,JSON.stringify(data));}catch(_){}};
 const ownHome=()=>sharedHome||data.home;
@@ -142,7 +143,7 @@ function exportProfile(){const payload=profilePayload();
 }
 function importProfile(obj){if(!obj||obj.version!==11||!obj.adventure||typeof obj.adventure!=='object')throw Error('Неверный формат сохранения');
  const a=obj.adventure;const skin=SKINS.some(v=>v[0]===a.skin)?a.skin:'classic',pet=PETS.some(v=>v[0]===a.pet)?a.pet:'none';
- data={...initial,v20:cleanV20(a.v20),secrets:Array.from(new Set((Array.isArray(a.secrets)?a.secrets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),pets:Array.from(new Set((Array.isArray(a.pets)?a.pets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),
+ data={...initial,v20:cleanV20(a.v20),v21:cleanV21(a.v21),secrets:Array.from(new Set((Array.isArray(a.secrets)?a.secrets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),pets:Array.from(new Set((Array.isArray(a.pets)?a.pets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),
  skin,pet,memories:Array.isArray(a.memories)?a.memories.filter(n=>n&&typeof n.text==='string'&&n.text.length<=160&&Number.isFinite(n.at)&&[0,1].includes(n.role)).slice(-40):[],home:Array.isArray(a.home)?a.home.filter(e=>FURN.some(x=>x[0]===e.item)&&Number.isInteger(e.slot)&&e.slot>=0&&e.slot<16).slice(0,16):initial.home,
  achievements:Array.isArray(a.achievements)?a.achievements.filter(x=>typeof x==='string'&&x.length<=40).slice(0,50):[],shards:Math.max(0,Math.min(99999,Number(a.shards)||0)),choices:{},daily:{day:typeof a.daily?.day==='string'?a.daily.day.slice(0,10):'',completed:Array.isArray(a.daily?.completed)?a.daily.completed.filter(v=>['stage','duet','stars'].includes(v)):[]},homeUpdatedAt:Number.isSafeInteger(a.homeUpdatedAt)&&a.homeUpdatedAt>=0?a.homeUpdatedAt:0,lookUpdatedAt:Number.isSafeInteger(a.lookUpdatedAt)&&a.lookUpdatedAt>=0?a.lookUpdatedAt:0};
  if(a.choices&&typeof a.choices==='object')for(const [k,v] of Object.entries(a.choices))if(/^\d{1,2}$/.test(k)&&Number(k)<=10&&[0,1].includes(v))data.choices[k]=v;
@@ -152,6 +153,20 @@ function importProfile(obj){if(!obj||obj.version!==11||!obj.adventure||typeof ob
   try{localStorage.setItem('linked-light-stars-v11',JSON.stringify(safe));}catch(_){}
  }
  sharedHome=null;save();callbacks.send?.({t:'customize',...getProfile()});callbacks.send?.({t:'home',items:data.home});progressChanged();
+}
+function syncV21(server){
+ if(!server||typeof server!=='object')return;
+ const old=cleanV21(data.v21),z=cleanV21(server);
+ z.unlockedStages=Array.from(new Set([...old.unlockedStages,...z.unlockedStages]));
+ z.completed=Array.from(new Set([...old.completed,...z.completed])).slice(-122);
+ z.trophies=Array.from(new Set([...old.trophies,...z.trophies])).slice(-64);
+ z.aquarium=Array.from(new Set([...old.aquarium,...z.aquarium]));
+ z.seasons=Array.from(new Set([...old.seasons,...z.seasons])).slice(-16);
+ const events=[...old.diary,...z.diary];
+ z.diary=events.filter((e,i)=>events.findIndex(x=>x.kind===e.kind&&x.stage===e.stage)===i).slice(-40);
+ z.garden={steps:Math.max(old.garden.steps,z.garden.steps),growth:Math.max(old.garden.growth,z.garden.growth)};
+ z.weeklyRecords={...old.weeklyRecords,...z.weeklyRecords};
+ if(JSON.stringify(z)!==JSON.stringify(old)){data.v21=z;progressChanged();}
 }
 function renderSaves(rootEl){rootEl.append(el('p','adv-description','Выгрузите прогресс в JSON, чтобы перенести его между устройствами и сохранить после очистки браузера. Это не автоматическая облачная синхронизация.'));
  rootEl.append(button('⬇ Скачать сохранение',exportProfile));const pick=el('input','adv-import');pick.type='file';pick.accept='.json,application/json';
@@ -234,5 +249,5 @@ function recordV20(s){
  if(s.v20Home?.memory?.completed&&!v.unlockedDecor.includes('crystal')){v.unlockedDecor.push('crystal');changed=true;}
  if(changed)progressChanged();
 }
-root.GameAdventure={recordV20,cleanV20,init,open,onJoined,onSnapshot,storyChoice,receiveHome,receiveLooks,getProfile,getHome,outfitFor,draw,data:()=>data,safeStage,BOSS_NAMES,profilePayload,importProfile,addMemory};
+root.GameAdventure={syncV21,cleanV21,recordV20,cleanV20,init,open,onJoined,onSnapshot,storyChoice,receiveHome,receiveLooks,getProfile,getHome,outfitFor,draw,data:()=>data,safeStage,BOSS_NAMES,profilePayload,importProfile,addMemory};
 })(typeof window!=='undefined'?window:globalThis);
