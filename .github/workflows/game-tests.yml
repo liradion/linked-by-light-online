@@ -17,6 +17,11 @@ jobs:
         run: |
           node --check server.js
           node --check v20-core.js
+          node --check v21-core.js
+          node --check v21-social.js
+          node --check shared/v21-stages.js
+          node --check public/v21.js
+          node --check public/reconciliation.js
           node --check shared/v20-stages.js
           node --check public/v20.js
           node --check public/client.js
