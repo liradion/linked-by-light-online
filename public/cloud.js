@@ -15,7 +15,14 @@ function mergeV20(a,b){
  return {schemaVersion:1,unlockedStages:Array.from(new Set([...(left.unlockedStages||[]),...(right.unlockedStages||[])])),
   records,choices:{...(left.choices||{}),...(right.choices||{})},
   unlockedDecor:Array.from(new Set([...(left.unlockedDecor||[]),...(right.unlockedDecor||[])])),
-  petInteractions:{...(left.petInteractions||{}),...(right.petInteractions||{})}};
+  petInteractions:{...(left.petInteractions||{}),...(right.petInteractions||{})},
+  house:{
+   zone:right.house?.zone||left.house?.zone||'living',
+   garden:{step:Math.max(left.house?.garden?.step||0,right.house?.garden?.step||0),completed:!!(left.house?.garden?.completed||right.house?.garden?.completed)},
+   memory:{step:Math.max(left.house?.memory?.step||0,right.house?.memory?.step||0),completed:!!(left.house?.memory?.completed||right.house?.memory?.completed)},
+   pet:{mood:right.house?.pet?.mood||left.house?.pet?.mood||'curious',interactions:Math.max(left.house?.pet?.interactions||0,right.house?.pet?.interactions||0)},
+   decor:[...(right.house?.decor||[]),...(left.house?.decor||[])].slice(0,6)
+  }};
 }
 function merge(a,b){if(!a||a.version!==11)return b;if(!b||b.version!==11)return a;
  const keys=new Set([...(a.adventure?.secrets||[]),...(b.adventure?.secrets||[])]);
