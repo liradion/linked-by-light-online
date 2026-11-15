@@ -6,3 +6,5 @@
 .exp-input:focus{outline:2px solid #8adfff}
 .exp-canvas{display:block;width:100%;height:auto;aspect-ratio:650 / 215;touch-action:manipulation;cursor:crosshair;border:1px solid #7b82b2;border-radius:10px;background:#111a31}
 @media (max-width:700px){.exp-input{font-size:16px}.exp-note p{font-size:12px}.exp-notes{max-height:28dvh}}
+@media(pointer:coarse){.exp-input{font-size:16px}}
+@media(pointer:coarse) and (orientation:landscape){.exp-canvas{max-height:145px}}
