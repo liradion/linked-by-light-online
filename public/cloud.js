@@ -35,7 +35,11 @@ function mergeV21(a,b){
   if(!v||typeof v.title!=='string')return false;
   const key=[v.stage,v.kind].join(':');if(seen.has(key))return false;seen.add(key);return true;
  }).slice(-40);
- return {schemaVersion:1,unlockedStages:union(x.unlockedStages,y.unlockedStages,10),
+ const stageRecords={...(y.records||{})};
+ for(const [key,entry] of Object.entries(x.records||{})){
+  const old=stageRecords[key];if(!old||entry.stars>old.stars||entry.stars===old.stars&&entry.elapsed<old.elapsed)stageRecords[key]=entry;
+ }
+ return {schemaVersion:1,records:stageRecords,unlockedStages:union(x.unlockedStages,y.unlockedStages,10),
   completed:union(x.completed,y.completed,122),trophies:union(x.trophies,y.trophies,64),
   seasons:union(x.seasons,y.seasons,16),aquarium:union(x.aquarium,y.aquarium,5),
   diary,weeklyRecords:records,garden:{
