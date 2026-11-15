@@ -17,7 +17,11 @@ function merge(a,b){if(!a||a.version!==11)return b;if(!b||b.version!==11)return 
  }
  return {...b,checkpoint:Math.max(a.checkpoint||0,b.checkpoint||0),records,
   adventure:{...b.adventure,secrets:Array.from(keys),pets:Array.from(pets),achievements:Array.from(achievements),
-  shards:Math.max(a.adventure?.shards||0,b.adventure?.shards||0),choices:{...(b.adventure?.choices||{}),...(a.adventure?.choices||{})},
+  shards:Math.max(a.adventure?.shards||0,b.adventure?.shards||0),
+  daily:a.adventure?.daily?.day===b.adventure?.daily?.day
+   ?{day:a.adventure?.daily?.day||'',completed:Array.from(new Set([...(a.adventure?.daily?.completed||[]),...(b.adventure?.daily?.completed||[])]))}
+   :(String(a.adventure?.daily?.day||'')>String(b.adventure?.daily?.day||'')?a.adventure?.daily:b.adventure?.daily),
+  choices:{...(b.adventure?.choices||{}),...(a.adventure?.choices||{})},
   // Field-level last-write-wins for home and looks; achievements and scores are monotonic.
   homeUpdatedAt:Math.max(a.adventure?.homeUpdatedAt||0,b.adventure?.homeUpdatedAt||0),
   lookUpdatedAt:Math.max(a.adventure?.lookUpdatedAt||0,b.adventure?.lookUpdatedAt||0),
