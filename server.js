@@ -61,9 +61,12 @@ function restoreRooms(){if(!SAVE_FILE||!fs.existsSync(SAVE_FILE))return;
   hydrateRooms(JSON.parse(raw));
  }catch(e){console.warn('Unable to restore rooms:',e.message);}}
 let cloudSaveInFlight=null;
-async function persistRoomsCloud(){
+async function persistRoomsCloud(force=false){
  if(!cloud.active)return false;
- if(cloudSaveInFlight)return cloudSaveInFlight;
+ if(cloudSaveInFlight){
+  if(!force)return cloudSaveInFlight;
+  await cloudSaveInFlight; // Flush the newest snapshot after the previous write.
+ }
  cloudSaveInFlight=cloud.saveRooms(roomBackups()).then(()=>true).catch(e=>{
   console.warn('Cloud room save failed:',e.message);return false;
  }).finally(()=>{cloudSaveInFlight=null;});
@@ -150,7 +153,7 @@ function broadcast(r,obj){
 }
 const betaHttp=createPublicBetaHttp({
  beta,rooms:ROOMS,storageState,getGallery:()=>V21_GALLERY,
- onUpdate:async()=>{persistRooms();await persistRoomsCloud();},
+ onUpdate:async()=>{persistRooms();await persistRoomsCloud(true);},
  onModerated:()=>{for(const r of ROOMS.values())broadcast(r,{t:'v21Gallery',items:social.publicGallery(V21_GALLERY)});}
 });
 const server=http.createServer((req,res)=>{
@@ -476,7 +479,7 @@ let shuttingDown=false;
 process.on('SIGTERM',async()=>{
  if(shuttingDown)return;shuttingDown=true;
  const force=setTimeout(()=>process.exit(0),9500);
- try{persistRooms();await persistRoomsCloud();}catch(e){console.warn('Shutdown backup:',e.message);}
+ try{persistRooms();await persistRoomsCloud(true);}catch(e){console.warn('Shutdown backup:',e.message);}
  server.close(()=>{clearTimeout(force);process.exit(0);});
 });
 setInterval(()=>{for(const r of ROOMS.values())for(const seat of r.seats)if(seat?.online)seat.peer.ping();},10_000).unref();
