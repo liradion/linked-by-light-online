@@ -56,7 +56,7 @@ function renderLevel(){
    case 'knowledge':
     [0,1,2].forEach((n)=>push(['☀ Солнце','☾ Луна','✧ Звезда'][n],'knowledge_symbol',{value:n},role!==1));break;
    case 'lantern':push(core.lantern.lit?'Погасить фонарь':'Зажечь фонарь','lantern_toggle',{},role!==0);break;
-   case 'transform':push('Принять / снять форму','transform');push('Взять ключ','transform_collect');break;
+   case 'transform':push('Сменить форму: герой → зверь/птица → сфера','transform');push('Взять ключ','transform_collect');push('Соединить две сферы','transform_orb_link');break;
    case 'weather':push('Направить ветер','weather_wind',{},role!==0);push('Вызвать дождь','weather_rain',{},role!==1);break;
    case 'cargo':push('Толкнуть вместе','cargo_push');break;
    case 'tree':push('Вырастить ветвь','tree_grow',{},role!==core.tree.growth%2);break;
@@ -252,12 +252,15 @@ function paint(ctx,level,players,world,clock,role){
  if(world.kind==='lantern'&&world.lantern.lit){ctx.fillStyle='#fff2ae9c';ctx.fillRect(c.anchor+360,459,230,17);}
  if(world.kind==='tree')for(let i=0;i<world.tree.growth;i++){ctx.fillStyle='#a8ecc69e';ctx.fillRect(c.anchor+i*115,440-i%3*32,125,16);}
  if(world.kind==='cargo'){ctx.fillStyle='#c2dcff';ctx.shadowColor='#8beeff';ctx.shadowBlur=22;ctx.fillRect(world.cargo.x,GROUND-64,65,64);ctx.shadowBlur=0;}
+ if(world.branch===1){ctx.fillStyle='#eed2a9bb';ctx.fillRect(c.anchor+310,399,172,17);}
+ if(world.kind==='transform'&&world.transform.orbLink){ctx.fillStyle='#c0faffbb';ctx.fillRect(c.goal+100,398,180,18);}
  if(world.kind==='transform'){
   for(const p of players){if(world.transform.forms[p.type]!=='normal'){
-   ctx.fillStyle=p.type===0?'#ffe7af':'#b9f9dd';ctx.fillText(p.type===0?'🕊️':'🦊',p.x+15,p.y-14);
+   ctx.fillStyle=p.type===0?'#ffe7af':'#b9f9dd';ctx.fillText(world.transform.forms[p.type]==='orb'?'✨':p.type===0?'🕊️':'🦊',p.x+15,p.y-14);
   }}
  }
  if(world.kind==='weather'){ctx.fillStyle='#cff7ff';ctx.fillText(world.weather.wind>0?'🌬️':'' ,c.anchor,GROUND-95);ctx.fillText(world.weather.rain>0?'🌧️':'',c.goal,GROUND-95);}
+ if(world.kind==='maze'&&world.maze.turn%2===1){ctx.fillStyle='#bcb4f0ac';ctx.fillRect(c.anchor+280,455,150,18);}
  if(world.kind==='maze'){ctx.fillStyle='#b6b4fc';ctx.fillText('⤾ '+world.maze.turn,c.anchor+240,GROUND-102);}
  ctx.restore();
 }
