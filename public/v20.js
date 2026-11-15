@@ -26,7 +26,7 @@ function render(){
  const n=GameQuality.stats();line(network,'Сервер',version||'проверка');line(network,'RTT / jitter',(n.rtt||0)+' / '+(n.jitter||0)+' мс');line(network,'FPS / буфер',(n.fps||0)+' / '+(n.buffer||0)+' мс');
  line(network,'Повторные подключения',api.reconnects?.()??0);
  b.append(network);
- if(!inRoom){heading(b,'Новая история');text(b,'Создайте комнату главы v20 и пригласите второго игрока обычной ссылкой.');b.append(button('Начать новую историю',()=>{dialog.close();api.create?.();}));return;}
+ if(!inRoom){heading(b,'Новая история');text(b,'Создайте комнату главы v20 и пригласите второго игрока обычной ссылкой.');b.append(button('Начать новую историю',()=>{dialog.close();api.create?.();}));const saved=GameAdventure.data()?.v20?.unlockedStages||[];if(saved.length>1)b.append(button('Продолжить с открытого уровня',()=>{dialog.close();api.resume?.(99+Math.min(12,saved.length));}));return;}
  if(role<0){text(b,'Режим наблюдателя. События доступны только для просмотра.');return;}
  const campaign=el('section','v20-section');heading(campaign,'Кампания · 12 уровней');
  if(v){text(campaign,(v.stageId||'')+' · '+(kinds[v.kind]||'')+(v.complete?' · головоломка решена':' · головоломка активна'));
@@ -139,7 +139,12 @@ function draw(ctx,level,players,v,clock,role){
 function init(callbacks){
  api=callbacks||{};
  try{const bytes=new Uint32Array(2);crypto.getRandomValues(bytes);nonce='v20'+Array.from(bytes,n=>n.toString(36)).join('');}catch(_){nonce='v20'+String(Date.now());}
- const menu=$('createBtn')?.parentElement;if(menu){launch=button('✦ Новая история v20',()=>api.create?.());launch.classList.add('v20-launch');menu.append(launch);}
+ const menu=$('createBtn')?.parentElement;if(menu){
+  launch=button('✦ Новая история v20',()=>api.create?.());launch.classList.add('v20-launch');menu.append(launch);
+  const saved=GameAdventure.data()?.v20?.unlockedStages||[];
+  let max=100;for(let id=100;id<=111;id++){if(!saved.includes('v20-'+String(id-99).padStart(2,'0')))break;max=id;}
+  if(max>100)menu.append(button('▶ Продолжить v20 · '+(max-99)+'/12',()=>api.resume?.(max)));
+ }
  const frame=document.querySelector('.frame')||document.body;
  const toggle=button('✦ v20 · История / Дом',()=>{if(!dialog.open){dialog.showModal();render();}else dialog.close();});toggle.classList.add('v20-toggle');frame.append(toggle);
  dialog=el('dialog','v20-dialog');const top=el('div','v20-top');top.append(el('strong','','Переплетение миров'),button('Закрыть ✕',()=>dialog.close()));dialog.append(top);
