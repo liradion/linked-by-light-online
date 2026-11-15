@@ -19,6 +19,16 @@ async function bodyJson(req,maxBytes){
   throw Object.assign(Error('invalid json'),{status:400});
  }
 }
+function clientAddress(req){
+ const socketAddress=String(req.socket?.remoteAddress||'unknown');
+ // Only trust the rightmost forwarding hop when an operator deliberately
+ // configures a trusted reverse proxy; otherwise never trust a client header.
+ if(process.env.BETA_TRUST_PROXY!=='1')return socketAddress;
+ const forwarded=req.headers?.['x-forwarded-for'];
+ if(typeof forwarded!=='string')return socketAddress;
+ const last=forwarded.split(',').at(-1)?.trim()||'';
+ return require('node:net').isIP(last)?last:socketAddress;
+}
 function sameOrigin(req){
  if(!req.headers.origin)return true; // scripts / same-origin requests without Origin
  try{
@@ -37,7 +47,7 @@ function createPublicBetaHttp({beta,rooms,storageState,getGallery,onUpdate,onMod
    respond(res,200,beta.getStatus(rooms,storageState()));return true;
   }
   if(pathname==='/api/beta/feedback'&&req.method==='POST'){
-   const ip=req.socket.remoteAddress||'unknown';
+   const ip=clientAddress(req);
    if(!beta.allow('feedback',ip,5,3600000)){respond(res,429,{error:'Лимит отзывов достигнут'});return true;}
    try{
     const raw=await bodyJson(req,1700),saved=beta.acceptFeedback(raw);
@@ -68,4 +78,4 @@ function createPublicBetaHttp({beta,rooms,storageState,getGallery,onUpdate,onMod
   respond(res,404,{error:'Not found'});return true;
  };
 }
-module.exports={createPublicBetaHttp,bodyJson,sameOrigin};
+module.exports={createPublicBetaHttp,bodyJson,sameOrigin,clientAddress};
