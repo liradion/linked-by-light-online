@@ -237,6 +237,7 @@ function onMessage(m){
 function onSnapshot(s){
  state=s;
  if(s?.world?.v21&&api.role?.()>=0){
+  GameAdventure.recordV21(s);
   const ids=GameAdventure.data()?.v21?.unlockedStages||[];
   const id=s.world.v21.stageId;
   if(!ids.includes(id)){
