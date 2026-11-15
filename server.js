@@ -8,6 +8,7 @@ const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./
 const {stages}=require('./shared/stages');
 const cloud=require('./cloud-store');
 const pwaIcons=require('./pwa-icons');
+const expansion=require('./expansion-core');
 const {createAuth}=require('./auth-server');
 const auth=createAuth({cloud});
 const PORT=Number(process.env.PORT)||3000;
@@ -19,11 +20,11 @@ const SAVE_DIR=process.env.SAVE_DIR||'';
 const SAVE_FILE=SAVE_DIR?path.join(SAVE_DIR,'linked-light-rooms-v11.json'):'';
 function roomBackups(){return {version:11,rooms:Array.from(ROOMS.values()).map(r=>({
  code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
- home:r.home||[],unlockedMax:r.unlockedMax,lastActivity:r.lastActivity,story:r.story||null}))};}
+ home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,lastActivity:r.lastActivity,story:r.story||null}))};}
 function persistRooms(){if(!SAVE_FILE)return;
  try{fs.mkdirSync(SAVE_DIR,{recursive:true});const rooms=Array.from(ROOMS.values()).map(r=>({
   code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
-  home:r.home||[],unlockedMax:r.unlockedMax,lastActivity:r.lastActivity,story:r.story||null}));
+  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,lastActivity:r.lastActivity,story:r.story||null}));
   const temp=SAVE_FILE+'.'+process.pid+'.tmp';fs.writeFileSync(temp,JSON.stringify({version:11,rooms}),'utf8');fs.renameSync(temp,SAVE_FILE);
  }catch(e){console.warn('Session persistence failed:',e.message);}}
 function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.rooms))return;
@@ -34,11 +35,11 @@ function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.roo
    if(seats.length!==2||!seats[0])continue;
    const game=createGame();initStage(game,saved.game.stage);
    // Restore only expected game state fields; avoid stale socket and input queues.
-   for(const key of ['players','shards','tick','padTimer','completion','transition','stats','lastResult','level'])
+   for(const key of ['players','shards','tick','padTimer','completion','transition','stats','lastResult','level','customChallenge','expansion'])
     if(saved.game[key]!==undefined)game[key]=saved.game[key];
    game.phase=saved.game.phase==='win'?'win':saved.game.phase==='playing'?'playing':'waiting';
    game.input.forEach(i=>{i.left=false;i.right=false;});
-   ROOMS.set(saved.code,{code:saved.code,seats,game,home:cleanHome(saved.home),unlockedMax:Math.max(0,Math.min(98,Number(saved.unlockedMax)||0)),lastActivity:Date.now(),story:saved.story||null});
+   ROOMS.set(saved.code,{code:saved.code,seats,game,home:cleanHome(saved.home),unlockedMax:Math.max(0,Math.min(98,Number(saved.unlockedMax)||0)),lastActivity:Date.now(),story:saved.story||null,notes:Array.isArray(saved.notes)?saved.notes.filter(n=>expansion.cleanNote(n?.text)).slice(-24).map(n=>({text:expansion.cleanNote(n.text),role:[0,1].includes(n.role)?n.role:0,at:Number(n.at)||0})):[],customLevel:expansion.cleanBlueprint(saved.customLevel),storyChoices:saved.storyChoices&&typeof saved.storyChoices==='object'?saved.storyChoices:{},ending:saved.ending||null});
   }
 }
 function restoreRooms(){if(!SAVE_FILE||!fs.existsSync(SAVE_FILE))return;
@@ -113,7 +114,7 @@ const allowedPets=['none','fox','owl','moth','cat','orb'];
 const newSeat=()=>({token:crypto.randomBytes(24).toString('hex'),peer:null,online:false,look:{skin:'classic',pet:'none'}});
 function cleanLook(x){return {skin:allowedSkins.includes(x?.skin)?x.skin:'classic',pet:allowedPets.includes(x?.pet)?x.pet:'none'};}
 function cleanHome(x){if(!Array.isArray(x))return [];return x.slice(0,12).map(v=>({item:allowedFurniture.includes(v?.item)?v.item:'lamp',slot:Number.isInteger(v?.slot)?Math.max(0,Math.min(11,v.slot)):0}));}
-function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[],story:r.story||null};}
+function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[],story:r.story||null,storyChoices:r.storyChoices||{},customLevel:r.customLevel||null,ending:r.ending||null};}
 restoreRooms();
 function countOnline(r){return r.seats.map(s=>!!s?.online);}
 function sendSeatRoom(r){const obj={t:'members',room:r.code,connected:countOnline(r),phase:r.game.phase};
@@ -174,7 +175,7 @@ server.on('upgrade',(req,socket,head)=>{
     room=r;role=index;seat.online=true;seat.peer=peer;r.lastActivity=Date.now();
     // После обновления страницы счётчики нажатий в браузере начинаются с нуля.
     r.game.input[role].packetSeq=0;r.game.input[role].processedSeq=0;r.game.input[role].jumpSeq=0;r.game.input[role].abilitySeq=0;r.game.input[role].bondSeq=0;r.game.input[role].emoteSeq=0;clearMovement(r.game,role);
-    peer.send({t:'joined',room:r.code,role,token:seat.token,phase:r.game.phase,connected:countOnline(r),home:r.home||[]});
+    peer.send({t:'joined',room:r.code,role,token:seat.token,phase:r.game.phase,connected:countOnline(r),home:r.home||[],notes:r.notes||[]});
     peer.send(roomSnapshot(r));
     sendSeatRoom(r);
   };
@@ -187,11 +188,12 @@ server.on('upgrade',(req,socket,head)=>{
       if(rateExceeded('create',8))return error('Слишком много комнат за минуту.');
       if(room)return error('Вы уже в комнате.');
       if(ROOMS.size>=MAX_ROOMS)return error('Сервер заполнен. Попробуйте позже.');
-      const code=newCode(),game=createGame();
+      const code=newCode(),game=createGame(),blueprint=expansion.cleanBlueprint(msg.blueprint);
       // Progress is supplied by the host's browser; rooms still run one authoritative server state.
       const saved=Number.isSafeInteger(msg.stage)?Math.max(0,Math.min(msg.stage===99&&msg.secrets===11?99:98,msg.stage)):0;
       if(saved>0)initStage(game,saved);
-      const r={code,seats:[newSeat(),null],game,home:cleanHome(msg.home),unlockedMax:saved,lastActivity:Date.now()};
+      if(blueprint)expansion.applyBlueprint(game,blueprint);
+      const r={code,seats:[newSeat(),null],game,home:cleanHome(msg.home),notes:[],customLevel:blueprint,storyChoices:{},ending:null,unlockedMax:saved,lastActivity:Date.now()};
       ROOMS.set(code,r);attach(r,0);return;
     }
     if(msg.t==='join'){
@@ -213,8 +215,16 @@ server.on('upgrade',(req,socket,head)=>{
       const act=msg.act,choice=msg.choice;
       if(!Number.isSafeInteger(act)||act<0||act>10||![0,1].includes(choice))return;
       if(room.game.stage!==99&&Math.floor(room.game.stage/9)!==act)return;
-      room.story={act,choice,role,stamp:Date.now()};
+      room.story={act,choice,role,stamp:Date.now()};room.storyChoices=room.storyChoices||{};room.storyChoices[act]=choice;
       broadcast(room,{t:'storyChoice',...room.story});return;
+    }
+    if(msg.t==='note'){
+      if(rateExceeded('note',12))return error('Не больше 12 записок в минуту.');
+      const text=expansion.cleanNote(msg.text);
+      if(!text)return error('Записка должна содержать от 1 до 160 символов.');
+      const note={text,role,at:Date.now()};
+      room.notes=(room.notes||[]).concat(note).slice(-24);
+      broadcast(room,{t:'note',note});return;
     }
     if(msg.t==='home'&&Array.isArray(msg.items)){
       room.home=cleanHome(msg.items);broadcast(room,{t:'home',items:room.home});return;
@@ -224,7 +234,7 @@ server.on('upgrade',(req,socket,head)=>{
       if(!Number.isSafeInteger(target)||target<0||target>99)return error('Неверный номер уровня.');
       if(target>room.unlockedMax&&(target!==99||msg.secrets!==11))return error('Уровень ещё не открыт.');
       if(target===99&&msg.secrets!==11)return error('Сначала найдите все 11 секретных рун.');
-      initStage(room.game,target);room.game.phase='playing';
+      initStage(room.game,target);room.customLevel=null;room.ending=null;room.game.phase='playing';
       sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='input'&&room.game.phase==='playing'){
@@ -235,13 +245,13 @@ server.on('upgrade',(req,socket,head)=>{
       return;
     }
     if(msg.t==='start'&&role===0&&room.seats.every(s=>s?.online)&&room.game.phase==='waiting'){
-      room.game.phase='playing';initStage(room.game,room.game.stage);sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
+      room.game.phase='playing';initStage(room.game,room.customLevel?0:room.game.stage);if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='restart'&&role===0&&room.seats.every(s=>s?.online)){
-      initStage(room.game,0);room.game.phase='playing';sendSeatRoom(room);broadcast(room,snapshot(room.game,countOnline(room)));return;
+      initStage(room.game,0);room.customLevel=null;room.ending=null;room.game.phase='playing';sendSeatRoom(room);broadcast(room,snapshot(room.game,countOnline(room)));return;
     }
     if(msg.t==='resetStage'&&role===0&&room.game.phase==='playing'){
-      initStage(room.game,room.game.stage);broadcast(room,snapshot(room.game,countOnline(room)));return;
+      initStage(room.game,room.customLevel?0:room.game.stage);if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;broadcast(room,roomSnapshot(room));return;
     }
   },()=>{
     if(!room)return;
@@ -255,6 +265,7 @@ const loop=setInterval(()=>{
   lastBroadcast++;
   for(const r of ROOMS.values()){
     tick(r.game,countOnline(r));
+    if(r.game.phase==='win'&&!r.ending)r.ending=r.customLevel?{kind:'creator',title:'Мастера света',text:'Ваш собственный уровень пройден вдвоём!',choices:0}:expansion.endingFor(r);
     r.unlockedMax=Math.max(r.unlockedMax,Math.min(98,r.game.stage));
     const both=r.seats.every(s=>s?.online);
     // 30 Hz while playing (formerly 20 Hz), with next-tick feedback on discrete actions.
