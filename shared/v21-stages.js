@@ -21,7 +21,7 @@ const stages=titles.map((title,i)=>{
   v21:{kind,anchor:x,goal:x+780,sequence:[2,0,1]},
   title,chapter:'Навстречу друг другу',levelSubtitle:'Новая история · '+(i+1)+'/10',
   objective:objectives[i],hint:objectives[i],width,spawn:[115,162],
-  floor:kind==='lantern'?[[0,x+300],[x+670,width]]:[[0,width]],platforms:[{x:420,y:448,w:160,h:17},{x:1110,y:445,w:178,h:18},{x:1540,y:475,w:125,h:17}],
+  floor:kind==='lantern'?[[0,x+300],[x+670,width]]:kind==='trails'?[[0,x+100],[x+830,width]]:[[0,width]],platforms:[{x:420,y:448,w:160,h:17},{x:1110,y:445,w:178,h:18},{x:1540,y:475,w:125,h:17}],
   pads:[],walls:[],crystals:[],bridges:[],hazards:[],
   gates:[{x:width-220,y:354,w:30,h:190}],portal:width-90,
   shards:[280,720,1090,1570,width-330],puzzle:{walls:false,crystals:false,pads:false},bridgeTrigger:'always'
