@@ -36,3 +36,13 @@ jobs:
           node --check public/sw.js
       - name: Run full multiplayer, cloud and PWA test suite
         run: npm test
+      - name: Verify an isolated local v22 deployment using the same read-only smoke as production
+        shell: bash
+        env:
+          SMOKE_BASE_URL: http://127.0.0.1:43997
+        run: |
+          set -euo pipefail
+          PORT=43997 BETA_MAX_ROOMS=10 node server.js &
+          GAME_PID=$!
+          trap 'kill "$GAME_PID" 2>/dev/null || true' EXIT
+          node scripts/smoke-public-beta.js
