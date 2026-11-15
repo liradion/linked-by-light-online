@@ -8,7 +8,7 @@ const {performance}=require('node:perf_hooks');
 const {createBenchmarkMetrics}=require('./benchmark-metrics');
 const benchmark=createBenchmarkMetrics();
 const {createPublicBeta}=require('./public-beta');
-const {createPublicBetaHttp}=require('./public-beta-http');
+const {createPublicBetaHttp,clientAddress}=require('./public-beta-http');
 const configuredBetaRooms=Number(process.env.BETA_MAX_ROOMS);
 const beta=createPublicBeta({maxRooms:process.env.BETA_MAX_ROOMS&&Number.isInteger(configuredBetaRooms)?configuredBetaRooms:200});
 const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./game-core');
@@ -203,7 +203,7 @@ server.on('upgrade',(req,socket,head)=>{
   beta.record('wsAccepted');
   let room=null,role=-1,peer,clientProtocol=1;
   let packetWindow=Date.now(),packetCount=0;
-  const betaAllow=(action,limit)=>benchmark.enabled&&['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)||beta.allow('ws-'+action,req.socket.remoteAddress,limit);
+  const betaAllow=(action,limit)=>benchmark.enabled&&['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)||beta.allow('ws-'+action,clientAddress(req),limit);
   const opCounts=new Map();
   function rateExceeded(action,limit){const now=Date.now(),entry=opCounts.get(action)||{start:now,count:0};
     if(now-entry.start>=60000){entry.start=now;entry.count=0;}
