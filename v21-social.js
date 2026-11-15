@@ -190,16 +190,17 @@ function published(raw,owner,clean){
  const title=text(b.title,32);
  if(title.length<3||!/[a-zа-яё0-9]/i.test(title))return null;
  return {id:crypto.randomBytes(6).toString('hex'),title,blueprint:{...b,title},
-  author:'Творцы света',created:Date.now(),reports:[],owner,hidden:false};
+  author:'Творцы света',created:Date.now(),reports:[],owner,hidden:false,status:'pending'};
 }
 function publicGallery(items){
- return (items||[]).filter(x=>!x.hidden).slice(-30).map(x=>({id:x.id,title:x.title,author:x.author,created:x.created,platforms:x.blueprint.platforms.length}));
+ return (items||[]).filter(x=>!x.hidden&&x.status==='approved').slice(-30).map(x=>({id:x.id,title:x.title,author:x.author,created:x.created,platforms:x.blueprint.platforms.length}));
 }
 function cleanGallery(raw,clean){
  return (Array.isArray(raw)?raw:[]).slice(-40).flatMap(x=>{
   const b=clean(x?.blueprint);if(!b||!b.platforms?.length||!/^([a-f0-9]{12})$/.test(x.id||''))return [];
   return [{id:x.id,title:text(x.title,32),author:'Творцы света',blueprint:b,created:Number(x.created)||0,
-    owner:typeof x.owner==='string'&&x.owner.length===6?x.owner:'',reports:[],hidden:!!x.hidden}];
+    owner:typeof x.owner==='string'&&x.owner.length===6?x.owner:'',reports:[],hidden:!!x.hidden,
+    status:['approved','pending','flagged','rejected'].includes(x.status)?x.status:'pending'}];
  });
 }
 module.exports={roomsProfile,cleanRoom,publicState,privateState,act,completed,cleanBoard,published,publicGallery,cleanGallery,diary};
