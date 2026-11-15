@@ -16,17 +16,18 @@ const hints={
  combo:'Свяжитесь нитью, активируйте обе печати измерений и завершите временной узел.'
 };
 const stages=titles.map((title,i)=>{
- const boss=i%4===3;
- const config={kind:kinds[i],tether:[940,1205],phase:[780,1290],time:[870,1330],boss:boss?['Смотритель граней','Хранитель секунд','Разорванное сердце'][(i-3)/4]:null};
+ const boss=i%4===3,shift=(i%3)*20,chapter=Math.floor(i/4);
+ const first=800+shift,second=1440+(i%4)*17,width=2300+chapter*70+(i%4)*25;
+ const config={kind:kinds[i],tether:[940+shift,1205+shift],phase:[740+shift,1290+(i%4)*15],time:[740+shift,1330+(i%4)*15],boss:boss?['Смотритель граней','Хранитель секунд','Разорванное сердце'][(i-3)/4]:null};
  return {
   v20Id:'v20-'+String(i+1).padStart(2,'0'),v20:config,
-  title,chapter:chapterNames[Math.floor(i/4)],levelSubtitle:'Переплетение миров · '+(i+1)+'/12',
+  title,chapter:chapterNames[chapter],levelSubtitle:'Переплетение миров · '+(i+1)+'/12',
   objective:hints[config.kind]+(boss?' После этого победите хранителя вдвоём.':''),
-  hint:hints[config.kind],width:2320,spawn:[100,164],
-  floor:boss?[[0,2320]]:[[0,820],[920,1435],[1535,2320]],
-  platforms:[{x:695,y:455,w:142,h:18},{x:1480,y:456,w:145,h:18},{x:1690,y:473,w:148,h:18}],
+  hint:hints[config.kind],width,spawn:[92,160],
+  floor:boss?[[0,width]]:[[0,first],[first+112,second],[second+116,width]],
+  platforms:[{x:first-150,y:452-(i%2)*22,w:145,h:18},{x:second+28,y:455-(i%3)*14,w:148,h:18},{x:1680+shift,y:472-(i%3)*19,w:155,h:18}],
   pads:[],walls:[],crystals:[],bridges:[],hazards:[],
-  gates:[{x:2050,y:350,w:31,h:194}],portal:2195,shards:[260,620,1140,1710,1960],
+  gates:[{x:width-245,y:350,w:31,h:194}],portal:width-100,shards:[260+shift,620+shift,1135+(i%3)*35,1690+shift,width-370],
   puzzle:{walls:false,crystals:false,pads:false},bridgeTrigger:'always'
  };
 });
