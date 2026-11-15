@@ -74,7 +74,7 @@ async function take(peer,filter,wait=4000){const end=Date.now()+wait;while(Date.
 test('two real WebSocket players share authored room, notes and quick signals',{timeout:13000},async()=>{
  const port=await freePort(),env={...process.env,PORT:String(port)};
  delete env.SUPABASE_URL;delete env.SUPABASE_SECRET_KEY;delete env.SUPABASE_SERVICE_ROLE_KEY;
- const child=spawn(process.execPath,['server.js'],{cwd:path.join(__dirname,'..'),env,stdio:['ignore','pipe','pipe']});let a,b;
+ const child=spawn(process.execPath,['server.js'],{cwd:path.join(__dirname,'..'),env,stdio:['ignore','pipe','pipe']});let a,b,c;
  try{
   await Promise.race([once(child.stdout,'data'),sleep(2500).then(()=>{throw Error('start timeout')})]);
   a=await socket(port);
@@ -88,6 +88,20 @@ test('two real WebSocket players share authored room, notes and quick signals',{
   a.send({t:'note',text:'Привет из нашей игры ❤️'});
   const note=await take(b,m=>m.t==='note');
   assert.equal(note.note.text,'Привет из нашей игры ❤️');
+  await take(a,m=>m.t==='note');
+  c=await socket(port);c.send({t:'join',room:joined.room,spectate:true});
+  const watcher=await take(c,m=>m.t==='joined');
+  assert.equal(watcher.role,-1);
+  assert.deepEqual(watcher.notes,[],'watchers must not see private notes');
+  const watching=await take(c,m=>m.t==='snapshot'&&m.customLevel);
+  assert.equal(watching.customLevel.title,blueprint.title);
+  a.send({t:'note',text:'Это только для участников'});
+  await take(b,m=>m.t==='note'&&m.note.text==='Это только для участников');
+  await take(a,m=>m.t==='note'&&m.note.text==='Это только для участников');
+  await sleep(120);assert.equal(c.messages.some(m=>m.t==='note'),false,'spectators cannot read notes');
+  c.send({t:'note',text:'Злоумышленник'});c.send({t:'input',inputSeq:999,right:true,abilitySeq:99});
+  await sleep(120);
+  assert.equal(a.messages.some(m=>m.t==='note'),false,'spectators cannot write notes');
   b.send({t:'quick',kind:'heart'});
   assert.equal((await take(a,m=>m.t==='quick')).kind,'heart');
   a.send({t:'start'});
@@ -100,7 +114,7 @@ test('two real WebSocket players share authored room, notes and quick signals',{
   const again=await socket(port);
   try{again.send({t:'join',room:joined.room,token:j2.token});
    const restored=await take(again,m=>m.t==='joined');
-   assert.equal(restored.notes.length,1,'notes restored on reconnect');
+   assert.equal(restored.notes.length,2,'notes restored on reconnect');
   }finally{again.ws.close();}
- }finally{try{a?.ws.close();b?.ws.close();}catch(_){}child.kill('SIGTERM');}
+ }finally{try{a?.ws.close();b?.ws.close();c?.ws.close();}catch(_){}child.kill('SIGTERM');}
 });
