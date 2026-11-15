@@ -26,10 +26,11 @@ function geometry(level,world,role){
  if(level?.v21&&world?.v21){
   const z=world.v21,c=level.v21;
   if(z.branch===1)r.push({x:c.anchor+310,y:399,w:172,h:17});
+  if(z.kind==='trails'&&role===0)r.push({x:c.anchor+105,y:509,w:735,h:14});
   if(z.kind==='trails'&&role===1)for(const t of z.trail||[])r.push({x:t.x,y:t.y,w:95,h:12});
   if(z.kind==='lantern'&&role===0)r.push({x:c.anchor+310,y:459,w:260,h:17});
   if(z.kind==='lantern'&&z.lantern?.lit&&role===1)r.push({x:c.anchor+360,y:459,w:230,h:17});
-  if(z.kind==='transform'&&role===1&&z.transform?.forms?.[1]!=='fox')r.push({x:c.anchor+320,y:544-76,w:28,h:76});
+  if(z.kind==='transform'&&role===1&&z.transform?.forms?.[1]!=='fox')r.push({x:c.anchor+320,y:544-140,w:28,h:140});
   if(z.kind==='maze'&&role===0&&z.maze?.turn<=z.maze?.checkpoint&&z.maze?.checkpoint<3)r.push({x:c.anchor+310+z.maze.checkpoint*150,y:544-100,w:29,h:100});
   if(z.kind==='tree')for(let i=0;i<(z.tree?.growth||0);i++)r.push({x:c.anchor+i*115,y:440-(i%3)*32,w:125,h:16});
   if(z.kind==='transform'&&z.transform?.orbLink)r.push({x:c.goal+100,y:398,w:180,h:18});
