@@ -142,6 +142,7 @@ function updateObjectives(g,dt){
     l.gateOpen=true;
 }
 function tick(g,connected){g.tick++;
+  if(g.assistMode&&g.tick%2===1)return;
   if(g.phase!=='playing'||!connected[0]||!connected[1])return;
   if(g.transition>0){g.transition-=DT;if(g.transition<=0){
     if(g.customChallenge||v23.hasStage(g.stage)&&g.stage>=v23.LAST||v21.hasStage(g.stage)&&g.stage>=v21.LAST||v20.hasStage(g.stage)&&g.stage>=v20.LAST||!v23.hasStage(g.stage)&&!v21.hasStage(g.stage)&&!v20.hasStage(g.stage)&&g.stage>=stages.length-1)g.phase='win';else initStage(g,g.stage+1);
@@ -159,7 +160,7 @@ function tick(g,connected){g.tick++;
   if(g.level.gateOpen&&both){g.completion+=DT;if(g.completion>.58){
     const st=g.stats||{elapsed:0,deaths:0,rescues:0,abilities:[0,0],hearts:0};
     const score=st.deaths===0&&st.elapsed<180&&st.abilities.every(n=>n>0)?3:st.deaths<=2?2:1;
-    g.lastResult={level:g.stage,elapsed:Math.round(st.elapsed*10)/10,deaths:st.deaths,rescues:st.rescues,stars:score,completed:true};
+    g.lastResult={level:g.stage,elapsed:Math.round(st.elapsed*10)/10,deaths:st.deaths,rescues:st.rescues,stars:score,completed:true,assisted:!!g.assistMode};
     g.transition=.85;
   }}else g.completion=0;
 }
