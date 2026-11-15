@@ -108,12 +108,12 @@ function newCode(){for(let tries=0;tries<50;tries++){
   const code=Array.from(crypto.randomBytes(6),byte=>ROOM_ALPHABET[byte%ROOM_ALPHABET.length]).join('');
   if(!ROOMS.has(code))return code;
 }throw Error('unable to create room');}
-const allowedFurniture=['lamp','plant','sofa','shelf','star','rug','aquarium','telescope'];
+const allowedFurniture=['lamp','plant','sofa','shelf','star','rug','aquarium','telescope','fireplace','frame','garden','piano'];
 const allowedSkins=['classic','sunset','aurora','royal','forest','galaxy'];
 const allowedPets=['none','fox','owl','moth','cat','orb'];
 const newSeat=()=>({token:crypto.randomBytes(24).toString('hex'),peer:null,online:false,look:{skin:'classic',pet:'none'}});
 function cleanLook(x){return {skin:allowedSkins.includes(x?.skin)?x.skin:'classic',pet:allowedPets.includes(x?.pet)?x.pet:'none'};}
-function cleanHome(x){if(!Array.isArray(x))return [];return x.slice(0,12).map(v=>({item:allowedFurniture.includes(v?.item)?v.item:'lamp',slot:Number.isInteger(v?.slot)?Math.max(0,Math.min(11,v.slot)):0}));}
+function cleanHome(x){if(!Array.isArray(x))return [];return x.slice(0,16).map(v=>({item:allowedFurniture.includes(v?.item)?v.item:'lamp',slot:Number.isInteger(v?.slot)?Math.max(0,Math.min(15,v.slot)):0}));}
 function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[],story:r.story||null,storyChoices:r.storyChoices||{},customLevel:r.customLevel||null,ending:r.ending||null};}
 restoreRooms();
 function countOnline(r){return r.seats.map(s=>!!s?.online);}
