@@ -47,7 +47,7 @@ test('v22 HTTP API, consent, moderation authentication and feedback survive cont
  try{
   server=startServer(port,dir);await waitHealth(port);
   const ver=await (await req(port,'/version')).json();
-  assert.equal(ver.version,'22.0.0');assert.equal(ver.protocol,3);
+  assert.equal(ver.version,'26.0.0');assert.equal(ver.protocol,4);
   for(const file of ['/beta.js','/beta.css','/privacy.html','/terms.html']){
    const resp=await req(port,file);assert.equal(resp.status,200,file);
   }
