@@ -27,3 +27,19 @@
  .v20-section{padding:10px}
 }
 @media(prefers-reduced-motion:reduce){.v20-dialog::backdrop{backdrop-filter:none}}
+
+.v20-story{background:linear-gradient(150deg,#191b44,#332b63)}
+.v20-story-art{height:106px;display:flex;align-items:center;justify-content:space-around;gap:6px;border-radius:12px;margin-bottom:12px;background:radial-gradient(circle at 50% 70%,#b7a3e63a,#1e274c88 68%),linear-gradient(#111d3c,#40356d);overflow:hidden}
+.v20-story-art span{display:block}
+.v20-hero-one,.v20-hero-two{font-size:53px;text-shadow:0 0 28px currentColor;animation:v20float 3.5s ease-in-out infinite alternate}
+.v20-hero-one{color:#ffd39a}.v20-hero-two{color:#86f3f8;animation-delay:-1.5s}
+.v20-story-horizon{font-size:24px;color:#fbe0ff}
+.v20-house{position:relative;min-height:128px;border:1px solid #d5a3ff50;border-radius:13px;margin:12px 0;overflow:hidden;background:linear-gradient(#242d55 0 60%,#4b436e 60% 100%);box-shadow:inset 0 0 33px #c9baff10}
+.v20-house-backdrop{font-size:35px;text-align:center;padding:22px 3px}
+.v20-pet{position:absolute;bottom:6px;left:17%;font-size:30px;animation:v20float 2.4s ease-in-out infinite alternate}
+.v20-decor{position:absolute;right:16px;bottom:8px;font-size:23px}
+.v20-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.v20-step{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:#8894d41c;border:1px solid #a1a9c848;opacity:.56;color:#eceafb}
+.v20-step.done{background:#a7d0ef55;border-color:#c9f5ff;color:#fff;opacity:1}
+@keyframes v20float{0%{transform:translateY(0)}100%{transform:translateY(-8px)}}
+@media(prefers-reduced-motion:reduce){.v20-hero-one,.v20-hero-two,.v20-pet{animation:none}}
