@@ -185,3 +185,24 @@ test('v26 assistance slows authoritative room simulation without changing defaul
  assert.equal(b.stats.elapsed,0);
  tick(b,[true,true]);assert.equal(b.stats.elapsed>0,true);
 });
+
+test('v24 story branch creates a real alternate collidable route in v23',()=>{
+ const g=setup(123),base=puzzle.platforms(g,0).length;
+ g.v23.branch=1;
+ assert.equal(puzzle.platforms(g,0).length,base+1);
+ assert.equal(puzzle.snapshot(g).branch,1);
+});
+test('dragon guard has an expiring time window and mirror/titan need special actions',()=>{
+ const dragon=setup(133),d=dragon.level.v23;
+ near(dragon,1,d.goal);assert.equal(press(dragon,1,'boss_guard').ok,true);
+ near(dragon,0,d.goal);puzzle.beforeStep(dragon,6);
+ assert.equal(dragon.v23.boss.shield,false);
+ assert.equal(press(dragon,0,'boss_strike').ok,false);
+ const mirror=setup(134),m=mirror.level.v23;
+ near(mirror,1,m.goal);assert.equal(press(mirror,1,'boss_guard').ok,false);
+ near(mirror,0,m.goal);assert.equal(press(mirror,1,'boss_mirror_trap').ok,true);
+ assert.equal(press(mirror,0,'boss_strike').ok,true);
+ const titan=setup(135),t=titan.level.v23;
+ near(titan,1,t.goal-150);assert.equal(press(titan,1,'boss_guard').ok,false);
+ assert.equal(press(titan,1,'boss_titan_seal').ok,true);
+});
