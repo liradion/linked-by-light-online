@@ -74,6 +74,7 @@ test('boss stages have distinct bosses and alternate authorized role hits',()=>{
    v20.afterStep(g,1/60);
    const role=boss.next;g.players[role].x=boss.x-15;
    v20.onAbility(g,g.players[role]);
+   if(i===n-2)assert.equal(boss.phase,3,'boss must reach third phase before death');
   }
   assert.equal(boss.hp,0);assert.equal(v20.completed(g),true);
  }
