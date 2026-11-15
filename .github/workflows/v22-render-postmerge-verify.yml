@@ -1,0 +1,50 @@
+name: v22 Render post-merge verification
+on:
+  workflow_run:
+    workflows: ["Game quality checks"]
+    branches: [main]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout main build
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Wait for Render deploy of exact commit and verify public beta assets
+        env:
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          SITE: https://linked-by-light-eu.onrender.com
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${EXPECTED_SHA:0:12}"
+          echo "Expecting v22.0.0 at commit $SHORT_SHA"
+          for i in $(seq 1 36); do
+            BODY="$(curl -fsSL --connect-timeout 10 --max-time 20 --retry 1 "$SITE/version" 2>/dev/null || true)"
+            if [ -n "$BODY" ]; then
+              ACTUAL="$(VERSION_JSON="$BODY" node -e '
+                try { const v=JSON.parse(process.env.VERSION_JSON);
+                process.stdout.write(v.version==="22.0.0" && v.protocol===3 ? String(v.commit||"") : ""); }
+                catch(_) {}')"
+              if [ "$ACTUAL" = "$SHORT_SHA" ]; then
+                echo "Exact deployment commit confirmed. Running safe read-only smoke."
+                node scripts/smoke-public-beta.js --url="$SITE" --expect-commit="$EXPECTED_SHA"
+                exit 0
+              fi
+              echo "Attempt $i: Render version response does not match exact commit yet."
+            else
+              echo "Attempt $i: Render endpoint unavailable."
+            fi
+            sleep 15
+          done
+          echo "::error::No verified deployment of commit $SHORT_SHA on Render; check Render dashboard, build logs, environment and service URL."
+          exit 1
