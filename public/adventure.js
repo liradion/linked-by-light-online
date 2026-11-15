@@ -18,9 +18,9 @@ const STORY=[
 const BOSS_NAMES=['Сонный Великан','Лесной Хранитель','Лунный Кракен','Король Ветров','Звёздный Сфинкс','Алмазный Страж','Неоновый Титан','Хранитель Течения','Часовой Голем','Тень Горизонта','Сердце Тьмы','Последняя Тень'];
 const SKINS=[['classic','Классика','✦'],['sunset','Закат','☀'],['aurora','Сияние','◈'],['royal','Корона','♛'],['forest','Лес','❀'],['galaxy','Галактика','✧']];
 const PETS=[['none','Без питомца','·'],['fox','Лисёнок','🦊'],['owl','Совёнок','🦉'],['moth','Мотылёк','🦋'],['cat','Котик','🐈'],['orb','Светлячок','✨']];
-const FURN=[['lamp','Лампа','💡'],['plant','Растение','🌿'],['sofa','Диван','🛋️'],['shelf','Книги','📚'],['star','Звезда','⭐'],['rug','Ковёр','🧶'],['aquarium','Аквариум','🐠'],['telescope','Телескоп','🔭']];
+const FURN=[['lamp','Лампа','💡'],['plant','Растение','🌿'],['sofa','Диван','🛋️'],['shelf','Книги','📚'],['star','Звезда','⭐'],['rug','Ковёр','🧶'],['aquarium','Аквариум','🐠'],['telescope','Телескоп','🔭'],['fireplace','Камин','🔥'],['frame','Фото','🖼️'],['garden','Сад','🪴'],['piano','Пианино','🎹']];
 const initial={secrets:[],pets:[],skin:'classic',pet:'none',home:[{item:'lamp',slot:0},{item:'plant',slot:4}],achievements:[],shards:0,choices:{},homeUpdatedAt:0,lookUpdatedAt:0};
-function load(){try{let x=JSON.parse(localStorage.getItem(DATA_KEY));if(x&&typeof x==='object')return {...initial,...x,secrets:Array.isArray(x.secrets)?x.secrets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],pets:Array.isArray(x.pets)?x.pets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],home:Array.isArray(x.home)?x.home.slice(0,12):initial.home,choices:x.choices&&typeof x.choices==='object'&&!Array.isArray(x.choices)?x.choices:{}};}catch(_){}return {...initial};}
+function load(){try{let x=JSON.parse(localStorage.getItem(DATA_KEY));if(x&&typeof x==='object')return {...initial,...x,secrets:Array.isArray(x.secrets)?x.secrets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],pets:Array.isArray(x.pets)?x.pets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],home:Array.isArray(x.home)?x.home.slice(0,16):initial.home,choices:x.choices&&typeof x.choices==='object'&&!Array.isArray(x.choices)?x.choices:{}};}catch(_){}return {...initial};}
 let data=load(),callbacks={},lastBossPhase=0,lastStage=-1,lastPet=false,lastSecret=false,lastHearts=0,sharedHome=null,serverLooks=[null,null],lastSaveTime=0;
 const $=id=>document.getElementById(id),save=()=>{try{localStorage.setItem(DATA_KEY,JSON.stringify(data));}catch(_){}};
 const ownHome=()=>sharedHome||data.home;
@@ -39,7 +39,7 @@ function button(label,cb,css=''){const b=el('button','adv-button '+css,label);b.
 function progressChanged(){save();if($('advDialog')?.open)renderDialog();}
 function getProfile(){return {skin:data.skin,pet:data.pet};}
 function getHome(){return data.home;}
-function receiveHome(items){if(!Array.isArray(items))return;sharedHome=items.slice(0,12);data.home=sharedHome;data.homeUpdatedAt=Date.now();progressChanged();}
+function receiveHome(items){if(!Array.isArray(items))return;sharedHome=items.slice(0,16);data.home=sharedHome;data.homeUpdatedAt=Date.now();progressChanged();}
 function receiveLooks(looks){if(Array.isArray(looks))serverLooks=looks;}
 function outfitFor(i){return serverLooks[i]||getProfile();}
 function onJoined(room,role){if(role>=0){callbacks.send?.({t:'customize',...getProfile()});}
@@ -82,10 +82,10 @@ function renderMap(rootEl){
 function renderHome(rootEl){
  rootEl.append(el('p','adv-description','Ваш общий домик. Выберите украшение, затем свободное место. Изменения синхронизируются в комнате и сохраняются в браузере.'));
  const preview=el('div','adv-home');const house=ownHome();const spaces=el('div','adv-home-grid');
- for(let i=0;i<12;i++){const obj=house.find(x=>x.slot===i),txt=obj?FURN.find(f=>f[0]===obj.item)?.[2]:'+';
+ for(let i=0;i<16;i++){const obj=house.find(x=>x.slot===i),txt=obj?FURN.find(f=>f[0]===obj.item)?.[2]:'+';
  const spot=button(txt,()=>{const item=$('advFurniture').value;const copy=house.filter(x=>x.slot!==i);if(item!=='clear')copy.push({item,slot:i});storeHome(copy);},'adv-home-slot');spot.title=obj?obj.item:'Добавить мебель';spaces.append(spot);}preview.append(el('div','adv-home-header','🏡 Остров двух огней'));preview.append(spaces);rootEl.append(preview);
  const sel=el('select','adv-select');sel.id='advFurniture';const opts=[['clear','Убрать предмет','⌫'],...FURN];for(const x of opts){const o=el('option',null,x[2]+' '+x[1]);o.value=x[0];sel.append(o);}rootEl.append(sel);
- rootEl.append(el('div','adv-mini','Остров общий, если оба игрока находятся в одной комнате. Вне комнаты мебель сохраняется на вашем устройстве.'));
+ rootEl.append(el('div','adv-mini','Остров общий, если оба игрока находятся в одной комнате. Вне комнаты мебель сохраняется на вашем устройстве. Доступно 16 мест и четыре новых предмета.'));
 }
 function renderWardrobe(rootEl){
  rootEl.append(el('p','adv-description','Костюмы открываются за прохождение глав, питомцы — за исследование уровней. Всё бесплатно.'));
@@ -120,7 +120,7 @@ function exportProfile(){const payload=profilePayload();
 function importProfile(obj){if(!obj||obj.version!==11||!obj.adventure||typeof obj.adventure!=='object')throw Error('Неверный формат сохранения');
  const a=obj.adventure;const skin=SKINS.some(v=>v[0]===a.skin)?a.skin:'classic',pet=PETS.some(v=>v[0]===a.pet)?a.pet:'none';
  data={...initial,secrets:Array.from(new Set((Array.isArray(a.secrets)?a.secrets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),pets:Array.from(new Set((Array.isArray(a.pets)?a.pets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),
- skin,pet,home:Array.isArray(a.home)?a.home.filter(e=>FURN.some(x=>x[0]===e.item)&&Number.isInteger(e.slot)&&e.slot>=0&&e.slot<12).slice(0,12):initial.home,
+ skin,pet,home:Array.isArray(a.home)?a.home.filter(e=>FURN.some(x=>x[0]===e.item)&&Number.isInteger(e.slot)&&e.slot>=0&&e.slot<16).slice(0,16):initial.home,
  achievements:Array.isArray(a.achievements)?a.achievements.filter(x=>typeof x==='string'&&x.length<=40).slice(0,50):[],shards:Math.max(0,Math.min(99999,Number(a.shards)||0)),choices:{},homeUpdatedAt:Number.isSafeInteger(a.homeUpdatedAt)&&a.homeUpdatedAt>=0?a.homeUpdatedAt:0,lookUpdatedAt:Number.isSafeInteger(a.lookUpdatedAt)&&a.lookUpdatedAt>=0?a.lookUpdatedAt:0};
  if(a.choices&&typeof a.choices==='object')for(const [k,v] of Object.entries(a.choices))if(/^\d{1,2}$/.test(k)&&Number(k)<=10&&[0,1].includes(v))data.choices[k]=v;
  const cp=Number(obj.checkpoint);if(Number.isSafeInteger(cp)&&cp>=0&&cp<=98){try{localStorage.setItem('linked-light-checkpoint-v99',String(cp));}catch(_){}}
