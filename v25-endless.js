@@ -70,7 +70,7 @@ function capture(room){
  if(z.replays.length>2)z.replays.shift();
  z.ghost=z.active.slice();z.ghostStage=g.stage;
  const bestKey=z.dailyKey||'stage-'+g.stage,time=Number(result.elapsed);
- if(Number.isFinite(time)&&time>0&&(!z.bests[bestKey]||time<z.bests[bestKey]))z.bests[bestKey]=time;
+ if(!result.assisted&&Number.isFinite(time)&&time>0&&(!z.bests[bestKey]||time<z.bests[bestKey]))z.bests[bestKey]=time;
 }
 function meta(room){
  const z=ensure(room);
