@@ -51,6 +51,26 @@ test('room note limits and three deterministic endings',()=>{
  room.game.stats.hearts=3;assert.equal(expansion.endingFor(room).kind,'promise');
  room.storyChoices={0:0,1:1,2:0,3:1,4:1};assert.equal(expansion.endingFor(room).kind,'aurora');
 });
+test('Google save merge retains different personal memories from both devices',()=>{
+ const vm=require('node:vm');
+ const sandbox={window:{},localStorage:{getItem:()=>null}};
+ const script=fs.readFileSync(path.join(__dirname,'../public/cloud.js'),'utf8');
+ vm.runInNewContext(script,sandbox);
+ const note1={at:100,role:0,text:'Записка 1'},note2={at:200,role:1,text:'Записка 2'};
+ const base={version:11,checkpoint:0,adventure:{memories:[note1],secrets:[],pets:[]}};
+ const other={version:11,checkpoint:0,adventure:{memories:[note2],secrets:[],pets:[]}};
+ const merged=sandbox.window.GameCloud.merge(base,other);
+ assert.equal(merged.adventure.memories.length,2);
+ assert.equal(merged.adventure.memories[0].text,'Записка 1');
+ assert.equal(merged.adventure.memories[1].text,'Записка 2');
+});
+test('custom co-op level finishes as a custom challenge, not the next campaign stage',()=>{
+ const g=createGame();assert.equal(expansion.applyBlueprint(g,{v:1,title:'Платформы вдвоём',platforms:[]}),true);
+ g.phase='playing';g.level.gateOpen=true;
+ for(const p of g.players){p.x=g.level.portal-20;p.y=430;p.vx=p.vy=0;p.grounded=true;}
+ for(let i=0;i<165;i++)tick(g,[true,true]);
+ assert.equal(g.phase,'win');assert.equal(g.stage,0);
+});
 test('browser expansion is loaded before client and supports touch and secure text content',()=>{
  const html=fs.readFileSync(path.join(__dirname,'../public/index.html'),'utf8');
  const client=fs.readFileSync(path.join(__dirname,'../public/client.js'),'utf8');
@@ -79,8 +99,9 @@ test('two real WebSocket players share authored room, notes and quick signals',{
   await Promise.race([once(child.stdout,'data'),sleep(2500).then(()=>{throw Error('start timeout')})]);
   a=await socket(port);
   const blueprint={v:1,title:'Мы вместе',platforms:[{x:350,y:440,w:110}]};
-  a.send({t:'create',stage:0,blueprint});
+  a.send({t:'create',stage:0,blueprint,home:Array.from({length:16},(_,i)=>({item:'piano',slot:i}))});
   const joined=await take(a,m=>m.t==='joined');
+  assert.equal(joined.home.length,16,'expanded house reaches all players');
   const state=await take(a,m=>m.t==='snapshot'&&m.customLevel);
   assert.equal(state.customLevel.title,blueprint.title);
   b=await socket(port);b.send({t:'join',room:joined.room});const j2=await take(b,m=>m.t==='joined');
