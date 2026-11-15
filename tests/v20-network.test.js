@@ -19,6 +19,14 @@ test('v20 real WebSocket room, actions, observer isolation and seat recovery',{t
  let a,b,c,rejoined;
  try{
   for(let attempt=0;attempt<80;attempt++){try{const res=await fetch('http://127.0.0.1:'+port+'/version');if(res.ok){const info=await res.json();assert.equal(info.version,'20.0.0');break;}}catch(_){}await sleep(50);}
+  for(const asset of ['/shared/v20-stages.js','/v20.js','/v20.css']){
+   const resp=await fetch('http://127.0.0.1:'+port+asset);
+   assert.equal(resp.status,200,'asset must be served: '+asset);
+   assert.ok((await resp.text()).length>200,'asset must not be empty: '+asset);
+  }
+  const page=await (await fetch('http://127.0.0.1:'+port+'/')).text();
+  assert.ok(page.indexOf('/shared/v20-stages.js')<page.indexOf('/v20.js'));
+  assert.ok(page.indexOf('/v20.js')<page.indexOf('/client.js?v=20'));
   a=await socket(port);a.send({t:'hello',protocol:2});a.send({t:'create',stage:100});const j=await take(a,m=>m.t==='joined');
   assert.equal(j.role,0);
   b=await socket(port);b.send({t:'hello',protocol:2});b.send({t:'join',room:j.room});const j2=await take(b,m=>m.t==='joined');
