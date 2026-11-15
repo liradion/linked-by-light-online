@@ -62,7 +62,7 @@ function capture(room){
  z.active.push([Math.round(g.tick),Math.round(a.x),Math.round(a.y),Math.round(b.x),Math.round(b.y)]);
  if(z.active.length>MAX_FRAMES)z.active.shift();
  const result=g.lastResult;
- if(!result?.completed||result.level!==g.stage)return;
+ if(!result?.completed||result.level!==g.stage||g.stats?.elapsed<result.elapsed)return;
  const key=result.level+':'+result.elapsed+':'+result.deaths;
  if(z.lastResult===key)return;
  z.lastResult=key;
@@ -88,4 +88,8 @@ function replayChunks(room,which){
   frames:entry.frames.slice(index*CHUNK,(index+1)*CHUNK)
  }));
 }
-module.exports={MAX_FRAMES,CHUNK,initial,clean,ensure,seedForDate,generate,capture,meta,replayChunks};
+function persist(raw){
+ const z=clean(raw);
+ return {...z,active:[],ghost:z.ghost.slice(-80),replays:z.replays.slice(-1).map(x=>({...x,frames:x.frames.slice(-80)}))};
+}
+module.exports={MAX_FRAMES,CHUNK,initial,clean,persist,ensure,seedForDate,generate,capture,meta,replayChunks};
