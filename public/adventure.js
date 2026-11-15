@@ -19,8 +19,18 @@ const BOSS_NAMES=['Сонный Великан','Лесной Хранитель
 const SKINS=[['classic','Классика','✦'],['sunset','Закат','☀'],['aurora','Сияние','◈'],['royal','Корона','♛'],['forest','Лес','❀'],['galaxy','Галактика','✧']];
 const PETS=[['none','Без питомца','·'],['fox','Лисёнок','🦊'],['owl','Совёнок','🦉'],['moth','Мотылёк','🦋'],['cat','Котик','🐈'],['orb','Светлячок','✨']];
 const FURN=[['lamp','Лампа','💡'],['plant','Растение','🌿'],['sofa','Диван','🛋️'],['shelf','Книги','📚'],['star','Звезда','⭐'],['rug','Ковёр','🧶'],['aquarium','Аквариум','🐠'],['telescope','Телескоп','🔭'],['fireplace','Камин','🔥'],['frame','Фото','🖼️'],['garden','Сад','🪴'],['piano','Пианино','🎹']];
-const initial={secrets:[],pets:[],skin:'classic',pet:'none',home:[{item:'lamp',slot:0},{item:'plant',slot:4}],achievements:[],shards:0,choices:{},memories:[],daily:{day:'',completed:[]},homeUpdatedAt:0,lookUpdatedAt:0};
-function load(){try{let x=JSON.parse(localStorage.getItem(DATA_KEY));if(x&&typeof x==='object')return {...initial,...x,secrets:Array.isArray(x.secrets)?x.secrets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],pets:Array.isArray(x.pets)?x.pets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],home:Array.isArray(x.home)?x.home.slice(0,16):initial.home,choices:x.choices&&typeof x.choices==='object'&&!Array.isArray(x.choices)?x.choices:{},memories:Array.isArray(x.memories)?x.memories.filter(v=>typeof v?.text==='string'&&v.text.length<=160).slice(-40):[],daily:x.daily&&typeof x.daily==='object'?{day:String(x.daily.day||'').slice(0,10),completed:Array.isArray(x.daily.completed)?x.daily.completed.filter(v=>['stage','duet','stars'].includes(v)):[]}:initial.daily};}catch(_){}return {...initial};}
+const initial={v20:{schemaVersion:1,unlockedStages:[],records:{},choices:{},unlockedDecor:[],petInteractions:{}},secrets:[],pets:[],skin:'classic',pet:'none',home:[{item:'lamp',slot:0},{item:'plant',slot:4}],achievements:[],shards:0,choices:{},memories:[],daily:{day:'',completed:[]},homeUpdatedAt:0,lookUpdatedAt:0};
+function cleanV20House(raw){
+ const h=raw&&typeof raw==='object'?raw:{};
+ const num=x=>Number.isInteger(x)?Math.max(0,Math.min(20,x)):0;
+ return {zone:['living','garden','workshop'].includes(h.zone)?h.zone:'living',
+  garden:{step:num(h.garden?.step),completed:!!h.garden?.completed},
+  memory:{step:num(h.memory?.step),completed:!!h.memory?.completed},
+  pet:{mood:['happy','curious','resting'].includes(h.pet?.mood)?h.pet.mood:'curious',interactions:num(h.pet?.interactions)},
+  decor:Array.isArray(h.decor)?h.decor.filter(x=>['lampion','flower','crystal'].includes(x)).slice(0,6):[]};
+}
+function cleanV20(raw){const v=raw&&typeof raw==='object'?raw:{};return {schemaVersion:1,unlockedStages:Array.from(new Set((Array.isArray(v.unlockedStages)?v.unlockedStages:[]).filter(x=>typeof x==='string'&&/^v20-(?:0[1-9]|1[0-2])$/.test(x)))).slice(0,12),records:v.records&&typeof v.records==='object'&&!Array.isArray(v.records)?Object.fromEntries(Object.entries(v.records).filter(([k,r])=>/^v20-(?:0[1-9]|1[0-2])$/.test(k)&&r&&Number.isInteger(r.stars)&&r.stars>=1&&r.stars<=3).map(([k,r])=>[k,{stars:r.stars,elapsed:Math.max(0,Number(r.elapsed)||0)}])):{},choices:v.choices&&typeof v.choices==='object'&&!Array.isArray(v.choices)?Object.fromEntries(Object.entries(v.choices).filter(([k,n])=>/^scene-(?:2|4|6|8|10|12)$/.test(k)&&[0,1].includes(n))):{},unlockedDecor:Array.from(new Set((Array.isArray(v.unlockedDecor)?v.unlockedDecor:[]).filter(x=>['lampion','flower','crystal'].includes(x)))).slice(0,3),petInteractions:{},house:cleanV20House(v.house)};}
+function load(){try{let x=JSON.parse(localStorage.getItem(DATA_KEY));if(x&&typeof x==='object')return {...initial,...x,v20:cleanV20(x.v20),secrets:Array.isArray(x.secrets)?x.secrets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],pets:Array.isArray(x.pets)?x.pets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],home:Array.isArray(x.home)?x.home.slice(0,16):initial.home,choices:x.choices&&typeof x.choices==='object'&&!Array.isArray(x.choices)?x.choices:{},memories:Array.isArray(x.memories)?x.memories.filter(v=>typeof v?.text==='string'&&v.text.length<=160).slice(-40):[],daily:x.daily&&typeof x.daily==='object'?{day:String(x.daily.day||'').slice(0,10),completed:Array.isArray(x.daily.completed)?x.daily.completed.filter(v=>['stage','duet','stars'].includes(v)):[]}:initial.daily};}catch(_){}return {...initial};}
 let data=load(),callbacks={},lastBossPhase=0,lastStage=-1,lastPet=false,lastSecret=false,lastHearts=0,sharedHome=null,serverLooks=[null,null],lastSaveTime=0;
 const $=id=>document.getElementById(id),save=()=>{try{localStorage.setItem(DATA_KEY,JSON.stringify(data));}catch(_){}};
 const ownHome=()=>sharedHome||data.home;
@@ -62,7 +72,7 @@ function onSnapshot(s){
  if((s.world.expansion?.duets||0)>0){finish('duet');if(!data.achievements.includes('duet')){data.achievements.push('duet');progressChanged();}}
  if(s.looks)receiveLooks(s.looks);if(s.home&&JSON.stringify(s.home)!==JSON.stringify(ownHome()))receiveHome(s.home);
  const ex=s.world.adventure;
- if(!ex)return;
+ if(!ex||s.stage>=100)return;
  const act=Math.min(10,Math.floor(s.stage/9));
  if(ex.pet?.collected&&!lastPet&&ex.pet.visible){if(!data.pets.includes(act)){data.pets.push(act);announce('Найден новый питомец '+PETS[(act%5)+1][2]+'!');progressChanged();}}
  if(ex.secret?.collected&&!lastSecret&&ex.secret.visible){if(!data.secrets.includes(act)){data.secrets.push(act);announce('Секрет мира открыт ✨ '+data.secrets.length+'/11');progressChanged();}}
@@ -132,7 +142,7 @@ function exportProfile(){const payload=profilePayload();
 }
 function importProfile(obj){if(!obj||obj.version!==11||!obj.adventure||typeof obj.adventure!=='object')throw Error('Неверный формат сохранения');
  const a=obj.adventure;const skin=SKINS.some(v=>v[0]===a.skin)?a.skin:'classic',pet=PETS.some(v=>v[0]===a.pet)?a.pet:'none';
- data={...initial,secrets:Array.from(new Set((Array.isArray(a.secrets)?a.secrets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),pets:Array.from(new Set((Array.isArray(a.pets)?a.pets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),
+ data={...initial,v20:cleanV20(a.v20),secrets:Array.from(new Set((Array.isArray(a.secrets)?a.secrets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),pets:Array.from(new Set((Array.isArray(a.pets)?a.pets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),
  skin,pet,memories:Array.isArray(a.memories)?a.memories.filter(n=>n&&typeof n.text==='string'&&n.text.length<=160&&Number.isFinite(n.at)&&[0,1].includes(n.role)).slice(-40):[],home:Array.isArray(a.home)?a.home.filter(e=>FURN.some(x=>x[0]===e.item)&&Number.isInteger(e.slot)&&e.slot>=0&&e.slot<16).slice(0,16):initial.home,
  achievements:Array.isArray(a.achievements)?a.achievements.filter(x=>typeof x==='string'&&x.length<=40).slice(0,50):[],shards:Math.max(0,Math.min(99999,Number(a.shards)||0)),choices:{},daily:{day:typeof a.daily?.day==='string'?a.daily.day.slice(0,10):'',completed:Array.isArray(a.daily?.completed)?a.daily.completed.filter(v=>['stage','duet','stars'].includes(v)):[]},homeUpdatedAt:Number.isSafeInteger(a.homeUpdatedAt)&&a.homeUpdatedAt>=0?a.homeUpdatedAt:0,lookUpdatedAt:Number.isSafeInteger(a.lookUpdatedAt)&&a.lookUpdatedAt>=0?a.lookUpdatedAt:0};
  if(a.choices&&typeof a.choices==='object')for(const [k,v] of Object.entries(a.choices))if(/^\d{1,2}$/.test(k)&&Number(k)<=10&&[0,1].includes(v))data.choices[k]=v;
@@ -201,5 +211,28 @@ function draw(ctx,level,players,extra,clock){if(!extra)return;
  if(players)players.forEach((p,i)=>{const look=outfitFor(i);if(look.pet==='none')return;const sym=PETS.find(z=>z[0]===look.pet)?.[2]||'✨';ctx.save();ctx.font='22px system-ui';ctx.textAlign='center';ctx.globalAlpha=.8;ctx.fillText(sym,p.x+(i?-21:52),p.y-5+Math.sin(clock*5+i)*6);ctx.restore();});
  if(extra.emotes?.length)extra.emotes.forEach((duration,i)=>{if(duration>0&&players[i]){const p=players[i];ctx.save();ctx.font='bold 26px system-ui';ctx.textAlign='center';ctx.fillText((['♡','✋','♫'])[extra.emoteKinds?.[i]||0],p.x+15,p.y-89-Math.sin(clock*7)*8);ctx.restore();}});
 }
-root.GameAdventure={init,open,onJoined,onSnapshot,storyChoice,receiveHome,receiveLooks,getProfile,getHome,outfitFor,draw,data:()=>data,safeStage,BOSS_NAMES,profilePayload,importProfile,addMemory};
+function recordV20(s){
+ if(!s||!Number.isInteger(s.stage))return;
+ const v=data.v20||(data.v20=cleanV20());
+ let changed=false,stageId='v20-'+String(s.stage-99).padStart(2,'0');
+ if(s.stage>=100&&s.stage<=111&&!v.unlockedStages.includes(stageId)){v.unlockedStages.push(stageId);changed=true;}
+ if(s.result?.completed&&s.result.level>=100&&s.result.level<=111){
+  const id='v20-'+String(s.result.level-99).padStart(2,'0'),old=v.records[id];
+  if(!old||s.result.stars>old.stars||s.result.stars===old.stars&&s.result.elapsed<old.elapsed){
+   v.records[id]={stars:s.result.stars,elapsed:s.result.elapsed};changed=true;
+  }
+ }
+ const choices=s.v20Story?.choices||{};
+ for(const [k,choice] of Object.entries(choices))if(/^scene-(?:2|4|6|8|10|12)$/.test(k)&&[0,1].includes(choice)&&v.choices[k]!==choice){
+  v.choices[k]=choice;changed=true;
+ }
+ if(s.v20Home){
+  const h=cleanV20House(s.v20Home);
+  if(JSON.stringify(h)!==JSON.stringify(v.house)){v.house=h;changed=true;}
+ }
+ if(s.v20Home?.garden?.completed&&!v.unlockedDecor.includes('flower')){v.unlockedDecor.push('flower');changed=true;}
+ if(s.v20Home?.memory?.completed&&!v.unlockedDecor.includes('crystal')){v.unlockedDecor.push('crystal');changed=true;}
+ if(changed)progressChanged();
+}
+root.GameAdventure={recordV20,cleanV20,init,open,onJoined,onSnapshot,storyChoice,receiveHome,receiveLooks,getProfile,getHome,outfitFor,draw,data:()=>data,safeStage,BOSS_NAMES,profilePayload,importProfile,addMemory};
 })(typeof window!=='undefined'?window:globalThis);

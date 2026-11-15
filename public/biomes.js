@@ -25,7 +25,7 @@ function puffs(c,x,y,r,col,a=.7){c.save();c.globalAlpha=a;c.fillStyle=col;for(le
 function petals(c,x,y,r,col,angle=0){c.save();c.translate(x,y);c.rotate(angle);for(let i=0;i<6;i++){c.rotate(TAU/6);c.fillStyle=col;c.beginPath();c.ellipse(0,-r*.65,r*.3,r*.56,0,0,TAU);c.fill();}circle(c,0,0,r*.30);c.fillStyle='#ffefbd';c.fill();c.restore();}
 function cog(c,x,y,r,rot,col){c.save();c.translate(x,y);c.rotate(rot);c.strokeStyle=col;c.lineWidth=7;circle(c,0,0,r);c.stroke();for(let i=0;i<12;i++){const a=i*TAU/12;c.save();c.rotate(a);c.fillStyle=col;c.fillRect(r-5,-8,20,16);c.restore();}c.strokeStyle=rgba(col,.55);c.lineWidth=4;circle(c,0,0,r*.42);c.stroke();for(let i=0;i<6;i++){let a=i*TAU/6;c.beginPath();c.moveTo(Math.cos(a)*r*.45,Math.sin(a)*r*.45);c.lineTo(Math.cos(a)*r*.85,Math.sin(a)*r*.85);c.stroke();}c.restore();}
 function bkg(c,level,index,t,cam){
- const act=Math.floor(index/9),v=index%9,sc=P[act],w=1200;
+ const act=index>=100?[4,8,10][Math.min(2,Math.floor((index-100)/4))]:Math.floor(index/9),v=index%9,sc=P[act],w=1200;
  c.save();
  switch(act){
  case 0: // giant warm sunlight, flowering meadow
@@ -87,7 +87,7 @@ function bkg(c,level,index,t,cam){
  }c.restore();
 }
 function platform(c,p,index,t){
- const act=Math.floor(index/9),sc=P[act],{x,y,w}=p;c.save();c.strokeStyle=sc.gold;c.fillStyle=sc.grass;c.lineWidth=1.3;
+ const act=index>=100?[4,8,10][Math.min(2,Math.floor((index-100)/4))]:Math.floor(index/9),sc=P[act],{x,y,w}=p;c.save();c.strokeStyle=sc.gold;c.fillStyle=sc.grass;c.lineWidth=1.3;
  switch(act){
  case 0:for(let q=x+18;q<x+w-10;q+=55)petals(c,q,y-8,5,'#ffd1d6',t*.3);break;
  case 1:for(let q=x+24;q<x+w-10;q+=35){c.beginPath();c.moveTo(q,y);c.lineTo(q-8,y-17);c.lineTo(q+6,y-13);c.stroke();}break;
