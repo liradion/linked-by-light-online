@@ -167,7 +167,7 @@ function completed(r,board){
  if(!z.trophies.includes(trophy))z.trophies.push(trophy);
  diary(r,stage,'win','Вместе пройдено: '+r.game.level.title);
  const species=['ember','moon','pearl','mist','nebula'];
- if(puzzles.hasStage(stage)){const creature=species[(stage-112)%5];if(!z.aquarium.includes(creature))z.aquarium.push(creature);}
+ if(puzzles.hasStage(stage)){z.garden.growth=Math.min(12,z.garden.growth+1);const creature=species[(stage-112)%5];if(!z.aquarium.includes(creature))z.aquarium.push(creature);}
  if(!Array.isArray(board))return;
  const w=puzzles.weekKey();
  if(stage!==puzzles.weeklyStage())return;
