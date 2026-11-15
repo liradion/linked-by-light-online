@@ -25,17 +25,17 @@ test('v21 genuine WebSocket campaign, story, home, gallery and reconnection',{ti
  let host,guest,observer,stale,rejoined;
  try{
   let ready=false;
-  for(let i=0;i<110;i++){try{const r=await fetch('http://127.0.0.1:'+port+'/version');if(r.ok){const v=await r.json();assert.equal(v.version,'22.0.0');assert.equal(v.protocol,3);ready=true;break;}}catch(_){}await sleep(60);}
+  for(let i=0;i<110;i++){try{const r=await fetch('http://127.0.0.1:'+port+'/version');if(r.ok){const v=await r.json();assert.equal(v.version,'26.0.0');assert.equal(v.protocol,4);ready=true;break;}}catch(_){}await sleep(60);}
   assert.equal(ready,true);
   for(const file of ['/shared/v21-stages.js','/v21.js','/v21.css']){
    const r=await fetch('http://127.0.0.1:'+port+file);assert.equal(r.status,200,file);
   }
   const html=await (await fetch('http://127.0.0.1:'+port+'/')).text();
   assert.ok(html.indexOf('/shared/v21-stages.js')<html.indexOf('/v21.js'));
-  assert.ok(html.indexOf('/v21.js')<html.indexOf('/client.js?v=22'));
+  assert.ok(html.indexOf('/v21.js')<html.indexOf('/client.js?v=26'));
   host=await link(port);host.send({t:'hello',protocol:3});
   host.send({t:'create',stage:112,unlockedV21:['v21-01','v21-02']});const joined=await take(host,m=>m.t==='joined');
-  assert.equal(joined.role,0);assert.equal(joined.protocol,3);
+  assert.equal(joined.role,0);assert.equal(joined.protocol,4);
   guest=await link(port);guest.send({t:'hello',protocol:3});
   guest.send({t:'join',room:joined.room});const invited=await take(guest,m=>m.t==='joined');
   assert.equal(invited.role,1);
