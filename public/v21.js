@@ -121,6 +121,10 @@ function renderHome(){
  selectInfo(garden,'Рост сада',(m.garden?.growth||0)+'/12');
  const plant=node('div','v21-plant','🌱 '+Array.from({length:Math.min(12,m.garden?.growth||0)},()=>'✿').join(' '));garden.append(plant);
  garden.append(btn('Полить и ухаживать',()=>draw('garden_tend'),(m.garden?.steps||0)%2!==role));
+ const mailbox=group(body,'Почтовый ящик наших воспоминаний');
+ para(mailbox,'Запечатанные послания показываются здесь только после разблокировки следующего уровня.');
+ if(!secret.length)para(mailbox,'Пока ни одного открытого послания.');
+ for(const item of secret)mailbox.append(node('div','v21-letter',(item.from===0?'✦ Искра: ':'◈ Эхо: ')+item.body));
  const aquarium=group(body,'Аквариум светлячков');
  para(aquarium,'Существа коллекционируются за первые прохождения новых эпизодов.');
  const icons={ember:'✨',moon:'🌙',pearl:'🫧',mist:'🦋',nebula:'⭐'};
