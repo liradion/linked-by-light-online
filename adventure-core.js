@@ -8,7 +8,7 @@ const ARCADE=['chase','flight','rhythm','sail'];
 function init(g){
  const idx=g.stage,act=Math.min(10,Math.floor(idx/9)),variant=idx%9,l=g.level;
  const isBoss=variant===8||idx===99;
- const boss=isBoss?{name:BOSS_NAMES[idx===99?11:act],x:l.gates[0].x-156,y:GROUND-80,hp:idx===99?8:3+Math.floor(act/3),max:idx===99?8:3+Math.floor(act/3),next:0,active:false,attack:0,warning:0,flash:0,phase:1,style:act,pattern:act%3}:null;
+ const boss=isBoss?{name:BOSS_NAMES[idx===99?11:act],x:l.gates[0].x-156,y:GROUND-80,hp:idx===99?8:3+Math.floor(act/3),max:idx===99?8:3+Math.floor(act/3),next:0,active:false,attack:0,warning:0,flash:0,phase:1,style:act,pattern:act%3,focusX:0}:null;
  let kind=null;
  if(idx!==99&&[2,4,5,6].includes(variant)){
   kind=variant===2?'chase':variant===4?'flight':variant===5?'sail':'rhythm';
@@ -63,9 +63,12 @@ function update(g,dt){
  a.bond.power=clamp(a.bond.power+(Math.abs(p0.x-p1.x)<250?.064:.015)*dt,0,1);
  for(let i=0;i<2;i++)a.emotes[i]=Math.max(0,a.emotes[i]-dt);
  if(boss&&boss.hp>0){boss.active=base;boss.flash=Math.max(0,boss.flash-dt);
-  if(boss.active){boss.attack+=dt;if(boss.attack>Math.max(2.1,4.8-boss.phase*.64)){boss.warning=Math.max(.68,1.28-boss.phase*.17);boss.attack=0;}
+  if(boss.active){boss.attack+=dt;if(boss.attack>Math.max(2.1,4.8-boss.phase*.64)){boss.warning=Math.max(.68,1.28-boss.phase*.17);boss.attack=0;
+     // v19: later boss phases target a predicted player lane, then telegraph it.
+     const target=g.players.reduce((best,p)=>Math.abs(p.x-boss.x)<Math.abs(best.x-boss.x)?p:best,g.players[0]);
+     boss.focusX=Math.max(50,Math.min(l.width-90,target.x));}
    if(boss.warning>0){boss.warning-=dt;if(boss.warning<=0&&a.bond.shield<=0){
-    for(const p of g.players){const nearBoss=dist(p,boss.x,GROUND-43)<165;const beam=Math.abs(p.x-boss.x)<80;const targetZone=Math.abs(p.x-(boss.x-110))<80;const danger=boss.pattern===0?nearBoss:boss.pattern===1?beam:targetZone;if(danger){p.x=l.spawn[p.type];p.y=GROUND-43;p.vx=0;p.vy=0;}}
+    for(const p of g.players){const nearBoss=dist(p,boss.x,GROUND-43)<165;const beam=Math.abs(p.x-boss.x)<80;const targetZone=Math.abs(p.x-(boss.phase>=2?boss.focusX:boss.x-110))<80;const danger=boss.pattern===0?nearBoss:boss.pattern===1?beam:targetZone;if(danger){p.x=l.spawn[p.type];p.y=GROUND-43;p.vx=0;p.vy=0;}}
    }}
   }
  }
