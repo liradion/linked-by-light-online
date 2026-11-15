@@ -153,3 +153,53 @@ test('server-only completed stage awards diary, firefly, medal once',()=>{
  assert.equal(r.v21World.trophies.length,1);
  assert.equal(r.v21World.diary.length,1);
 });
+
+test('orb form requires both players and adds a real extra platform',()=>{
+ const game=setup(116),anchor=game.level.v21.anchor,goal=game.level.v21.goal;
+ park(game,0,anchor);park(game,1,anchor+440);
+ for(let i=0;i<2;i++){
+  assert.equal(v21.action(game,0,'transform').ok,true);
+  assert.equal(v21.action(game,1,'transform').ok,true);
+ }
+ assert.deepEqual(game.v21.transform.forms,['orb','orb']);
+ assert.equal(v21.action(game,0,'transform_orb_link').ok,false);
+ park(game,0,goal);park(game,1,goal);
+ assert.equal(v21.action(game,0,'transform_orb_link').ok,true);
+ assert.equal(game.v21.transform.orbLink,true);
+ assert.ok(v21.platformRects(game,0).some(x=>x.kind==='v21-orb'));
+});
+test('role-specific bridges, tunnel and story branch affect collision prediction',()=>{
+ const prediction=require('../public/reconciliation.js');
+ const light=v21.getStage(115);
+ assert.ok(light.floor.length===2,'Lantern level must have physical floor gap');
+ const world={v21:{kind:'lantern',branch:1,lantern:{lit:false}}};
+ const host=prediction.geometry(light,world,0),guest=prediction.geometry(light,world,1);
+ assert.ok(host.some(x=>x.x===light.v21.anchor+310));
+ assert.equal(guest.some(x=>x.x===light.v21.anchor+360&&x.y===459),false);
+ world.v21.lantern.lit=true;
+ assert.ok(prediction.geometry(light,world,1).some(x=>x.x===light.v21.anchor+360));
+ assert.ok(prediction.geometry(light,world,0).some(x=>x.x===light.v21.anchor+310&&x.y===399));
+ const fox=v21.getStage(116);
+ assert.ok(prediction.geometry(fox,{v21:{kind:'transform',transform:{forms:['normal','normal']}}},1).some(x=>x.x===fox.v21.anchor+320));
+ assert.equal(prediction.geometry(fox,{v21:{kind:'transform',transform:{forms:['normal','fox']}}},1).some(x=>x.x===fox.v21.anchor+320),false);
+});
+test('cloud profile merges v21 milestones and best records with v19/v20 intact',()=>{
+ const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+ const sandbox={window:{},localStorage:{getItem:()=>null}};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../public/cloud.js'),'utf8'),sandbox);
+ const base=()=>({version:11,checkpoint:15,records:{},adventure:{
+  secrets:[1],pets:[],memories:[],achievements:['together'],
+  v20:{unlockedStages:['v20-01'],records:{'v20-01':{stars:2,elapsed:80}}},
+  v21:{unlockedStages:[],completed:[],trophies:[],aquarium:[],garden:{growth:0,steps:0},records:{},diary:[]}
+ }});
+ const a=base(),b=base();
+ a.adventure.v21={unlockedStages:['v21-01'],records:{'v21-01':{stars:2,elapsed:32}},completed:['v21-01'],garden:{growth:2,steps:4},trophies:['trophy-v21-01'],diary:[{type:'event',stage:112,kind:'win',title:'Победа'}]};
+ b.adventure.v21={unlockedStages:['v21-02'],records:{'v21-01':{stars:3,elapsed:52}},completed:['v21-02'],garden:{growth:3,steps:6},aquarium:['ember'],diary:[]};
+ const merged=sandbox.window.GameCloud.merge(a,b);
+ assert.equal(merged.adventure.v21.records['v21-01'].stars,3);
+ assert.equal(merged.adventure.v21.unlockedStages.length,2);
+ assert.equal(merged.adventure.v21.completed.length,2);
+ assert.equal(merged.adventure.v21.garden.growth,3);
+ assert.equal(merged.adventure.v20.unlockedStages.length,1);
+ assert.equal(merged.adventure.secrets.length,1);
+});
