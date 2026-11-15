@@ -14,7 +14,7 @@ const keys=new Set(),input={left:false,right:false,jumpSeq:0,abilitySeq:0,bondSe
 let prediction=null,lastPredStage=-1,predJumpAt=0,lastAck=0,lastResultId='',packetSeq=0,wasOnGround=null,lastFootstep=0;
 const predictor=GameReconciliation.createPredictor();
 let latency=0,lastSend=0,playingOnce=false;
-const qs=new URLSearchParams(location.search);const invite=qs.get('room');
+const qs=new URLSearchParams(location.search);const invite=qs.get('room');let pendingSpectate=qs.get('spectate')==='1';
 if(invite&&/^[A-Z2-9]{6}$/i.test(invite))pendingRoom=invite.toUpperCase();
 function roomToken(id){try{return localStorage.getItem('lightroom:'+id)||sessionStorage.getItem('lightroom:'+id)||'';}catch(_){return '';}}
 function saveToken(id,t){try{localStorage.setItem('lightroom:'+id,t);sessionStorage.setItem('lightroom:'+id,t);}catch(_){}}
@@ -44,16 +44,16 @@ function openConnection(){
   socket=new WebSocket(protocol+'//'+location.host+'/ws');ready=false;updateStatus();
   socket.addEventListener('open',()=>{
     reconnectCount=0;ready=true;connectedBefore=true;setError('');updateStatus();
-    if(room||pendingRoom){const code=room||pendingRoom;wsSend({t:'join',room:code,token:token||roomToken(code)});}
+    if(room||pendingRoom){const code=room||pendingRoom;wsSend({t:'join',room:code,token:token||roomToken(code),spectate:role===-1&&!!room||pendingSpectate});}
     else if(pendingCreate){wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome()});pendingCreate=false;pendingBlueprint=null;}
     else showUI();
   });
   socket.addEventListener('message',e=>{
     let m;try{m=JSON.parse(e.data);}catch(_){return;}
     if(m.t==='joined'){
-      room=m.room;role=m.role;token=m.token;phase=m.phase;pendingRoom='';saveToken(room,token);
+      room=m.room;role=m.role;token=m.token;phase=m.phase;pendingRoom='';if(role>=0)saveToken(room,token);
       history.replaceState({},'',location.pathname+'?room='+encodeURIComponent(room));
-      connected=m.connected||[false,false];$('myRole').textContent=role===0?'Искра (ведущий)':'Эхо (гость)';
+      connected=m.connected||[false,false];$('myRole').textContent=role===0?'Искра (ведущий)':role===1?'Эхо (гость)':'Наблюдатель';
       if(m.home)GameAdventure.receiveHome(m.home);GameAdventure.onJoined(room,role);GameExpansion.onJoined(m.notes||[]);
       setError('');resetKeys();showUI();return;
     }
@@ -114,7 +114,7 @@ function showUI(){
   else overlay.dataset.view='';
   overlay.classList.toggle('hidden',!!room&&phase==='playing');
   $('waitingBanner').classList.toggle('hidden',!room||phase!=='playing'||connected.every(Boolean));
-  $('touchControls').style.visibility=!!room&&phase==='playing'?'visible':'hidden';
+  $('touchControls').style.visibility=!!room&&role>=0&&phase==='playing'?'visible':'hidden';
 }
 function createRoom(newGame=false,stageOverride=null,blueprint=null){
  setError('');pendingCreate=true;pendingRoom='';pendingBlueprint=blueprint;pendingCreateStage=Number.isInteger(stageOverride)?stageOverride:(newGame?0:bestStage());
@@ -122,7 +122,7 @@ function createRoom(newGame=false,stageOverride=null,blueprint=null){
  else{wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome()});pendingCreate=false;pendingBlueprint=null;}
 }
 function joinRoom(code){const value=(code||'').trim().toUpperCase();if(!/^[A-HJ-NP-Z2-9]{6}$/.test(value)){setError('Введите шестизначный код комнаты.');return;}
-  pendingRoom=value;setError('');if(ready)wsSend({t:'join',room:value,token:roomToken(value)});else openConnection();
+  pendingRoom=value;pendingSpectate=false;setError('');if(ready)wsSend({t:'join',room:value,token:roomToken(value)});else openConnection();
 }
 $('createBtn').addEventListener('click',()=>createRoom(false));
 $('newCampaignBtn').addEventListener('click',()=>createRoom(true));
@@ -137,17 +137,25 @@ $('copyBtn').addEventListener('click',async()=>{
   try{await navigator.clipboard.writeText(text);$('copyBtn').textContent='Скопировано ✓';setTimeout(()=>$('copyBtn').textContent='Скопировать приглашение',1500);}
   catch(_){setError('Не удалось скопировать автоматически. Код: '+room+' — '+url.href);}
 });
+const spectatorCopy=document.createElement('button');spectatorCopy.type='button';spectatorCopy.className='button-secondary';spectatorCopy.textContent='👀 Ссылка наблюдателю';
+spectatorCopy.onclick=async()=>{
+ if(!room)return;
+ const url=new URL(location.pathname,location.href);url.searchParams.set('room',room);url.searchParams.set('spectate','1');
+ try{await navigator.clipboard.writeText(url.href);spectatorCopy.textContent='Скопировано ✓';setTimeout(()=>spectatorCopy.textContent='👀 Ссылка наблюдателю',1600);}
+ catch(_){setError('Ссылка наблюдателю: '+url.href);}
+};
+$('copyBtn').parentElement.append(spectatorCopy);
 $('soundBtn').addEventListener('click',()=>{sound=!sound;GameQuality.setSound(sound);$('soundBtn').textContent=sound?'♫ Вкл.':'♫ Выкл.';if(sound)GameQuality.audioUnlock();});
 function resetKeys(){keys.clear();input.left=false;input.right=false;
   document.querySelectorAll('.touch-button').forEach(b=>b.classList.remove('pressed'));sendInput();}
 function updateInput(){const left=role===0?'a':'arrowleft',right=role===0?'d':'arrowright';
   input.left=keys.has(left)||keys.has('touch-left')||keys.has('gamepad-left');input.right=keys.has(right)||keys.has('touch-right')||keys.has('gamepad-right');sendInput();}
-function activateKey(kind){GameExpansion.haptic(12);GameQuality.audioUnlock();if(kind==='jump')GameQuality.effect('jump');else if(kind==='ability')GameQuality.effect('ability');if(kind==='jump'){input.jumpSeq++;predJumpAt=performance.now();}else if(kind==='ability')input.abilitySeq++;else if(kind==='bond')input.bondSeq++;else if(kind==='emote')input.emoteSeq++;sendInput();}
+function activateKey(kind){if(role<0)return;GameExpansion.haptic(12);GameQuality.audioUnlock();if(kind==='jump')GameQuality.effect('jump');else if(kind==='ability')GameQuality.effect('ability');if(kind==='jump'){input.jumpSeq++;predJumpAt=performance.now();}else if(kind==='ability')input.abilitySeq++;else if(kind==='bond')input.bondSeq++;else if(kind==='emote')input.emoteSeq++;sendInput();}
 const prevent=new Set(['arrowleft','arrowright','arrowup','arrowdown',' ','enter']);
 window.addEventListener('keydown',e=>{
   if(document.activeElement?.tagName==='INPUT')return;
   const k=e.key.toLowerCase();if(prevent.has(k))e.preventDefault();
-  if(e.repeat||!room||phase!=='playing')return;
+  if(e.repeat||!room||role<0||phase!=='playing')return;
   if(k==='r'&&role===0){wsSend({t:'resetStage'});return;}
   const left=role===0?'a':'arrowleft',right=role===0?'d':'arrowright',jump=role===0?'w':'arrowup',ability=role===0?'f':'enter';
   GameQuality.audioUnlock();if(k===jump)activateKey('jump');if(k===ability)activateKey('ability');
@@ -168,7 +176,7 @@ document.querySelectorAll('.touch-button').forEach(btn=>{
   function up(e){e.preventDefault();if(keys.delete(tag)){btn.classList.remove('pressed');updateInput();}}
   btn.addEventListener('pointerdown',down);btn.addEventListener('pointerup',up);btn.addEventListener('pointercancel',up);btn.addEventListener('lostpointercapture',()=>{keys.delete(tag);btn.classList.remove('pressed');updateInput();});
 });
-function sendInput(){if(!room||!ready||phase!=='playing')return;
+function sendInput(){if(!room||role<0||!ready||phase!=='playing')return;
   const packet={t:'input',inputSeq:++packetSeq,left:input.left,right:input.right,jumpSeq:input.jumpSeq,abilitySeq:input.abilitySeq,bondSeq:input.bondSeq,emoteSeq:input.emoteSeq};
   predictor.send(packet,performance.now());wsSend(packet);lastSend=performance.now();}
 setInterval(()=>{if(ready&&room&&phase==='playing')sendInput();},25);
@@ -223,7 +231,7 @@ function consumeSnapshot(s){
   if(latest&&s.tick<latest.tick)return;
   const previous=latest;
   if(s.ack&&role>=0){lastAck=Math.max(lastAck,s.ack[role]||0);document.documentElement.dataset.pendingInputs=String(Math.max(0,packetSeq-lastAck));}
-  if(s.result&&s.result.completed&&!s.customLevel){const key=s.result.level+':'+s.result.elapsed+':'+s.result.deaths;
+  if(s.result&&s.result.completed&&!s.customLevel&&role>=0){const key=s.result.level+':'+s.result.elapsed+':'+s.result.deaths;
     if(lastResultId!==key){lastResultId=key;saveStageResult(s.result);announce('Уровень '+(s.result.level+1)+' — '+s.result.stars+' ★ · '+s.result.elapsed+' с · падений: '+s.result.deaths,3.6);GameQuality.effect('star');}}
   if(previous&&s.stage!==previous.stage){prediction=null;lastPredStage=-1;predictor.reset();snapshots=[];camera=0;particles=[];rings=[];GameJuice.clear();
     const next=stageDefs[s.stage];GameQuality.ambient(Math.floor(s.stage/9));announce('✦ Уровень '+(s.stage+1)+' — '+(next.reality?{mirror:'Две реальности',chronicle:'Прошлое и будущее',gravity:'Антигравитация'}[next.reality.kind]:next.signature.subtitle),2.8);tone(600,.16,'sine',.055);}
@@ -234,7 +242,7 @@ function consumeSnapshot(s){
   const predictedStage=s.customLevel?GameExpansion.toStage(stageDefs[0],s.customLevel):stageDefs[s.stage];
   if(role>=0&&phase==='playing'&&s.players?.[role])predictor.reconcile({...s.players[role],type:role,w:30,h:43},s.ack?.[role]||0,predictedStage,s.world,s.stage,performance.now(),s.processedCommands?.[role],GameQuality.predictionLead());
   GameQuality.ambient(Math.floor(Math.min(98,s.stage)/9));
-  if(!s.customLevel&&(phase==='playing'||phase==='win')&&levelIndex<99)saveCheckpoint(levelIndex);
+  if(role>=0&&!s.customLevel&&(phase==='playing'||phase==='win')&&levelIndex<99)saveCheckpoint(levelIndex);
   level=s.customLevel?GameExpansion.toStage(stageDefs[0],s.customLevel):structuredClone(stageDefs[levelIndex]);level.gateOpen=s.world.gateOpen;level.bridgeLatched=s.world.bridgeLatched;level.padLatched=!!s.world.padLatched;
   level.pads.forEach((p,i)=>p.pressed=!!s.world.pads[i]);
   level.walls.forEach((w,i)=>w.broken=!!s.world.walls[i]);
@@ -253,7 +261,7 @@ function consumeSnapshot(s){
     r.anchors.forEach((a,i)=>a.active=!!state.anchors?.[i]);
   }
   collectibles=level.shards.map((x,i)=>({x,y:i%2?390:432,taken:!!s.world.shards[i]}));
-  GameJuice.snapshot(previous,s,level);GameAdventure.onSnapshot(s);GameExpansion.onSnapshot(s);
+  GameJuice.snapshot(previous,s,level);if(role>=0)GameAdventure.onSnapshot(s);GameExpansion.onSnapshot(s);
   if(previous?.world?.reality&&!previous.world.reality.done&&s.world.reality?.done){
     announce('✦ Две реальности соединены!',2.6);tone(860,.22,'sine',.05);GameQuality.effect('star');
   }
@@ -385,5 +393,5 @@ function saveStageResult(result){try{const all=JSON.parse(localStorage.getItem(R
 GameQuality.init({getSession:()=>({phase,role,room}),onControls:(left,right)=>{if(left)keys.add('gamepad-left');else keys.delete('gamepad-left');if(right)keys.add('gamepad-right');else keys.delete('gamepad-right');updateInput();},onAction:activateKey});
 GameQuality.ambient(0);
 GameAdventure.init({send:wsSend,currentStage:()=>levelIndex,bestStage,inRoom:()=>!!room,startStage:(n)=>{if(room){if(role===0)wsSend({t:'selectStage',stage:n,secrets:GameAdventure.data().secrets.length});else announce('Уровни выбирает создатель комнаты.');}else createRoom(false,n);}});
-GameCloud.init();GameExpansion.init({send:wsSend,inRoom:()=>!!room,createCustom:b=>createRoom(false,0,b),announce,saveMemory:GameAdventure.addMemory,getMemories:()=>GameAdventure.data().memories||[]});openConnection();showUI();requestAnimationFrame(animate);
+GameCloud.init();GameExpansion.init({send:wsSend,inRoom:()=>!!room&&role>=0,createCustom:b=>createRoom(false,0,b),announce,saveMemory:GameAdventure.addMemory,getMemories:()=>GameAdventure.data().memories||[]});openConnection();showUI();requestAnimationFrame(animate);
 })();
