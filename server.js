@@ -150,7 +150,8 @@ function broadcast(r,obj){
 }
 const betaHttp=createPublicBetaHttp({
  beta,rooms:ROOMS,storageState,getGallery:()=>V21_GALLERY,
- onUpdate:async()=>{persistRooms();await persistRoomsCloud();}
+ onUpdate:async()=>{persistRooms();await persistRoomsCloud();},
+ onModerated:()=>{for(const r of ROOMS.values())broadcast(r,{t:'v21Gallery',items:social.publicGallery(V21_GALLERY)});}
 });
 const server=http.createServer((req,res)=>{
   const authRequest=req.url?.startsWith('/api/auth/')||req.url?.startsWith('/?')&&/(?:\?|&)(?:code|error)=/.test(req.url);
@@ -342,7 +343,8 @@ server.on('upgrade',(req,socket,head)=>{
          result=puzzle.has(msg.kind)?v21.action(room.game,role,msg.kind,msg):social.act(room,role,msg.kind,msg);
        }
        if(msg.t==='v21Publish'){
-         if(role!==0)result={ok:false,error:'Только ведущий может публиковать авторскую карту'};
+         if(!beta.adminEnabled)result={ok:false,error:'Галерея временно закрыта: модератор ещё не подключён'};
+         else if(role!==0)result={ok:false,error:'Только ведущий может публиковать авторскую карту'};
          else if(V21_GALLERY.filter(x=>x.owner===room.code&&['pending','approved','flagged'].includes(x.status)).length>=2)result={ok:false,error:'Не более двух публичных карт от команды'};
          else{
            const entry=social.published(msg.blueprint,room.code,expansion.cleanBlueprint);
