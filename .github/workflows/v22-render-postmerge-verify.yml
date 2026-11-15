@@ -1,4 +1,4 @@
-name: v22 Render post-merge verification
+name: v26 Render post-merge verification
 on:
   workflow_run:
     workflows: ["Game quality checks"]
@@ -27,13 +27,13 @@ jobs:
         run: |
           set -euo pipefail
           SHORT_SHA="${EXPECTED_SHA:0:12}"
-          echo "Expecting v22.0.0 at commit $SHORT_SHA"
+          echo "Expecting v26.0.0 at commit $SHORT_SHA"
           for i in $(seq 1 36); do
             BODY="$(curl -fsSL --connect-timeout 10 --max-time 20 --retry 1 "$SITE/version" 2>/dev/null || true)"
             if [ -n "$BODY" ]; then
               ACTUAL="$(VERSION_JSON="$BODY" node -e '
                 try { const v=JSON.parse(process.env.VERSION_JSON);
-                process.stdout.write(v.version==="22.0.0" && v.protocol===3 ? String(v.commit||"") : ""); }
+                process.stdout.write(v.version==="26.0.0" && v.protocol===4 ? String(v.commit||"") : ""); }
                 catch(_) {}')"
               if [ "$ACTUAL" = "$SHORT_SHA" ]; then
                 echo "Exact deployment commit confirmed. Running safe read-only smoke."
