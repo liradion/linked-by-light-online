@@ -218,6 +218,10 @@ server.on('upgrade',(req,socket,head)=>{
       room.story={act,choice,role,stamp:Date.now()};room.storyChoices=room.storyChoices||{};room.storyChoices[act]=choice;
       broadcast(room,{t:'storyChoice',...room.story});return;
     }
+    if(msg.t==='quick'&&['here','wait','help','heart'].includes(msg.kind)){
+      if(rateExceeded('quick',30))return;
+      broadcast(room,{t:'quick',kind:msg.kind,role});return;
+    }
     if(msg.t==='note'){
       if(rateExceeded('note',12))return error('Не больше 12 записок в минуту.');
       const text=expansion.cleanNote(msg.text);
