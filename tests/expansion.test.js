@@ -79,7 +79,7 @@ test('browser expansion is loaded before client and supports touch and secure te
  assert.match(client,/GameExpansion\.onSnapshot\(s\)/);
  assert.match(ui,/textContent=text/);
  assert.match(ui,/canvas\.addEventListener\('click'/);
- assert.match(ui,/GameExpansion=\{init/);
+ assert.match(ui,/GameExpansion=\{(?:currentBlueprint:[^,]+,)?init/);
 });
 async function freePort(){return new Promise((resolve,reject)=>{
  const s=net.createServer();s.once('error',reject);s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p));});
