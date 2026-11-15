@@ -8,6 +8,7 @@ const {performance}=require('node:perf_hooks');
 const {createBenchmarkMetrics}=require('./benchmark-metrics');
 const benchmark=createBenchmarkMetrics();
 const {createPublicBeta}=require('./public-beta');
+const {createPublicBetaHttp}=require('./public-beta-http');
 const configuredBetaRooms=Number(process.env.BETA_MAX_ROOMS);
 const beta=createPublicBeta({maxRooms:process.env.BETA_MAX_ROOMS&&Number.isInteger(configuredBetaRooms)?configuredBetaRooms:200});
 const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./game-core');
@@ -147,9 +148,18 @@ function broadcast(r,obj){
   for(const s of r.seats)if(s?.online)s.peer.sendRaw(payload,isSnapshot);
   if(obj?.t!=='note')for(const peer of r.spectators||[])peer.sendRaw(payload,isSnapshot);
 }
+const betaHttp=createPublicBetaHttp({
+ beta,rooms:ROOMS,storageState,getGallery:()=>V21_GALLERY,
+ onUpdate:async()=>{persistRooms();await persistRoomsCloud();}
+});
 const server=http.createServer((req,res)=>{
   const authRequest=req.url?.startsWith('/api/auth/')||req.url?.startsWith('/?')&&/(?:\?|&)(?:code|error)=/.test(req.url);
   if(authRequest){auth.handle(req,res).catch(()=>{if(!res.headersSent){res.writeHead(500,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({error:'Ошибка авторизации'}));}});return;}
+  if(req.url?.startsWith('/api/beta/')||req.url?.startsWith('/api/admin/v22/')){
+    betaHttp(req,res).catch(e=>{console.warn('Public beta API error:',e.message);
+     if(!res.headersSent){res.writeHead(503,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end('{"error":"Сервис временно недоступен"}');}});
+    return;
+  }
   if(req.url?.startsWith('/api/cloud/')){cloud.handle(req,res);return;}
   const pathname=new URL(req.url,'http://localhost').pathname;
   if(benchmark.respond(req,res,ROOMS))return;
@@ -460,7 +470,13 @@ const loop=setInterval(()=>{
 loop.unref();
 setInterval(persistRooms,12_000).unref();
 setInterval(persistRoomsCloud,30_000).unref();
-process.on('SIGTERM',()=>{persistRooms();persistRoomsCloud();server.close();});
+let shuttingDown=false;
+process.on('SIGTERM',async()=>{
+ if(shuttingDown)return;shuttingDown=true;
+ const force=setTimeout(()=>process.exit(0),9500);
+ try{persistRooms();await persistRoomsCloud();}catch(e){console.warn('Shutdown backup:',e.message);}
+ server.close(()=>{clearTimeout(force);process.exit(0);});
+});
 setInterval(()=>{for(const r of ROOMS.values())for(const seat of r.seats)if(seat?.online)seat.peer.ping();},10_000).unref();
 setInterval(()=>{const now=Date.now();for(const [key,r] of ROOMS){if(!r.seats.some(s=>s?.online)&&now-r.lastActivity>30*60_000)ROOMS.delete(key);}},60_000).unref();
 restoreRoomsCloud().finally(()=>server.listen(PORT,'0.0.0.0',()=>console.log(`Linked by Light online: http://localhost:${PORT}`))); 
