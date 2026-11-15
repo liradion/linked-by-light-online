@@ -39,6 +39,7 @@ function init(g){g.v21=hasStage(g.stage)?freshState(g):null;
 function platformRects(g,role){
  const z=g.v21;if(!z)return [];
  const c=g.level.v21,all=[];
+ if(z.branch===1)all.push({x:c.anchor+310,y:399,w:172,h:17,kind:'v21-choice-route'});
  if(z.kind==='trails'&&role===1)for(const s of z.trail)all.push({x:s.x,y:s.y,w:95,h:12,kind:'v21-trail'});
  if(z.kind==='lantern'&&z.lantern.lit&&role===1)all.push({x:c.anchor+360,y:459,w:230,h:17,kind:'v21-light'});
  if(z.kind==='tree')for(let i=0;i<z.tree.growth;i++)all.push({x:c.anchor+i*115,y:440-(i%3)*32,w:125,h:16,kind:'v21-branch'});
