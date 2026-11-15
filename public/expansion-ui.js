@@ -196,5 +196,5 @@ function drawWeather(ctx,width,height,weather,time,quality='high'){
  if(weather.resonance>0){ctx.strokeStyle='#d9ffff88';ctx.lineWidth=4;ctx.strokeRect(5,5,width-10,height-10);}
  ctx.restore();
 }
-root.GameExpansion={init,onJoined,onNote,onQuick,onSnapshot,toStage,drawWeather,normalize,encode,decode,haptic};
+root.GameExpansion={currentBlueprint:()=>normalize(blueprint),init,onJoined,onNote,onQuick,onSnapshot,toStage,drawWeather,normalize,encode,decode,haptic};
 })(typeof window!=='undefined'?window:globalThis);
