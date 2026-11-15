@@ -27,7 +27,7 @@ function freshState(game){
   trail:[],trailCrossings:0,lastTrailX:0,lastTrailTick:0,lastCrossTick:-999,
   transfer:{sent:false,received:false,delivered:false},knowledge:{progress:0,sequence:c.sequence.slice()},
   lantern:{lit:false,bridgeCrossed:false,calm:false},
-  transform:{forms:['normal','normal'],tokens:[false,false],energy:[0,0]},
+  transform:{forms:['normal','normal'],tokens:[false,false],energy:[0,0],orbLink:false},
   weather:{wind:0,rain:0,charges:[0,0]},
   cargo:{x:c.anchor+180,step:0,votes:[false,false]},tree:{growth:0},
   maze:{turn:0,checkpoint:0},asymmetry:{phase:0,flags:[false,false]},
@@ -43,6 +43,7 @@ function platformRects(g,role){
  if(z.kind==='trails'&&role===1)for(const s of z.trail)all.push({x:s.x,y:s.y,w:95,h:12,kind:'v21-trail'});
  if(z.kind==='lantern'&&z.lantern.lit&&role===1)all.push({x:c.anchor+360,y:459,w:230,h:17,kind:'v21-light'});
  if(z.kind==='tree')for(let i=0;i<z.tree.growth;i++)all.push({x:c.anchor+i*115,y:440-(i%3)*32,w:125,h:16,kind:'v21-branch'});
+ if(z.kind==='transform'&&z.transform.orbLink)all.push({x:c.goal+100,y:398,w:180,h:18,kind:'v21-orb'});
  if(z.kind==='maze'&&z.maze.turn%2===1)all.push({x:c.anchor+280,y:455,w:150,h:18,kind:'v21-maze'});
  return all;
 }
@@ -130,13 +131,17 @@ function action(g,role,kind,raw={}){
  if(kind==='transform'&&z.kind==='transform'){
   if(!close(p,c.anchor+(role?440:0),240))return deny('Подойдите к месту превращения');
   const form=role===0?'bird':'fox';
-  z.transform.forms[role]=z.transform.forms[role]===form?'normal':form;
+  z.transform.forms[role]=z.transform.forms[role]==='normal'?form:z.transform.forms[role]===form?'orb':'normal';
   return success('Форма '+z.transform.forms[role]);
  }
  if(kind==='transform_collect'&&z.kind==='transform'){
   if(!close(p,c.anchor+(role?550:150),190)||z.transform.forms[role]!== (role===0?'bird':'fox'))
    return deny('Нужна правильная форма у своего ключа');
   z.transform.tokens[role]=true;return success('Световой ключ получен');
+ }
+ if(kind==='transform_orb_link'&&z.kind==='transform'){
+  if(!z.transform.forms.every(x=>x==='orb')||!g.players.every(x=>close(x,c.goal,220)))return deny('Оба героя должны стать световыми сферами у общего алтаря');
+  z.transform.orbLink=true;return success('Древний механизм открыл дополнительный путь');
  }
  if(kind==='weather_wind'&&z.kind==='weather'&&role===0){
   if(!close(p,c.anchor,220))return deny('Искра должна встать у флюгера');
@@ -184,7 +189,7 @@ function snapshot(g){
  const z=g.v21;if(!z)return null;
  return {stageId:z.stageId,kind:z.kind,branch:z.branch||0,completed:z.completed,trail:z.trail.map(s=>({...s})),trailCrossings:z.trailCrossings,
   transfer:{...z.transfer},knowledge:{progress:z.knowledge.progress},
-  lantern:{...z.lantern},transform:{forms:z.transform.forms.slice(),tokens:z.transform.tokens.slice()},
+  lantern:{...z.lantern},transform:{forms:z.transform.forms.slice(),tokens:z.transform.tokens.slice(),orbLink:z.transform.orbLink},
   weather:{wind:z.weather.wind,rain:z.weather.rain,charge:z.weather.charges[0]},
   cargo:{x:z.cargo.x,step:z.cargo.step,votes:z.cargo.votes.slice()},
   tree:{growth:z.tree.growth},maze:{...z.maze},asymmetry:{...z.asymmetry}};
