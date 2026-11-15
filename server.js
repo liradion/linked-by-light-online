@@ -404,6 +404,14 @@ const loop=setInterval(()=>{
   lastBroadcast++;
   for(const r of ROOMS.values()){
     tick(r.game,countOnline(r));
+    // A time-capsule letter becomes visible at the next stage. Update only
+    // the two authenticated seats; never include private content in snapshots.
+    if(r.lastPrivateStage!==r.game.stage){
+      r.lastPrivateStage=r.game.stage;
+      for(let i=0;i<r.seats.length;i++){
+        const seat=r.seats[i];if(seat?.online)seat.peer.send({t:'v21Private',data:social.privateState(r,i)});
+      }
+    }
     if(r.game.phase==='win'&&!r.ending)r.ending=v21.hasStage(r.game.stage)?{kind:'v21',title:'Навстречу друг другу',text:'Ваши пути снова встретились! Новые воспоминания ждут дома.'}:v20.hasStage(r.game.stage)?v20.endingForStory(r.v20Story):r.customLevel?{kind:'creator',title:'Мастера света',text:'Ваш собственный уровень пройден вдвоём!',choices:0}:expansion.endingFor(r);
     if(r.ending?.kind==='v20-together'&&r.v20Home&&!r.v20Home.decor.includes('lampion')&&r.v20Home.decor.length<6)r.v20Home.decor.push('lampion');
      const previousV21=r.v21World?.lastResult;
