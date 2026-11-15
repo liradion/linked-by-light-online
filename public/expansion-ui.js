@@ -164,7 +164,7 @@ function render(){
  if(tab==='notes')noteEditor();else if(tab==='editor')renderEditor();else renderPhoto();
  body.append(el('p',undefined,'adv-mini'));body.lastChild.id='exp-message';
 }
-function open(next){tab=next;render();if(!dialog.open)dialog.showModal();}
+function open(next){tab=next;render();if(!dialog.open)dialog.showModal();body.scrollTop=0;dialog.scrollTop=0;}
 function init(callbacks){
  api=callbacks;
  const host=document.querySelector('.adv-nav')||document.querySelector('.topline');
