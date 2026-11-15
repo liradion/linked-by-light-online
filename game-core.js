@@ -81,7 +81,9 @@ function stepPlayer(g,p,dt){const i=g.input[p.type], axis=Number(i.right)-Number
   }
   if(abilityFired){worlds.onAbility(g,p);adventure.onAbility(g,p);reality.onAbility(g,p);expansion.onAbility(g,p);v20.onAbility(g,p);}
   i.abilityQueued=false;
-  if(i.jumpQueued)p.jumpBuffer=.14;else p.jumpBuffer=Math.max(0,p.jumpBuffer-dt);
+  const v21Operator=g.v21?.kind==='asymmetry'&&g.v21.asymmetry.phase<2&&p.type===(g.v21.asymmetry.phase===0?1:0);
+   if(v21Operator){i.jumpQueued=false;p.jumpBuffer=0;}
+   if(i.jumpQueued)p.jumpBuffer=.14;else p.jumpBuffer=Math.max(0,p.jumpBuffer-dt);
   i.jumpQueued=false;
   if(p.grounded)p.coyote=.11;else p.coyote=Math.max(0,p.coyote-dt);
   if(p.jumpBuffer>0&&p.coyote>0){
