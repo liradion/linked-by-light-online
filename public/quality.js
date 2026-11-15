@@ -94,5 +94,6 @@ function ambient(act){if(!pad||!audioCtx||act===ambientWorld)return;ambientWorld
 function effect(type){if(!audioCtx||!options.sound)return;const config={step:[145,.04,.006],jump:[350,.12,.016],land:[95,.1,.015],ability:[650,.23,.026],boss:[110,.33,.025],star:[920,.16,.017],rescue:[540,.26,.026]};const [freq,duration,volume]=config[type]||config.step;try{
  const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=type==='boss'?'sawtooth':'sine';osc.frequency.setValueAtTime(freq,audioCtx.currentTime);osc.frequency.exponentialRampToValueAtTime(Math.max(40,freq*.64),audioCtx.currentTime+duration);gain.gain.setValueAtTime(volume,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration);
  }catch(_){}}
-root.GameQuality={init,net,snapshotArrived,interpolationDelay,predictionLead,stats,sample,apply,ambient,effect,audioUnlock,setSound,settings:()=>({...options})};
+function setReducedMotion(value){options.reducedMotion=!!value;apply();}
+root.GameQuality={init,net,snapshotArrived,interpolationDelay,predictionLead,stats,sample,apply,ambient,effect,audioUnlock,setSound,setReducedMotion,settings:()=>({...options})};
 })(typeof window!=='undefined'?window:globalThis);
