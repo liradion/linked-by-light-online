@@ -212,10 +212,10 @@ function draw(ctx,level,players,extra,clock){if(!extra)return;
  if(extra.emotes?.length)extra.emotes.forEach((duration,i)=>{if(duration>0&&players[i]){const p=players[i];ctx.save();ctx.font='bold 26px system-ui';ctx.textAlign='center';ctx.fillText((['♡','✋','♫'])[extra.emoteKinds?.[i]||0],p.x+15,p.y-89-Math.sin(clock*7)*8);ctx.restore();}});
 }
 function recordV20(s){
- if(!s||!Number.isInteger(s.stage)||s.stage<100||s.stage>111)return;
+ if(!s||!Number.isInteger(s.stage))return;
  const v=data.v20||(data.v20=cleanV20());
  let changed=false,stageId='v20-'+String(s.stage-99).padStart(2,'0');
- if(!v.unlockedStages.includes(stageId)){v.unlockedStages.push(stageId);changed=true;}
+ if(s.stage>=100&&s.stage<=111&&!v.unlockedStages.includes(stageId)){v.unlockedStages.push(stageId);changed=true;}
  if(s.result?.completed&&s.result.level>=100&&s.result.level<=111){
   const id='v20-'+String(s.result.level-99).padStart(2,'0'),old=v.records[id];
   if(!old||s.result.stars>old.stars||s.result.stars===old.stars&&s.result.elapsed<old.elapsed){
