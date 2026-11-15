@@ -178,6 +178,10 @@ function init(callbacks){
 function drawWeather(ctx,width,height,weather,time,quality='high'){
  if(!weather||weather.kind==='clear')return;
  ctx.save();const n=quality==='low'?14:45;
+ // A gentle 60-second day/night tint, driven by the authoritative world clock.
+ const dusk=(1+Math.sin((weather.time||0)*.105-1.1))*.5;
+ ctx.fillStyle='rgba(5,9,28,'+(0.05+dusk*.14).toFixed(3)+')';
+ ctx.fillRect(0,0,width,height);
  if(weather.kind==='rain'){
   ctx.strokeStyle='#a2d8ff48';ctx.lineWidth=1.3;ctx.beginPath();
   for(let i=0;i<n;i++){const x=(i*83+time*175)%width,y=(i*139+time*440)%height;ctx.moveTo(x,y);ctx.lineTo(x-8,y+23);}ctx.stroke();
