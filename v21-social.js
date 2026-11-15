@@ -199,7 +199,9 @@ function cleanGallery(raw,clean){
  return (Array.isArray(raw)?raw:[]).slice(-40).flatMap(x=>{
   const b=clean(x?.blueprint);if(!b||!b.platforms?.length||!/^([a-f0-9]{12})$/.test(x.id||''))return [];
   return [{id:x.id,title:text(x.title,32),author:'Творцы света',blueprint:b,created:Number(x.created)||0,
-    owner:typeof x.owner==='string'&&x.owner.length===6?x.owner:'',reports:[],hidden:!!x.hidden,
+    owner:typeof x.owner==='string'&&x.owner.length===6?x.owner:'',
+    reports:Array.from(new Set((Array.isArray(x.reports)?x.reports:[]).filter(v=>typeof v==='string'&&/^[a-f0-9]{24}$/.test(v)))).slice(-3),
+    hidden:!!x.hidden,
     status:['approved','pending','flagged','rejected'].includes(x.status)?x.status:'pending'}];
  });
 }
