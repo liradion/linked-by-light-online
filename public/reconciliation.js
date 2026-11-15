@@ -23,6 +23,14 @@ function geometry(level,world,role){
   if(role===0&&world.v20.phase?.flags?.[0])r.push({x:900,y:438,w:112,h:18});
   if(role===1&&world.v20.phase?.state!=='light')r.push({x:1340,y:438,w:112,h:18});
  }
+ if(level?.v21&&world?.v21){
+  const z=world.v21,c=level.v21;
+  if(z.branch===1)r.push({x:c.anchor+310,y:399,w:172,h:17});
+  if(z.kind==='trails'&&role===1)for(const t of z.trail||[])r.push({x:t.x,y:t.y,w:95,h:12});
+  if(z.kind==='lantern'&&z.lantern?.lit&&role===1)r.push({x:c.anchor+360,y:459,w:230,h:17});
+  if(z.kind==='tree')for(let i=0;i<(z.tree?.growth||0);i++)r.push({x:c.anchor+i*115,y:440-(i%3)*32,w:125,h:16});
+  if(z.kind==='maze'&&z.maze?.turn%2===1)r.push({x:c.anchor+280,y:455,w:150,h:18});
+ }
  return r;
 }
 function integrate(p,input,solids,width,dt=DT,gravity=1300,wind=0,rain=false){
