@@ -9,11 +9,11 @@ const freePort=()=>new Promise((resolve,reject)=>{
   const n=s.address().port;s.close(()=>resolve(n));
  });
 });
-function startServer(port,storage){
+function startServer(port,storage,overrides={}){
  const proc=spawn(process.execPath,['server.js'],{
   cwd:path.resolve(__dirname,'..'),env:{...process.env,PORT:String(port),SAVE_DIR:storage,
    LL_ADMIN_TOKEN:adminToken,SUPABASE_URL:'',SUPABASE_SECRET_KEY:'',
-   SUPABASE_SERVICE_ROLE_KEY:'',DATABASE_URL:'',BETA_MAX_ROOMS:'10'},stdio:['ignore','pipe','pipe']
+   SUPABASE_SERVICE_ROLE_KEY:'',DATABASE_URL:'',BETA_MAX_ROOMS:'10',...overrides},stdio:['ignore','pipe','pipe']
  });
  let log='';proc.stderr.on('data',b=>{log=(log+b.toString()).slice(-12000);});
  proc.stdout.on('data',b=>{log=(log+b.toString()).slice(-12000);});
@@ -107,4 +107,15 @@ test('v22 refuses unauthorized moderation attempts and validates decisions',{tim
   const ops=await req(port,'/api/admin/v22/overview',{headers:{Authorization:'Bearer '+adminToken}});
   assert.equal(ops.status,200);assert.equal((await ops.json()).pendingGallery.length,0);
  }finally{await stopServer(server);}
+});
+
+test('v26 first rollout caps room capacity on Render even if old dashboard setting is 200',{timeout:15000},async()=>{
+ const port=await freePort();
+ const srv=startServer(port,'',{RENDER:'true',RENDER_GIT_COMMIT:'1234567890abcdef',BETA_MAX_ROOMS:'200'});
+ try{
+  await waitHealth(port);
+  const status=await (await req(port,'/api/beta/status')).json();
+  assert.equal(status.version,'26.0.0');
+  assert.equal(status.roomCapacity,5);
+ }finally{await stopServer(srv);}
 });
