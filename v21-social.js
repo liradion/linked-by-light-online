@@ -11,7 +11,7 @@ const roomsProfile=()=>({
  schemaVersion:1,unlockedStages:[],diary:[],restScenes:[],prequel:[0,0],
  mode:'friends',votes:[null,null],branch:0,branchVotes:[null,null],
  letters:[],garden:{steps:0,growth:0},aquarium:[],melody:[],painting:Array(64).fill(-1),
- trophies:[],completed:[],weeklyRecords:{},seasons:[],lastResult:'',
+ trophies:[],completed:[],weeklyRecords:{},seasons:[],seasonProgress:{id:'',step:0},lastResult:'',
  counters:{paint:0,note:0},lastDay:''
 });
 function cleanRoom(raw){
@@ -31,6 +31,7 @@ function cleanRoom(raw){
  d.completed=unique(v.completed,122);
  d.weeklyRecords=v.weeklyRecords&&typeof v.weeklyRecords==='object'?Object.fromEntries(Object.entries(v.weeklyRecords).filter(([k,n])=>/^\d{4}-W\d{2}$/.test(k)&&Number.isFinite(n)&&n>0&&n<36000).slice(-10)):{};
  d.seasons=unique(v.seasons,16).filter(x=>/^\d{4}-(winter|spring|summer|autumn)$/.test(x));
+ d.seasonProgress={id:typeof v.seasonProgress?.id==='string'&&/^\d{4}-(winter|spring|summer|autumn)$/.test(v.seasonProgress.id)?v.seasonProgress.id:'',step:between(v.seasonProgress?.step,0,4)?v.seasonProgress.step:0};
  d.lastResult=text(v.lastResult,100);
  d.counters={paint:between(v.counters?.paint,0,10000)?v.counters.paint:0,note:between(v.counters?.note,0,10000)?v.counters.note:0};
  d.letters=(Array.isArray(v.letters)?v.letters:[]).filter(x=>x&&between(x.from,0,1)&&typeof x.body==='string')
@@ -43,7 +44,7 @@ function publicState(r){
  return {schemaVersion:1,unlockedStages:z.unlockedStages,diary:z.diary.slice(-30),restScenes:z.restScenes,
   prequel:z.prequel,mode:z.mode,modeVotes:z.votes,branch:z.branch,branchVotes:z.branchVotes,
   garden:z.garden,aquarium:z.aquarium,melody:z.melody,painting:z.painting,
-  trophies:z.trophies,completed:z.completed,weeklyRecords:z.weeklyRecords,seasons:z.seasons};
+  trophies:z.trophies,completed:z.completed,weeklyRecords:z.weeklyRecords,seasons:z.seasons,seasonProgress:z.seasonProgress};
 }
 function privateState(r,role){
  return {letters:(r.v21World?.letters||[]).filter(x=>x.unlock<=(r.game?.stage||0)).map(x=>({...x})),role};
@@ -135,13 +136,19 @@ function act(r,role,kind,raw={}){
   if(z.painting.every(n=>n>=0))diary(r,stage,'painting','Нарисовали общую картину');
   return ok('Фрагмент картины сохранён');
  }
- if(kind==='season_claim'){
+ if(kind==='season_step'){
   const key=new Date().getUTCFullYear()+'-'+puzzles.seasonId();
-  if(z.seasons.includes(key))return fail('Сезонное воспоминание уже открыто');
+  if(z.seasons.includes(key))return fail('Сезонная история уже пройдена');
   if(z.completed.filter(x=>x.startsWith('v21-')).length<2)return fail('Пройдите минимум два новых испытания вдвоём');
-  z.seasons.push(key);z.trophies.push('season-'+key);
-  diary(r,stage,'season','Фестиваль '+puzzles.seasonId());
-  return ok('Сезонный трофей помещён в музей');
+  if(!z.seasonProgress||z.seasonProgress.id!==key)z.seasonProgress={id:key,step:0};
+  if(role!==z.seasonProgress.step%2)return fail('Эту страницу истории открывает второй игрок');
+  z.seasonProgress.step++;
+  if(z.seasonProgress.step===4){
+   z.seasons.push(key);z.trophies.push('season-'+key);
+   diary(r,stage,'season','Фестиваль '+puzzles.seasonId());
+   return ok('Сезонная история пройдена, трофей в музее');
+  }
+  return ok('Открыта сцена '+z.seasonProgress.step+'/4');
  }
  return fail('Неизвестная совместная активность');
 }
