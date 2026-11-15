@@ -93,7 +93,7 @@ function onAbility(g,player){
  const v=g.v20,b=v?.boss;if(!b||!b.active||b.hp<=0)return;
  if(player.type!==b.next||!near(player,b.x,240))return;
  if((v.kind==='combo'||b.style==='mirror')&&!v.tether.active)return;
- b.hp--;b.next=1-b.next;b.phase=clamp(1+Math.floor((b.max-b.hp)/2),1,3);
+ b.hp--;b.next=1-b.next;b.phase=clamp(1+Math.floor((b.max-b.hp)*3/b.max),1,3);
  b.warning=0;b.attack=0;
 }
 function afterStep(g,dt){
