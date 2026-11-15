@@ -26,7 +26,7 @@ function sameOrigin(req){
   return origin.host===host&&['https:','http:'].includes(origin.protocol);
  }catch(_){return false;}
 }
-function createPublicBetaHttp({beta,rooms,storageState,getGallery,onUpdate}){
+function createPublicBetaHttp({beta,rooms,storageState,getGallery,onUpdate,onModerated=()=>{}}){
  return async function handle(req,res){
   const pathname=new URL(req.url,'http://localhost').pathname;
   const publicApi=pathname.startsWith('/api/beta/');
@@ -59,7 +59,7 @@ function createPublicBetaHttp({beta,rooms,storageState,getGallery,onUpdate}){
      const data=await bodyJson(req,800);
      const outcome=beta.moderateGallery(getGallery(),data.id,data.decision);
      if(!outcome){respond(res,400,{error:'Неизвестная карта или решение'});return true;}
-     await onUpdate();
+     await onUpdate();onModerated();
      respond(res,200,{ok:true,...outcome});
     }catch(e){respond(res,e.status||503,{error:'Не удалось изменить состояние карты'});}
     return true;
