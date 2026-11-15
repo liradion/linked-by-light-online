@@ -114,6 +114,13 @@ function showUI(){
   if(!room)overlay.dataset.view='menu';
   else if(phase==='waiting')overlay.dataset.view='lobby';
   else if(phase==='win')overlay.dataset.view='win';
+  if(phase==='win'&&latest?.ending){
+    const win=$('winView');
+    const heading=win?.querySelector('.hero-title'),summary=win?.querySelector('.intro-copy'),eyebrow=win?.querySelector('.eyebrow');
+    if(heading)heading.textContent=latest.ending.title||'Вы прошли игру!';
+    if(summary)summary.textContent=latest.ending.text||'Ваша общая история продолжается.';
+    if(eyebrow)eyebrow.textContent=levelIndex>=100?'ПЕРЕПЛЕТЕНИЕ МИРОВ · 12 УРОВНЕЙ':'ОСНОВНАЯ КАМПАНИЯ · 99 УРОВНЕЙ';
+  }
   else overlay.dataset.view='';
   overlay.classList.toggle('hidden',!!room&&phase==='playing');
   $('waitingBanner').classList.toggle('hidden',!room||phase!=='playing'||connected.every(Boolean));
