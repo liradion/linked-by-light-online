@@ -206,10 +206,18 @@ server.on('upgrade',(req,socket,head)=>{
       // Progress is supplied by the host's browser; rooms still run one authoritative server state.
       const requested=Number.isSafeInteger(msg.stage)?msg.stage:0;
        if(v20.hasStage(requested)&&clientProtocol<2)return error('Обновите игру до v20, чтобы открыть новую кампанию.');
-       const saved=v20.hasStage(requested)?100:Math.max(0,Math.min(requested===99&&msg.secrets===11?99:98,requested));
+       // v19 already trusts the host browser's local checkpoint. v20 supports the
+      // same noncompetitive resume model, bounded to consecutive known stage IDs.
+      const ids=Array.isArray(msg.unlockedV20)?msg.unlockedV20.filter(x=>typeof x==='string').slice(0,12):[];
+      let resumeMax=100;
+      for(let i=100;i<=v20.LAST;i++){
+        if(!ids.includes('v20-'+String(i-99).padStart(2,'0')))break;
+        resumeMax=i;
+      }
+      const saved=v20.hasStage(requested)?Math.min(requested,resumeMax):Math.max(0,Math.min(requested===99&&msg.secrets===11?99:98,requested));
       if(saved>0)initStage(game,saved);
       if(blueprint)expansion.applyBlueprint(game,blueprint);
-      const r={code,seats:[newSeat(),null],game,home:cleanHome(msg.home),notes:[],customLevel:blueprint,spectators:new Set(),storyChoices:{},ending:null,unlockedMax:Math.min(98,saved),v20Unlocked:100,v20Home:v20.cleanHome(),v20Story:v20.cleanStory(),lastActivity:Date.now()};
+      const r={code,seats:[newSeat(),null],game,home:cleanHome(msg.home),notes:[],customLevel:blueprint,spectators:new Set(),storyChoices:{},ending:null,unlockedMax:Math.min(98,saved),v20Unlocked:resumeMax,v20Home:v20.cleanHome(msg.v20Home),v20Story:v20.cleanStory({choices:msg.v20Choices}),lastActivity:Date.now()};
       ROOMS.set(code,r);attach(r,0);return;
     }
     if(msg.t==='join'){
