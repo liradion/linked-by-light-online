@@ -182,7 +182,7 @@ function action(g,role,kind,raw={}){
 }
 function snapshot(g){
  const z=g.v21;if(!z)return null;
- return {stageId:z.stageId,kind:z.kind,completed:z.completed,trail:z.trail.map(s=>({...s})),trailCrossings:z.trailCrossings,
+ return {stageId:z.stageId,kind:z.kind,branch:z.branch||0,completed:z.completed,trail:z.trail.map(s=>({...s})),trailCrossings:z.trailCrossings,
   transfer:{...z.transfer},knowledge:{progress:z.knowledge.progress},
   lantern:{...z.lantern},transform:{forms:z.transform.forms.slice(),tokens:z.transform.tokens.slice()},
   weather:{wind:z.weather.wind,rain:z.weather.rain,charge:z.weather.charges[0]},
