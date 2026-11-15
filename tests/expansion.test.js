@@ -75,7 +75,7 @@ test('browser expansion is loaded before client and supports touch and secure te
  const html=fs.readFileSync(path.join(__dirname,'../public/index.html'),'utf8');
  const client=fs.readFileSync(path.join(__dirname,'../public/client.js'),'utf8');
  const ui=fs.readFileSync(path.join(__dirname,'../public/expansion-ui.js'),'utf8');
- assert.ok(html.indexOf('/expansion-ui.js?v=19')<html.indexOf('/client.js?v=21'));
+ assert.ok(html.indexOf('/expansion-ui.js?v=19')<html.indexOf('/client.js?v=22'));
  assert.match(client,/GameExpansion\.onSnapshot\(s\)/);
  assert.match(ui,/textContent=text/);
  assert.match(ui,/canvas\.addEventListener\('click'/);
