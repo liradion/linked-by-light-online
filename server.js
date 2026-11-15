@@ -10,7 +10,11 @@ const benchmark=createBenchmarkMetrics();
 const {createPublicBeta}=require('./public-beta');
 const {createPublicBetaHttp,clientAddress}=require('./public-beta-http');
 const configuredBetaRooms=Number(process.env.BETA_MAX_ROOMS);
-const beta=createPublicBeta({maxRooms:process.env.BETA_MAX_ROOMS&&Number.isInteger(configuredBetaRooms)?configuredBetaRooms:200});
+const requestedBetaRooms=process.env.BETA_MAX_ROOMS&&Number.isInteger(configuredBetaRooms)?configuredBetaRooms:200;
+// First v26 public beta rollout on Render: protect the Free instance against
+// an old dashboard BETA_MAX_ROOMS=200 override. CI benchmarks remain uncapped.
+const onRender=process.env.RENDER==='true'||!!process.env.RENDER_SERVICE_ID||!!process.env.RENDER_GIT_COMMIT;
+const beta=createPublicBeta({maxRooms:onRender?Math.min(requestedBetaRooms,5):requestedBetaRooms});
 const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./game-core');
 const {stages}=require('./shared/stages');
 const cloud=require('./cloud-store');
