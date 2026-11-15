@@ -166,7 +166,7 @@ server.on('upgrade',(req,socket,head)=>{
   const accept=crypto.createHash('sha1').update(key+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
   socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+accept+'\r\n\r\n');
   socket.setNoDelay(true);
-  let room=null,role=-1,peer;
+  let room=null,role=-1,peer,clientProtocol=1;
   let packetWindow=Date.now(),packetCount=0;
   const opCounts=new Map();
   function rateExceeded(action,limit){const now=Date.now(),entry=opCounts.get(action)||{start:now,count:0};
@@ -176,10 +176,10 @@ server.on('upgrade',(req,socket,head)=>{
   const attach=(r,index)=>{
     if(room)return error('Вы уже находитесь в комнате.');
     const seat=r.seats[index];if(seat.online&&seat.peer){try{seat.peer.close();}catch(_){}}
-    room=r;role=index;seat.online=true;seat.peer=peer;r.lastActivity=Date.now();
+    room=r;role=index;seat.online=true;seat.peer=peer;seat.protocol=clientProtocol;seat.connectionEpoch=(seat.connectionEpoch||0)+1;r.lastActivity=Date.now();
     // После обновления страницы счётчики нажатий в браузере начинаются с нуля.
-    r.game.input[role].packetSeq=0;r.game.input[role].processedSeq=0;r.game.input[role].jumpSeq=0;r.game.input[role].abilitySeq=0;r.game.input[role].bondSeq=0;r.game.input[role].emoteSeq=0;clearMovement(r.game,role);
-    peer.send({t:'joined',room:r.code,role,token:seat.token,phase:r.game.phase,connected:countOnline(r),home:r.home||[],notes:r.notes||[]});
+    r.game.input[role].packetSeq=0;r.game.input[role].processedSeq=0;r.game.input[role].jumpSeq=0;r.game.input[role].abilitySeq=0;r.game.input[role].bondSeq=0;r.game.input[role].emoteSeq=0;clearMovement(r.game,role);r.game.input[role].resync=true;
+    peer.send({t:'joined',room:r.code,role,token:seat.token,connectionEpoch:seat.connectionEpoch,protocol:2,phase:r.game.phase,connected:countOnline(r),home:r.home||[],notes:r.notes||[]});
     peer.send(roomSnapshot(r));
     sendSeatRoom(r);
   };
@@ -197,7 +197,7 @@ server.on('upgrade',(req,socket,head)=>{
     const now=Date.now();if(now-packetWindow>=2000){packetWindow=now;packetCount=0;}
     if(++packetCount>240){peer.close(1008);return;}
     if(msg.t==='ping'){peer.send({t:'pong',sent:Number.isFinite(msg.sent)?msg.sent:0});return;}
-     if(msg.t==='hello'){peer.send({t:'hello',protocol:2,version:'20.0.0'});return;}
+     if(msg.t==='hello'){clientProtocol=msg.protocol===2?2:1;if(room&&role>=0&&room.seats[role])room.seats[role].protocol=clientProtocol;peer.send({t:'hello',protocol:2,version:'20.0.0'});return;}
     if(msg.t==='create'){
       if(rateExceeded('create',8))return error('Слишком много комнат за минуту.');
       if(room)return error('Вы уже в комнате.');
@@ -205,6 +205,7 @@ server.on('upgrade',(req,socket,head)=>{
       const code=newCode(),game=createGame(),blueprint=expansion.cleanBlueprint(msg.blueprint);
       // Progress is supplied by the host's browser; rooms still run one authoritative server state.
       const requested=Number.isSafeInteger(msg.stage)?msg.stage:0;
+       if(v20.hasStage(requested)&&clientProtocol<2)return error('Обновите игру до v20, чтобы открыть новую кампанию.');
        const saved=v20.hasStage(requested)?100:Math.max(0,Math.min(requested===99&&msg.secrets===11?99:98,requested));
       if(saved>0)initStage(game,saved);
       if(blueprint)expansion.applyBlueprint(game,blueprint);
@@ -216,7 +217,8 @@ server.on('upgrade',(req,socket,head)=>{
       if(room)return error('Вы уже в комнате.');
       const code=typeof msg.room==='string'?msg.room.trim().toUpperCase():'';
       const r=ROOMS.get(code);if(!r)return error('Комната не найдена. Проверьте код.');
-      if(msg.spectate===true){watch(r);return;}
+      if(v20.hasStage(r.game.stage)&&clientProtocol<2)return error('Обновите страницу до v20, чтобы присоединиться к новой истории.');
+       if(msg.spectate===true){watch(r);return;}
       const token=typeof msg.token==='string'?msg.token:'';
       let index=r.seats.findIndex(s=>s&&s.token===token);
       if(index<0){index=r.seats.findIndex(s=>s===null);if(index<0)return error('В комнате уже два игрока.');r.seats[index]=newSeat();}
@@ -247,6 +249,7 @@ server.on('upgrade',(req,socket,head)=>{
       broadcast(room,{t:'note',note});return;
     }
     if(msg.t==='coopAction'||msg.t==='sceneVote'||msg.t==='homeAction'){
+       if(clientProtocol<2)return error('Для этой команды необходим клиент v20.');
        if(rateExceeded('v20-action',90))return error('Слишком много действий за минуту.');
        const id=typeof msg.actionId==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(msg.actionId)?msg.actionId:'';
        if(!id)return error('Некорректный идентификатор действия');
@@ -272,7 +275,7 @@ server.on('upgrade',(req,socket,head)=>{
     if(msg.t==='selectStage'&&role===0&&room.seats.every(s=>s?.online)){
       const target=msg.stage;
       if(!Number.isSafeInteger(target)||target<0||target>v20.LAST)return error('Неверный номер уровня.');
-      if(v20.hasStage(target)){if(target>(room.v20Unlocked||100))return error('Уровень ещё не открыт.');}
+      if(v20.hasStage(target)){if(room.seats.some(s=>s?.online&&s.protocol!==2))return error('Оба игрока должны обновить игру до v20.');if(target>(room.v20Unlocked||100))return error('Уровень ещё не открыт.');}
        else if(target>room.unlockedMax&&(target!==99||msg.secrets!==11))return error('Уровень ещё не открыт.');
       if(target===99&&msg.secrets!==11)return error('Сначала найдите все 11 секретных рун.');
       initStage(room.game,target);room.customLevel=null;room.ending=null;room.game.phase='playing';
@@ -286,6 +289,7 @@ server.on('upgrade',(req,socket,head)=>{
       return;
     }
     if(msg.t==='start'&&role===0&&room.seats.every(s=>s?.online)&&room.game.phase==='waiting'){
+      if(v20.hasStage(room.game.stage)&&room.seats.some(s=>s.protocol!==2))return error('Для новой кампании обновите игру на обоих устройствах.');
       room.game.phase='playing';initStage(room.game,room.customLevel?0:room.game.stage);if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='restart'&&role===0&&room.seats.every(s=>s?.online)){
