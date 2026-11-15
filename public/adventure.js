@@ -20,7 +20,16 @@ const SKINS=[['classic','Классика','✦'],['sunset','Закат','☀'],
 const PETS=[['none','Без питомца','·'],['fox','Лисёнок','🦊'],['owl','Совёнок','🦉'],['moth','Мотылёк','🦋'],['cat','Котик','🐈'],['orb','Светлячок','✨']];
 const FURN=[['lamp','Лампа','💡'],['plant','Растение','🌿'],['sofa','Диван','🛋️'],['shelf','Книги','📚'],['star','Звезда','⭐'],['rug','Ковёр','🧶'],['aquarium','Аквариум','🐠'],['telescope','Телескоп','🔭'],['fireplace','Камин','🔥'],['frame','Фото','🖼️'],['garden','Сад','🪴'],['piano','Пианино','🎹']];
 const initial={v20:{schemaVersion:1,unlockedStages:[],records:{},choices:{},unlockedDecor:[],petInteractions:{}},secrets:[],pets:[],skin:'classic',pet:'none',home:[{item:'lamp',slot:0},{item:'plant',slot:4}],achievements:[],shards:0,choices:{},memories:[],daily:{day:'',completed:[]},homeUpdatedAt:0,lookUpdatedAt:0};
-function cleanV20(raw){const v=raw&&typeof raw==='object'?raw:{};return {schemaVersion:1,unlockedStages:Array.from(new Set((Array.isArray(v.unlockedStages)?v.unlockedStages:[]).filter(x=>typeof x==='string'&&/^v20-(?:0[1-9]|1[0-2])$/.test(x)))).slice(0,12),records:v.records&&typeof v.records==='object'&&!Array.isArray(v.records)?Object.fromEntries(Object.entries(v.records).filter(([k,r])=>/^v20-(?:0[1-9]|1[0-2])$/.test(k)&&r&&Number.isInteger(r.stars)&&r.stars>=1&&r.stars<=3).map(([k,r])=>[k,{stars:r.stars,elapsed:Math.max(0,Number(r.elapsed)||0)}])):{},choices:v.choices&&typeof v.choices==='object'&&!Array.isArray(v.choices)?Object.fromEntries(Object.entries(v.choices).filter(([k,n])=>/^scene-(?:2|4|6|8|10|12)$/.test(k)&&[0,1].includes(n))):{},unlockedDecor:Array.from(new Set((Array.isArray(v.unlockedDecor)?v.unlockedDecor:[]).filter(x=>['lampion','flower','crystal'].includes(x)))).slice(0,3),petInteractions:{}};}
+function cleanV20House(raw){
+ const h=raw&&typeof raw==='object'?raw:{};
+ const num=x=>Number.isInteger(x)?Math.max(0,Math.min(20,x)):0;
+ return {zone:['living','garden','workshop'].includes(h.zone)?h.zone:'living',
+  garden:{step:num(h.garden?.step),completed:!!h.garden?.completed},
+  memory:{step:num(h.memory?.step),completed:!!h.memory?.completed},
+  pet:{mood:['happy','curious','resting'].includes(h.pet?.mood)?h.pet.mood:'curious',interactions:num(h.pet?.interactions)},
+  decor:Array.isArray(h.decor)?h.decor.filter(x=>['lampion','flower','crystal'].includes(x)).slice(0,6):[]};
+}
+function cleanV20(raw){const v=raw&&typeof raw==='object'?raw:{};return {schemaVersion:1,unlockedStages:Array.from(new Set((Array.isArray(v.unlockedStages)?v.unlockedStages:[]).filter(x=>typeof x==='string'&&/^v20-(?:0[1-9]|1[0-2])$/.test(x)))).slice(0,12),records:v.records&&typeof v.records==='object'&&!Array.isArray(v.records)?Object.fromEntries(Object.entries(v.records).filter(([k,r])=>/^v20-(?:0[1-9]|1[0-2])$/.test(k)&&r&&Number.isInteger(r.stars)&&r.stars>=1&&r.stars<=3).map(([k,r])=>[k,{stars:r.stars,elapsed:Math.max(0,Number(r.elapsed)||0)}])):{},choices:v.choices&&typeof v.choices==='object'&&!Array.isArray(v.choices)?Object.fromEntries(Object.entries(v.choices).filter(([k,n])=>/^scene-(?:2|4|6|8|10|12)$/.test(k)&&[0,1].includes(n))):{},unlockedDecor:Array.from(new Set((Array.isArray(v.unlockedDecor)?v.unlockedDecor:[]).filter(x=>['lampion','flower','crystal'].includes(x)))).slice(0,3),petInteractions:{},house:cleanV20House(v.house)};}
 function load(){try{let x=JSON.parse(localStorage.getItem(DATA_KEY));if(x&&typeof x==='object')return {...initial,...x,v20:cleanV20(x.v20),secrets:Array.isArray(x.secrets)?x.secrets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],pets:Array.isArray(x.pets)?x.pets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],home:Array.isArray(x.home)?x.home.slice(0,16):initial.home,choices:x.choices&&typeof x.choices==='object'&&!Array.isArray(x.choices)?x.choices:{},memories:Array.isArray(x.memories)?x.memories.filter(v=>typeof v?.text==='string'&&v.text.length<=160).slice(-40):[],daily:x.daily&&typeof x.daily==='object'?{day:String(x.daily.day||'').slice(0,10),completed:Array.isArray(x.daily.completed)?x.daily.completed.filter(v=>['stage','duet','stars'].includes(v)):[]}:initial.daily};}catch(_){}return {...initial};}
 let data=load(),callbacks={},lastBossPhase=0,lastStage=-1,lastPet=false,lastSecret=false,lastHearts=0,sharedHome=null,serverLooks=[null,null],lastSaveTime=0;
 const $=id=>document.getElementById(id),save=()=>{try{localStorage.setItem(DATA_KEY,JSON.stringify(data));}catch(_){}};
@@ -216,6 +225,10 @@ function recordV20(s){
  const choices=s.v20Story?.choices||{};
  for(const [k,choice] of Object.entries(choices))if(/^scene-(?:2|4|6|8|10|12)$/.test(k)&&[0,1].includes(choice)&&v.choices[k]!==choice){
   v.choices[k]=choice;changed=true;
+ }
+ if(s.v20Home){
+  const h=cleanV20House(s.v20Home);
+  if(JSON.stringify(h)!==JSON.stringify(v.house)){v.house=h;changed=true;}
  }
  if(s.v20Home?.garden?.completed&&!v.unlockedDecor.includes('flower')){v.unlockedDecor.push('flower');changed=true;}
  if(s.v20Home?.memory?.completed&&!v.unlockedDecor.includes('crystal')){v.unlockedDecor.push('crystal');changed=true;}
