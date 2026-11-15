@@ -1,4 +1,4 @@
-name: v22 deployment smoke (read-only)
+name: v26 deployment smoke (read-only)
 on:
   workflow_dispatch:
     inputs:
@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Read-only verify exact v22 version, assets, headers and configuration
+      - name: Read-only verify exact v26 version, assets, headers and configuration
         env:
           SMOKE_BASE_URL: ${{ inputs.base_url }}
         run: node scripts/smoke-public-beta.js

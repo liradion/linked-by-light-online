@@ -19,6 +19,13 @@ jobs:
           node --check public-beta.js
           node --check public-beta-http.js
           node --check public/beta.js
+          node --check v23-core.js
+          node --check v24-world.js
+          node --check v25-endless.js
+          node --check shared/v23-stages.js
+          node --check public/v23plus.js
+          node --check public/adventure.js
+          node --check public/cloud.js
           node --check scripts/smoke-public-beta.js
           node --check v20-core.js
           node --check v21-core.js
