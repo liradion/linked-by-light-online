@@ -165,6 +165,8 @@ function syncV21(server){
  const events=[...old.diary,...z.diary];
  z.diary=events.filter((e,i)=>events.findIndex(x=>x.kind===e.kind&&x.stage===e.stage)===i).slice(-40);
  z.garden={steps:Math.max(old.garden.steps,z.garden.steps),growth:Math.max(old.garden.growth,z.garden.growth)};
+ if(!z.painting.some(n=>n>=0)&&old.painting.some(n=>n>=0))z.painting=old.painting;
+ if(!z.melody.length&&old.melody.length)z.melody=old.melody;
  z.weeklyRecords={...old.weeklyRecords,...z.weeklyRecords};
  if(JSON.stringify(z)!==JSON.stringify(old)){data.v21=z;progressChanged();}
 }
