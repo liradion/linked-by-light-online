@@ -253,7 +253,12 @@ function paint(ctx,level,players,world,clock,role){
  const marker=(x,label,active)=>{ctx.strokeStyle=active?'#bffaff':'#ffd2a6';ctx.fillStyle='#f2ebff';ctx.shadowColor='#ae99ed';ctx.shadowBlur=active?18:7;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,GROUND-30,24,0,Math.PI*2);ctx.stroke();ctx.fillText(label,x,GROUND-65);ctx.shadowBlur=0;};
  marker(c.anchor,labels[world.kind],world.completed);marker(c.goal,'◈ Второй путь',world.completed);
  if(world.kind==='trails')for(const s of world.trail){ctx.fillStyle='#efc8ffb8';ctx.fillRect(s.x,s.y,95,12);}
- if(world.kind==='lantern'&&world.lantern.lit){ctx.fillStyle='#fff2ae9c';ctx.fillRect(c.anchor+360,459,230,17);}
+ if(world.kind==='lantern'){
+  if(role===0||role===-1){ctx.fillStyle='#adcaff9c';ctx.fillRect(c.anchor+310,459,260,17);}
+  if(world.lantern.lit&&(role===1||role===-1)){ctx.fillStyle='#fff2ae9c';ctx.fillRect(c.anchor+360,459,230,17);}
+ }
+ if(world.kind==='transform'&&world.transform.forms[1]!=='fox'&&(role===1||role===-1)){ctx.fillStyle='#bd92d4';ctx.fillRect(c.anchor+320,544-76,28,76);}
+ if(world.kind==='maze'&&world.maze.turn<=world.maze.checkpoint&&world.maze.checkpoint<3&&(role===0||role===-1)){ctx.fillStyle='#e9b9ff';ctx.fillRect(c.anchor+310+world.maze.checkpoint*150,544-100,29,100);}
  if(world.kind==='tree')for(let i=0;i<world.tree.growth;i++){ctx.fillStyle='#a8ecc69e';ctx.fillRect(c.anchor+i*115,440-i%3*32,125,16);}
  if(world.kind==='cargo'){ctx.fillStyle='#c2dcff';ctx.shadowColor='#8beeff';ctx.shadowBlur=22;ctx.fillRect(world.cargo.x,GROUND-64,65,64);ctx.shadowBlur=0;}
  if(world.branch===1){ctx.fillStyle='#eed2a9bb';ctx.fillRect(c.anchor+310,399,172,17);}
