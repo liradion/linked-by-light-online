@@ -16,6 +16,10 @@ jobs:
       - name: Verify JavaScript syntax
         run: |
           node --check server.js
+          node --check public-beta.js
+          node --check public-beta-http.js
+          node --check public/beta.js
+          node --check scripts/smoke-public-beta.js
           node --check v20-core.js
           node --check v21-core.js
           node --check v21-social.js
