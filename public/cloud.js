@@ -18,6 +18,12 @@ function merge(a,b){if(!a||a.version!==11)return b;if(!b||b.version!==11)return 
  return {...b,checkpoint:Math.max(a.checkpoint||0,b.checkpoint||0),records,
   adventure:{...b.adventure,secrets:Array.from(keys),pets:Array.from(pets),achievements:Array.from(achievements),
   shards:Math.max(a.adventure?.shards||0,b.adventure?.shards||0),
+  memories:(()=>{
+   const all=[...(b.adventure?.memories||[]),...(a.adventure?.memories||[])],seen=new Set();
+   return all.filter(n=>{if(!n||typeof n.text!=='string')return false;
+    const id=[n.at,n.role,n.text].join(':');if(seen.has(id))return false;seen.add(id);return true;
+   }).sort((x,y)=>x.at-y.at).slice(-40);
+  })(),
   daily:a.adventure?.daily?.day===b.adventure?.daily?.day
    ?{day:a.adventure?.daily?.day||'',completed:Array.from(new Set([...(a.adventure?.daily?.completed||[]),...(b.adventure?.daily?.completed||[])]))}
    :(String(a.adventure?.daily?.day||'')>String(b.adventure?.daily?.day||'')?a.adventure?.daily:b.adventure?.daily),
