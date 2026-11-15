@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const {createPublicBeta,normalizeFeedback,cleanFeedback}=require('../public-beta');
-const {sameOrigin}=require('../public-beta-http');
+const {sameOrigin,clientAddress}=require('../public-beta-http');
 test('consent is mandatory; beta feedback is normalized and excludes unrequested identifiers',()=>{
  const entry=normalizeFeedback({kind:'bug',consent:true,
   message:'<script>Проблема при соединении</script>',platform:'iphone',rating:4,stage:112,
@@ -70,4 +70,20 @@ test('cross-origin beta requests are rejected',()=>{
  assert.equal(sameOrigin({headers:{host:'game.example',origin:'https://evil.example'}}),false);
  assert.equal(sameOrigin({headers:{host:'game.example',origin:'not a URL'}}),false);
  assert.equal(sameOrigin({headers:{host:'game.example'}}),true);
+});
+
+test('proxy address lookup ignores spoofed headers unless explicitly enabled',()=>{
+ const original=process.env.BETA_TRUST_PROXY;
+ const req={socket:{remoteAddress:'10.0.0.3'},headers:{'x-forwarded-for':'203.0.113.7, 198.51.100.11'}};
+ try{
+  delete process.env.BETA_TRUST_PROXY;
+  assert.equal(clientAddress(req),'10.0.0.3');
+  process.env.BETA_TRUST_PROXY='1';
+  assert.equal(clientAddress(req),'198.51.100.11');
+  req.headers['x-forwarded-for']='invalid';
+  assert.equal(clientAddress(req),'10.0.0.3');
+ }finally{
+  if(original===undefined)delete process.env.BETA_TRUST_PROXY;
+  else process.env.BETA_TRUST_PROXY=original;
+ }
 });
