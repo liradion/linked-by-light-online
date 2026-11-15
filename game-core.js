@@ -28,6 +28,16 @@ const makeInput=()=>({left:false,right:false,jumpQueued:false,abilityQueued:fals
 function updateInput(g,role,message){
   if(![0,1].includes(role))return;
   let i=g.input[role];
+  // First packet after a reconnect establishes the new client's sequence baseline.
+  // It must not replay previously held jump/ability/bond/emote buttons.
+  if(i.resync){
+    for(const key of ['jumpSeq','abilitySeq','bondSeq','emoteSeq']){
+      const n=message[key];i[key]=Number.isSafeInteger(n)&&n>=0&&n<=1_000_000_000?n:0;
+    }
+    const n=message.inputSeq;i.packetSeq=Number.isSafeInteger(n)&&n>=0?n:0;
+    i.processedSeq=i.packetSeq;i.left=message.left===true;i.right=message.right===true;
+    i.resync=false;return;
+  }
   if(Number.isSafeInteger(message.inputSeq)&&message.inputSeq>=0&&message.inputSeq<=Number.MAX_SAFE_INTEGER){i.packetSeq=Math.max(i.packetSeq||0,message.inputSeq);}
   i.left=message.left===true;i.right=message.right===true;
   for(const [seqField,queued] of [['jumpSeq','jumpQueued'],['abilitySeq','abilityQueued'],['bondSeq','bondQueued'],['emoteSeq','emoteQueued']]){
