@@ -31,7 +31,7 @@ function roomBackups(){return {version:11,v21Board:V21_BOARD,v21Gallery:V21_GALL
 function persistRooms(){if(!SAVE_FILE)return;
  try{fs.mkdirSync(SAVE_DIR,{recursive:true});const rooms=Array.from(ROOMS.values()).map(r=>({
   code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
-  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),lastActivity:r.lastActivity,story:r.story||null}));
+  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),lastActivity:r.lastActivity,story:r.story||null}));
   const temp=SAVE_FILE+'.'+process.pid+'.tmp';fs.writeFileSync(temp,JSON.stringify({version:11,rooms,v21Board:V21_BOARD,v21Gallery:V21_GALLERY}),'utf8');fs.renameSync(temp,SAVE_FILE);
  }catch(e){console.warn('Session persistence failed:',e.message);}}
 function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.rooms))return;
@@ -296,6 +296,66 @@ server.on('upgrade',(req,socket,head)=>{
        }
        return;
      }
+     if(msg.t==='v21Action'||msg.t==='v21Publish'||msg.t==='v21Report'||msg.t==='v21GalleryPlay'||msg.t==='v21GalleryList'||msg.t==='v21Weekly'){
+       if(clientProtocol<3)return error('Обновите игру до версии 21');
+       if(rateExceeded('v21-actions',100))return error('Слишком много команд в минуту');
+       if(msg.t==='v21GalleryList'){peer.send({t:'v21Gallery',items:social.publicGallery(V21_GALLERY)});return;}
+       if(msg.t==='v21Weekly'){
+         const week=v21.weekKey();
+         peer.send({t:'v21WeeklyBoard',week,target:v21.weeklyStage(),items:V21_BOARD.filter(x=>x.week===week).sort((a,b)=>a.time-b.time).slice(0,10)});
+         return;
+       }
+       const id=typeof msg.actionId==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(msg.actionId)?msg.actionId:'';
+       if(!id)return error('Некорректный идентификатор команды');
+       const seat=room.seats[role];seat.actionIds=seat.actionIds||new Set();
+       if(seat.actionIds.has(id)){peer.send({t:'actionResult',actionId:id,ok:false,error:'Команда уже обработана'});return;}
+       seat.actionIds.add(id);if(seat.actionIds.size>256)seat.actionIds.delete(seat.actionIds.values().next().value);
+       let result={ok:false,error:'Команда не распознана'};
+       if(msg.t==='v21Action'){
+         const puzzle=new Set(['trail_mark','transfer_send','transfer_receive','transfer_deliver','knowledge_symbol','lantern_toggle','transform','transform_collect','weather_wind','weather_rain','cargo_push','tree_grow','maze_rotate','maze_checkpoint','asym_action','asym_cross']);
+         result=puzzle.has(msg.kind)?v21.action(room.game,role,msg.kind,msg):social.act(room,role,msg.kind,msg);
+       }
+       if(msg.t==='v21Publish'){
+         if(role!==0)result={ok:false,error:'Только ведущий может публиковать авторскую карту'};
+         else if(V21_GALLERY.filter(x=>x.owner===room.code&&!x.hidden).length>=2)result={ok:false,error:'Не более двух публичных карт от команды'};
+         else{
+           const entry=social.published(msg.blueprint,room.code,expansion.cleanBlueprint);
+           if(entry){V21_GALLERY.push(entry);if(V21_GALLERY.length>40)V21_GALLERY.shift();result={ok:true,detail:'Карта опубликована и доступна в галерее'};}
+           else result={ok:false,error:'Сначала создайте карту с платформами в редакторе'};
+         }
+       }
+       if(msg.t==='v21Report'){
+         const item=V21_GALLERY.find(x=>x.id===msg.id&&!x.hidden);
+         if(!item||item.owner===room.code)result={ok:false,error:'Не удалось отправить жалобу'};
+         else{
+           const fingerprint=crypto.createHash('sha256').update(seat.token).digest('hex').slice(0,24);
+           if(item.reports.includes(fingerprint))result={ok:false,error:'Жалоба уже получена'};
+           else {item.reports.push(fingerprint);if(item.reports.length>=3)item.hidden=true;result={ok:true,detail:'Жалоба принята; карта скрывается после трёх независимых жалоб'};}
+         }
+       }
+       if(msg.t==='v21GalleryPlay'){
+         const item=V21_GALLERY.find(x=>x.id===msg.id&&!x.hidden);
+         if(role!==0||!room.seats.every(x=>x?.online))result={ok:false,error:'Оба игрока должны быть в комнате'};
+         else if(!item)result={ok:false,error:'Карта отсутствует'};
+         else{
+           initStage(room.game,0);expansion.applyBlueprint(room.game,item.blueprint);
+           room.customLevel=item.blueprint;room.ending=null;room.game.phase='playing';
+           sendSeatRoom(room);broadcast(room,roomSnapshot(room));
+           result={ok:true,detail:'Авторская карта загружена'};
+         }
+       }
+       peer.send({t:'actionResult',actionId:id,...result});
+       if(result.ok){
+         room.urgentSnapshot=true;
+         if(msg.t==='v21Action'){
+           broadcast(room,{t:'v21State',data:social.publicState(room)});
+           if(msg.kind.startsWith('letter_'))for(const s of room.seats)if(s?.online)s.peer.send({t:'v21Private',data:social.privateState(room,s===room.seats[0]?0:1)});
+         }
+         if(msg.t==='v21Publish'||msg.t==='v21Report')broadcast(room,{t:'v21Gallery',items:social.publicGallery(V21_GALLERY)});
+         if(msg.t==='v21Action'&&room.game.v21)broadcast(room,roomSnapshot(room));
+       }
+       return;
+     }
      if(msg.t==='home'&&Array.isArray(msg.items)){
       room.home=cleanHome(msg.items);broadcast(room,{t:'home',items:room.home});return;
     }
@@ -305,7 +365,7 @@ server.on('upgrade',(req,socket,head)=>{
       if(v21.hasStage(target)){
         if(room.seats.some(s=>s?.online&&s.protocol<3))return error('Оба игрока должны обновить игру до v21.');
         if(target>(room.v21Unlocked||v21.FIRST))return error('Испытание v21 ещё не открыто.');
-       }else if(v20.hasStage(target)){if(room.seats.some(s=>s?.online&&s.protocol!==2))return error('Оба игрока должны обновить игру до v20.');if(target>(room.v20Unlocked||100))return error('Уровень ещё не открыт.');}
+       }else if(v20.hasStage(target)){if(room.seats.some(s=>s?.online&&s.protocol<2))return error('Оба игрока должны обновить игру до v20.');if(target>(room.v20Unlocked||100))return error('Уровень ещё не открыт.');}
        else if(target>room.unlockedMax&&(target!==99||msg.secrets!==11))return error('Уровень ещё не открыт.');
       if(target===99&&msg.secrets!==11)return error('Сначала найдите все 11 секретных рун.');
       initStage(room.game,target);room.customLevel=null;room.ending=null;room.game.phase='playing';
@@ -344,9 +404,14 @@ const loop=setInterval(()=>{
   lastBroadcast++;
   for(const r of ROOMS.values()){
     tick(r.game,countOnline(r));
-    if(r.game.phase==='win'&&!r.ending)r.ending=v20.hasStage(r.game.stage)?v20.endingForStory(r.v20Story):r.customLevel?{kind:'creator',title:'Мастера света',text:'Ваш собственный уровень пройден вдвоём!',choices:0}:expansion.endingFor(r);
+    if(r.game.phase==='win'&&!r.ending)r.ending=v21.hasStage(r.game.stage)?{kind:'v21',title:'Навстречу друг другу',text:'Ваши пути снова встретились! Новые воспоминания ждут дома.'}:v20.hasStage(r.game.stage)?v20.endingForStory(r.v20Story):r.customLevel?{kind:'creator',title:'Мастера света',text:'Ваш собственный уровень пройден вдвоём!',choices:0}:expansion.endingFor(r);
     if(r.ending?.kind==='v20-together'&&r.v20Home&&!r.v20Home.decor.includes('lampion')&&r.v20Home.decor.length<6)r.v20Home.decor.push('lampion');
+     const previousV21=r.v21World?.lastResult;
      social.completed(r,V21_BOARD);
+     if(previousV21!==r.v21World?.lastResult){
+       broadcast(r,{t:'v21State',data:social.publicState(r)});
+       for(const seat of r.seats)if(seat?.online)seat.peer.send({t:'v21Private',data:social.privateState(r,seat===r.seats[0]?0:1)});
+     }
      r.unlockedMax=Math.max(r.unlockedMax,Math.min(98,r.game.stage));
      if(v20.hasStage(r.game.stage))r.v20Unlocked=Math.max(r.v20Unlocked||100,r.game.stage);
      if(v21.hasStage(r.game.stage))r.v21Unlocked=Math.max(r.v21Unlocked||v21.FIRST,r.game.stage);
