@@ -110,3 +110,16 @@ test('v19 cloud profiles retain old values and merge v20 records',()=>{
  assert.equal(m.adventure.v20.unlockedStages.length,2);
  assert.equal(m.adventure.secrets.length,2);
 });
+
+test('client geometry reconciles role-specific phase ledges and temporal motion',()=>{
+ const predictor=require('../public/reconciliation.js');
+ const level=v20.getStage(101);
+ const world={v20:{kind:'phase',phase:{flags:[true,false],state:'shadow'}}};
+ const p0=predictor.geometry(level,world,0),p1=predictor.geometry(level,world,1);
+ assert.ok(p0.some(x=>x.x===900&&x.y===438));
+ assert.ok(p1.some(x=>x.x===1340&&x.y===438));
+ const other=v20.getStage(102);
+ other.platforms.push({x:1120,y:414,w:142,h:18,temporal:true});
+ const time=predictor.geometry(other,{v20:{time:{platformX:1207}}},0);
+ assert.ok(time.some(x=>x.temporal&&x.x===1207));
+});
