@@ -52,7 +52,7 @@ function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.roo
    if(seats.length!==2||!seats[0])continue;
    const game=createGame();initStage(game,saved.game.stage);
    // Restore only expected game state fields; avoid stale socket and input queues.
-   for(const key of ['players','shards','tick','padTimer','completion','transition','stats','lastResult','level','customChallenge','expansion','v20','v21','v23'])
+   for(const key of ['players','shards','tick','padTimer','completion','transition','stats','lastResult','level','customChallenge','expansion','v20','v21','v23','assistMode'])
     if(saved.game[key]!==undefined)game[key]=saved.game[key];
    game.phase=saved.game.phase==='win'?'win':saved.game.phase==='playing'?'playing':'waiting';
    game.input.forEach(i=>{i.left=false;i.right=false;});
@@ -447,7 +447,14 @@ server.on('upgrade',(req,socket,head)=>{
        if(msg.t==='v25ReplayGet'){
          const chunks=v25.replayChunks(room,msg.which==='ghost'?'ghost':Number.isInteger(msg.stage)?msg.stage:undefined);
          if(!chunks.length)outcome={ok:false,error:'Пока нет записанных прохождений'};
-         else{for(const chunk of chunks)peer.send(chunk);outcome={ok:true,detail:'Повтор отправлен частями'};}
+         else{
+          // Pace chunks to respect WebSocket backpressure on slower iPhone/Safari connections.
+          chunks.forEach((chunk,index)=>{
+           const t=setTimeout(()=>{if(seat.online&&seat.peer===peer)peer.send(chunk);},index*85);
+           t.unref?.();
+          });
+          outcome={ok:true,detail:'Повтор отправлен частями'};
+         }
        }
        peer.send({t:'actionResult',actionId:id,...outcome});
        if(outcome.ok){
