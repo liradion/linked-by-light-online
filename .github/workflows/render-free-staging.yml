@@ -1,0 +1,133 @@
+name: Render Free class and unstable-network staging test
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/render-free-bench.js
+      - .github/workflows/render-free-staging.yml
+      - server.js
+      - benchmark-metrics.js
+
+permissions:
+  contents: read
+
+jobs:
+  render-free-emulation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify standalone network tester
+        run: node --check scripts/render-free-bench.js
+      - name: Start isolated 0.1 CPU / 512 MiB game service, no production credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          TOKEN="$(openssl rand -hex 32)"
+          echo "LL_BENCH_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          docker pull node:22-alpine
+          docker run -d --rm --name ll-render-free-staging \
+            --network host --cpus 0.1 --memory 512m --memory-swap 512m \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m \
+            -v "$GITHUB_WORKSPACE:/app:ro" -w /app \
+            -e PORT=43567 -e LL_BENCH_TOKEN="$TOKEN" \
+            -e SUPABASE_URL="" -e SUPABASE_SECRET_KEY="" \
+            -e SUPABASE_SERVICE_ROLE_KEY="" -e DATABASE_URL="" -e SAVE_DIR="" \
+            node:22-alpine node server.js
+          test "$(docker inspect -f '{{.HostConfig.NanoCpus}}' ll-render-free-staging)" = "100000000"
+          test "$(docker inspect -f '{{.HostConfig.Memory}}' ll-render-free-staging)" = "536870912"
+          docker exec ll-render-free-staging sh -c 'echo CPU_QUOTA:; cat /sys/fs/cgroup/cpu.max; echo MEMORY_MAX:; cat /sys/fs/cgroup/memory.max'
+      - name: Capacity at Render Free-class CPU and memory limits
+        run: >
+          node scripts/render-free-bench.js
+          --profile=capacity --cases=10,20,50,100,200,400
+          --duration=12 --warmup=2 --input-hz=40
+          --out=artifacts/render-free-capacity
+      - name: Restart isolated game container for intermediate capacity tests
+        shell: bash
+        run: |
+          docker rm -f ll-render-free-staging 2>/dev/null || true
+          docker run -d --rm --name ll-render-free-staging \
+            --network host --cpus 0.1 --memory 512m --memory-swap 512m \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m \
+            -v "$GITHUB_WORKSPACE:/app:ro" -w /app \
+            -e PORT=43567 -e LL_BENCH_TOKEN="$LL_BENCH_TOKEN" \
+            -e SUPABASE_URL="" -e SUPABASE_SECRET_KEY="" \
+            -e SUPABASE_SERVICE_ROLE_KEY="" -e DATABASE_URL="" -e SAVE_DIR="" \
+            node:22-alpine node server.js
+      - name: Refine capacity threshold at 60 / 70 / 80 / 90 active players
+        run: >
+          node scripts/render-free-bench.js
+          --profile=capacity --cases=60,70,80,90
+          --duration=12 --warmup=2 --input-hz=40
+          --out=artifacts/render-free-refine
+      - name: Select maximum locally stable benchmark step
+        shell: bash
+        run: |
+          STABLE_PLAYERS="$(node -e '
+            const fs=require("fs");
+            const paths=["artifacts/render-free-capacity/report.json","artifacts/render-free-refine/report.json"];
+            const all=paths.flatMap(p=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")).cases:[]);
+            console.log(Math.max(10,...all.filter(x=>x.passes).map(x=>x.players)));
+          ')"
+          echo "STABLE_PLAYERS=$STABLE_PLAYERS" >> "$GITHUB_ENV"
+          echo "Selected $STABLE_PLAYERS active players for 90 second soak"
+      - name: Restart isolated game container for sustained load
+        shell: bash
+        run: |
+          docker rm -f ll-render-free-staging 2>/dev/null || true
+          docker run -d --rm --name ll-render-free-staging \
+            --network host --cpus 0.1 --memory 512m --memory-swap 512m \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m \
+            -v "$GITHUB_WORKSPACE:/app:ro" -w /app \
+            -e PORT=43567 -e LL_BENCH_TOKEN="$LL_BENCH_TOKEN" \
+            -e SUPABASE_URL="" -e SUPABASE_SECRET_KEY="" \
+            -e SUPABASE_SERVICE_ROLE_KEY="" -e DATABASE_URL="" -e SAVE_DIR="" \
+            node:22-alpine node server.js
+      - name: Sustained 90-second test at maximum passing capacity
+        shell: bash
+        run: |
+          node scripts/render-free-bench.js \
+            --profile=capacity --cases="$STABLE_PLAYERS" \
+            --duration=90 --warmup=3 --input-hz=40 \
+            --out=artifacts/render-free-soak
+      - name: Re-create empty isolated game instance before network impairment test
+        if: always()
+        shell: bash
+        run: |
+          docker rm -f ll-render-free-staging 2>/dev/null || true
+          docker run -d --rm --name ll-render-free-staging \
+            --network host --cpus 0.1 --memory 512m --memory-swap 512m \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m \
+            -v "$GITHUB_WORKSPACE:/app:ro" -w /app \
+            -e PORT=43567 -e LL_BENCH_TOKEN="$LL_BENCH_TOKEN" \
+            -e SUPABASE_URL="" -e SUPABASE_SECRET_KEY="" \
+            -e SUPABASE_SERVICE_ROLE_KEY="" -e DATABASE_URL="" -e SAVE_DIR="" \
+            node:22-alpine node server.js
+      - name: Impaired network (150 ms RTT, jitter +/-30 ms, 2 percent lost commands, 10 second reconnect)
+        run: >
+          node scripts/render-free-bench.js
+          --profile=unstable --cases=20 --duration=45 --warmup=2 --input-hz=40
+          --uplink-ms=75 --downlink-ms=75 --jitter-ms=30
+          --input-loss-pct=2 --outage-sec=10
+          --out=artifacts/render-free-unstable
+      - name: Cleanup isolated container
+        if: always()
+        run: docker rm -f ll-render-free-staging 2>/dev/null || true
+      - name: Publish summary and structured artifacts
+        if: always()
+        shell: bash
+        run: |
+          for item in artifacts/render-free-capacity/report.md artifacts/render-free-refine/report.md artifacts/render-free-soak/report.md artifacts/render-free-unstable/report.md; do
+            if test -f "$item"; then cat "$item" >> "$GITHUB_STEP_SUMMARY"; fi
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: render-free-network-benchmark
+          path: artifacts/render-free-*/
+          retention-days: 30
