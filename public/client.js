@@ -405,7 +405,13 @@ function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-
  for(const pt of particles){ctx.globalAlpha=Math.max(0,pt.life/pt.ttl);ctx.fillStyle=pt.color;ctx.beginPath();ctx.arc(pt.x,pt.y,pt.r*Math.max(.25,pt.life/pt.ttl),0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
  ctx.restore();}
 function drawPortal(x,y,active){GameVisuals.portal(ctx,x,y,active,clock);}
-function drawPlayer(p){GameVisuals.player(ctx,p,clock);}
+function drawPlayer(p){
+ const scale=level?.v23?.kind==='resize'?(latest?.world?.v23?.scale?.[p.type]||1):1;
+ if(scale!==1){
+  ctx.save();ctx.translate(p.x+15,p.y+43);ctx.scale(scale,scale);ctx.translate(-(p.x+15),-(p.y+43));
+  GameVisuals.player(ctx,p,clock);ctx.restore();
+ }else GameVisuals.player(ctx,p,clock);
+}
 function draw(){background();if(level)drawWorld();else {ctx.fillStyle='#ffffff11';ctx.fillRect(0,544,1200,106);}GameExpansion.drawWeather(ctx,W,H,latest?.world?.expansion,clock,GameQuality.settings().graphics);if(phase==='win'){glowCircle(600,280,300,'#ffe6b720');}if(GameQuality.settings().graphics!=='low')GameVisuals.vignette(ctx,W,H);}
 const RESULT_KEY='linked-light-stars-v11';
 function saveStageResult(result){try{const all=JSON.parse(localStorage.getItem(RESULT_KEY)||'{}');
