@@ -188,4 +188,5 @@ function snapshot(g){
   cargo:{x:z.cargo.x,step:z.cargo.step,votes:z.cargo.votes.slice()},
   tree:{growth:z.tree.growth},maze:{...z.maze},asymmetry:{...z.asymmetry}};
 }
-module.exports={FIRST,LAST,hasStage,getStage,init,platformRects,beforeStep,afterStep,action,snapshot,weekKey,weeklyStage,seasonId,capText};
+function completed(g){return !g.v21||g.v21.completed;}
+module.exports={FIRST,LAST,hasStage,getStage,init,platformRects,beforeStep,afterStep,action,completed,snapshot,weekKey,weeklyStage,seasonId,capText};
