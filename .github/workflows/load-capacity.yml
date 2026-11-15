@@ -28,11 +28,16 @@ jobs:
           node --check server.js
       - name: Run 50 / 100 / 200 / 400 real concurrent WebSocket clients against localhost
         run: node scripts/load-test.js --cases=50,100,200,400 --duration=8 --warmup=2 --input-hz=25 --out=artifacts
+      - name: 400-player sustained 30s test at real 40Hz input cadence
+        run: node scripts/load-test.js --cases=400 --duration=30 --warmup=3 --input-hz=40 --out=artifacts/soak
       - name: Publish Markdown summary
         if: always()
         run: |
           if test -f artifacts/load-test.md; then
             cat artifacts/load-test.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if test -f artifacts/soak/load-test.md; then
+            cat artifacts/soak/load-test.md >> "$GITHUB_STEP_SUMMARY"
           fi
       - uses: actions/upload-artifact@v4
         if: always()
@@ -41,4 +46,6 @@ jobs:
           path: |
             artifacts/load-test.json
             artifacts/load-test.md
+            artifacts/soak/load-test.json
+            artifacts/soak/load-test.md
           retention-days: 30
