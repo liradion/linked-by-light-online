@@ -319,8 +319,9 @@ const loop=setInterval(()=>{
   lastBroadcast++;
   for(const r of ROOMS.values()){
     tick(r.game,countOnline(r));
-    if(r.game.phase==='win'&&!r.ending)r.ending=v20.hasStage(r.game.stage)?{kind:'v20',title:'Переплетение миров',text:'Два света сохранили свою связь!',choices:Object.keys(r.v20Story?.choices||{}).length}:r.customLevel?{kind:'creator',title:'Мастера света',text:'Ваш собственный уровень пройден вдвоём!',choices:0}:expansion.endingFor(r);
-    r.unlockedMax=Math.max(r.unlockedMax,Math.min(98,r.game.stage));
+    if(r.game.phase==='win'&&!r.ending)r.ending=v20.hasStage(r.game.stage)?v20.endingForStory(r.v20Story):r.customLevel?{kind:'creator',title:'Мастера света',text:'Ваш собственный уровень пройден вдвоём!',choices:0}:expansion.endingFor(r);
+    if(r.ending?.kind==='v20-together'&&r.v20Home&&!r.v20Home.decor.includes('lampion')&&r.v20Home.decor.length<6)r.v20Home.decor.push('lampion');
+     r.unlockedMax=Math.max(r.unlockedMax,Math.min(98,r.game.stage));
      if(v20.hasStage(r.game.stage))r.v20Unlocked=Math.max(r.v20Unlocked||100,r.game.stage);
     const both=r.seats.every(s=>s?.online);
     // 30 Hz while playing (formerly 20 Hz), with next-tick feedback on discrete actions.
