@@ -35,11 +35,11 @@ const SAVE_DIR=process.env.SAVE_DIR||'';
 const SAVE_FILE=SAVE_DIR?path.join(SAVE_DIR,'linked-light-rooms-v11.json'):'';
 function roomBackups(){return {version:11,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup(),rooms:Array.from(ROOMS.values()).map(r=>({
  code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
- home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.clean(r.v25),lastActivity:r.lastActivity,story:r.story||null}))};}
+ home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.persist(r.v25),lastActivity:r.lastActivity,story:r.story||null}))};}
 function persistRooms(){if(!SAVE_FILE)return;
  try{fs.mkdirSync(SAVE_DIR,{recursive:true});const rooms=Array.from(ROOMS.values()).map(r=>({
   code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
-  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.clean(r.v25),lastActivity:r.lastActivity,story:r.story||null}));
+  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.persist(r.v25),lastActivity:r.lastActivity,story:r.story||null}));
   const temp=SAVE_FILE+'.'+process.pid+'.tmp';fs.writeFileSync(temp,JSON.stringify({version:11,rooms,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup()}),'utf8');fs.renameSync(temp,SAVE_FILE);
  }catch(e){console.warn('Session persistence failed:',e.message);}}
 function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.rooms))return;
@@ -400,6 +400,55 @@ server.on('upgrade',(req,socket,head)=>{
        }
        return;
      }
+     if(['v23Action','v24Action','v25Generate','v25ReplayGet','v25MetaGet'].includes(msg.t)){
+       if(clientProtocol<4)return error('Для новых глав нужна версия v26.');
+       if(rateExceeded('expansion-action',75))return error('Слишком много игровых команд');
+       if(msg.t==='v25MetaGet'){peer.send({t:'v25Meta',data:v25.meta(room)});return;}
+       const id=typeof msg.actionId==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(msg.actionId)?msg.actionId:'';
+       if(!id)return error('Некорректный идентификатор действия');
+       const seat=room.seats[role];seat.actionIds=seat.actionIds||new Set();
+       if(seat.actionIds.has(id)){peer.send({t:'actionResult',actionId:id,ok:false,error:'Повторное действие'});return;}
+       seat.actionIds.add(id);
+       if(seat.actionIds.size>256)seat.actionIds.delete(seat.actionIds.values().next().value);
+       let outcome={ok:false,error:'Действие неизвестно'};
+       if(msg.t==='v23Action')outcome=v23.action(room.game,role,msg.kind,msg);
+       if(msg.t==='v24Action')outcome=v24.action(room,role,msg.kind,msg);
+       if(msg.t==='v25Generate'){
+         const ready=role===0&&room.seats.every(s=>s?.online);
+         if(!ready)outcome={ok:false,error:'Ведущий может создать испытание только вдвоём'};
+         else{
+           const daily=msg.mode==='daily';
+           const seed=daily?v25.seedForDate():Number.isInteger(msg.seed)&&msg.seed>0&&msg.seed<=0xffffffff?msg.seed:null;
+           if(!seed)outcome={ok:false,error:'Необходимо выбрать действительный seed или ежедневный режим'};
+           else{
+             const blueprint=v25.generate(seed);
+             if(expansion.applyBlueprint(room.game,blueprint)){
+               room.customLevel=blueprint;room.ending=null;room.game.phase='playing';
+               const z=v25.ensure(room);z.seed=seed;z.dailyKey=daily?new Date().toISOString().slice(0,10):'';
+               z.stage=-1;z.active=[];z.lastResult='';
+               outcome={ok:true,detail:daily?'Ежедневный мир создан':'Испытание создано · seed '+seed};
+               sendSeatRoom(room);broadcast(room,roomSnapshot(room));
+             }else outcome={ok:false,error:'Не удалось создать безопасный уровень'};
+           }
+         }
+       }
+       if(msg.t==='v25ReplayGet'){
+         const chunks=v25.replayChunks(room,msg.which==='ghost'?'ghost':Number.isInteger(msg.stage)?msg.stage:undefined);
+         if(!chunks.length)outcome={ok:false,error:'Пока нет записанных прохождений'};
+         else{for(const chunk of chunks)peer.send(chunk);outcome={ok:true,detail:'Повтор отправлен частями'};}
+       }
+       peer.send({t:'actionResult',actionId:id,...outcome});
+       if(outcome.ok){
+         room.urgentSnapshot=true;
+         if(msg.t==='v24Action'){
+           const update={t:'v24State',data:v24.publicState(room)};
+           for(const player of room.seats)if(player?.online)player.peer.send(update);
+         }
+         if(msg.t==='v23Action'||msg.t==='v25Generate')broadcast(room,roomSnapshot(room));
+         if(msg.t==='v25Generate')broadcast(room,{t:'v25Meta',data:v25.meta(room)});
+       }
+       return;
+     }
      if(msg.t==='home'&&Array.isArray(msg.items)){
       room.home=cleanHome(msg.items);broadcast(room,{t:'home',items:room.home});return;
     }
@@ -454,6 +503,7 @@ const loop=setInterval(()=>{
   for(const r of ROOMS.values()){
     tick(r.game,countOnline(r));
     v25.capture(r);
+    if(r.v25?.lastResult&&r.v25.lastResult!==r.lastReplayNotice){r.lastReplayNotice=r.v25.lastResult;broadcast(r,{t:'v25Meta',data:v25.meta(r)});}
     // A time-capsule letter becomes visible at the next stage. Update only
     // the two authenticated seats; never include private content in snapshots.
     if(r.lastPrivateStage!==r.game.stage){
