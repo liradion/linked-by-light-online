@@ -37,7 +37,7 @@ test('v20 real WebSocket room, actions, observer isolation and seat recovery',{t
   assert.equal((await take(b,m=>m.t==='actionResult'&&m.actionId==='garden-2')).ok,true);
   const home=await take(a,m=>m.t==='v20Home'&&m.home.garden.step===2);
   assert.equal(home.home.garden.step,2);
-  c=await socket(port);c.send({t:'join',room:j.room,spectate:true});const watch=await take(c,m=>m.t==='joined');
+  c=await socket(port);c.send({t:'hello',protocol:2});c.send({t:'join',room:j.room,spectate:true});const watch=await take(c,m=>m.t==='joined');
   assert.equal(watch.role,-1);
   c.send({t:'homeAction',actionId:'illegal',kind:'flower'});
   await sleep(160);
