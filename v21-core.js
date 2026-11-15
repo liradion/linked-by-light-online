@@ -40,10 +40,11 @@ function platformRects(g,role){
  const z=g.v21;if(!z)return [];
  const c=g.level.v21,all=[];
  if(z.branch===1)all.push({x:c.anchor+310,y:399,w:172,h:17,kind:'v21-choice-route'});
+ if(z.kind==='trails'&&role===0)all.push({x:c.anchor+105,y:509,w:735,h:14,kind:'v21-spark-route'});
  if(z.kind==='trails'&&role===1)for(const s of z.trail)all.push({x:s.x,y:s.y,w:95,h:12,kind:'v21-trail'});
  if(z.kind==='lantern'&&role===0)all.push({x:c.anchor+310,y:459,w:260,h:17,kind:'v21-fixed'});
  if(z.kind==='lantern'&&z.lantern.lit&&role===1)all.push({x:c.anchor+360,y:459,w:230,h:17,kind:'v21-light'});
- if(z.kind==='transform'&&role===1&&z.transform.forms[1]!=='fox')all.push({x:c.anchor+320,y:GROUND-76,w:28,h:76,kind:'v21-tunnel'});
+ if(z.kind==='transform'&&role===1&&z.transform.forms[1]!=='fox')all.push({x:c.anchor+320,y:GROUND-140,w:28,h:140,kind:'v21-tunnel'});
  if(z.kind==='maze'&&role===0&&z.maze.turn<=z.maze.checkpoint&&z.maze.checkpoint<3)all.push({x:c.anchor+310+z.maze.checkpoint*150,y:GROUND-100,w:29,h:100,kind:'v21-maze-door'});
  if(z.kind==='tree')for(let i=0;i<z.tree.growth;i++)all.push({x:c.anchor+i*115,y:440-(i%3)*32,w:125,h:16,kind:'v21-branch'});
  if(z.kind==='transform'&&z.transform.orbLink)all.push({x:c.goal+100,y:398,w:180,h:18,kind:'v21-orb'});
