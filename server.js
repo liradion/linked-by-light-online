@@ -545,6 +545,7 @@ const loop=setInterval(()=>{
      if(v21.hasStage(r.game.stage))r.v21Unlocked=Math.max(r.v21Unlocked||v21.FIRST,r.game.stage);
      if(v23.hasStage(r.game.stage))r.v23Unlocked=Math.max(r.v23Unlocked||v23.FIRST,r.game.stage);
      if(r.game.v21)r.game.v21.branch=r.v21World?.branch||0;
+     if(r.game.v23)r.game.v23.branch=r.v24World?.narrative?.path||0;
     const both=r.seats.every(s=>s?.online);
     // 30 Hz while playing (formerly 20 Hz), with next-tick feedback on discrete actions.
     // A disconnected/waiting room sends only 2 Hz; seat changes are sent immediately.
