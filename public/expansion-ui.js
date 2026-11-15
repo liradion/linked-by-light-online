@@ -23,10 +23,14 @@ function toStage(base,raw){
  level.signature.done=true;level.shards=[];return level;
 }
 function haptic(pattern=15){try{if(navigator.vibrate)navigator.vibrate(pattern);}catch(_){}}
-function onJoined(serverNotes){notes=Array.isArray(serverNotes)?serverNotes.slice(-MAX_NOTES):[];if(dialog?.open&&tab==='notes')render();}
+function onJoined(serverNotes){
+ notes=Array.isArray(serverNotes)?serverNotes.slice(-MAX_NOTES):[];
+ for(const note of notes)api.saveMemory?.(note);
+ if(dialog?.open&&tab==='notes')render();
+}
 function onNote(note){
  if(!note||typeof note.text!=='string')return;
- notes.push({text:note.text.slice(0,160),role:note.role,at:note.at});notes=notes.slice(-MAX_NOTES);
+ notes.push({text:note.text.slice(0,160),role:note.role,at:note.at});notes=notes.slice(-MAX_NOTES);api.saveMemory?.(note);
  if(dialog?.open&&tab==='notes')render();
  haptic(12);
 }
@@ -49,11 +53,16 @@ function onSnapshot(s){
  }
 }
 function noteEditor(){
- const intro=el('p','Записки видны только участникам комнаты. История комнаты сохраняется на сервере (до 24 записок).','adv-description');
+ const intro=el('p','Записки видят только участники комнаты. Последние 24 записки хранятся в комнате, до 40 попадают в ваш личный архив и синхронизируются с Google при входе.','adv-description');
  body.append(intro);
  const list=el('div',undefined,'exp-notes');
- if(!notes.length)list.append(el('p','Пока нет записок. Оставьте первую ✨','adv-mini'));
- for(const n of notes){
+ if(!(api.getMemories?.()?.length||notes.length))list.append(el('p','Пока нет записок. Оставьте первую ✨','adv-mini'));
+ const saved=api.getMemories?.()||[];
+ const seen=new Set(),all=[...saved,...notes].filter(n=>{
+  if(!n||typeof n.text!=='string')return false;
+  const k=[n.at,n.role,n.text].join(':');if(seen.has(k))return false;seen.add(k);return true;
+ }).sort((x,y)=>(x.at||0)-(y.at||0)).slice(-40);
+ for(const n of all){
   const item=el('article',undefined,'exp-note');
   item.append(el('strong',n.role===0?'✦ Искра':'◈ Эхо'));
   item.append(el('p',n.text));list.append(item);
@@ -62,7 +71,11 @@ function noteEditor(){
  const input=el('textarea');input.maxLength=160;input.rows=2;input.placeholder='Напиши что-нибудь друг другу…';
  input.className='exp-input';body.append(input);
  const send=el('button','Отправить записку','adv-button');
- send.onclick=()=>{const text=input.value.trim();if(!text)return;api.send?.({t:'note',text});input.value='';};
+ send.onclick=()=>{const text=input.value.trim();if(!text)return;
+  if(api.inRoom?.())api.send?.({t:'note',text});
+  else{const note={text,role:0,at:Date.now()};api.saveMemory?.(note);notify('Личная заметка сохранена на устройстве.');render();}
+  input.value='';
+ };
  body.append(send);
  body.append(el('h3','Быстрые сигналы'));
  const actions=el('div',undefined,'adv-options');
