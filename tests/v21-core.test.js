@@ -139,6 +139,10 @@ test('community validates safe geometry and public gallery never leaks room owne
  const blueprint={v:1,title:'Дорога двух огней',platforms:[{x:500,y:399,w:110,h:16}]};
  const item=social.published(blueprint,'ABCDEF',expansion.cleanBlueprint);
  assert.ok(item&&/^[a-f0-9]{12}$/.test(item.id));
+ const unpublished=social.publicGallery([item]);
+ assert.equal(item.status,'pending');
+ assert.equal(unpublished.length,0);
+ item.status='approved';
  const list=social.publicGallery([item]);
  assert.equal(list.length,1);
  assert.equal(JSON.stringify(list).includes('ABCDEF'),false);

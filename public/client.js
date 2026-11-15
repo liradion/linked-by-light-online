@@ -43,7 +43,7 @@ function openConnection(){
   const protocol=location.protocol==='https:'?'wss:':'ws:';
   socket=new WebSocket(protocol+'//'+location.host+'/ws');ready=false;updateStatus();
   socket.addEventListener('open',()=>{
-    if(connectedBefore)totalReconnects++;reconnectCount=0;ready=true;connectedBefore=true;setError('');updateStatus();
+    if(connectedBefore){totalReconnects++;GamePublicBeta.onRecovered();}reconnectCount=0;ready=true;connectedBefore=true;setError('');updateStatus();
     wsSend({t:'hello',protocol:3});
     if(room||pendingRoom){const code=room||pendingRoom;wsSend({t:'join',room:code,token:token||roomToken(code),spectate:role===-1&&!!room||pendingSpectate});}
     else if(pendingCreate){wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome(),unlockedV20:GameAdventure.data().v20?.unlockedStages||[],v20Home:GameAdventure.data().v20?.house||{},v20Choices:GameAdventure.data().v20?.choices||{},unlockedV21:GameAdventure.data().v21?.unlockedStages||[],v21Profile:{unlockedStages:GameAdventure.data().v21?.unlockedStages||[],completed:GameAdventure.data().v21?.completed||[],trophies:GameAdventure.data().v21?.trophies||[],aquarium:GameAdventure.data().v21?.aquarium||[]}});pendingCreate=false;pendingBlueprint=null;}
@@ -57,7 +57,7 @@ function openConnection(){
       history.replaceState({},'',location.pathname+'?room='+encodeURIComponent(room));
       connected=m.connected||[false,false];$('myRole').textContent=role===0?'Искра (ведущий)':role===1?'Эхо (гость)':'Наблюдатель';
       if(role>=0&&m.home)GameAdventure.receiveHome(m.home);GameAdventure.onJoined(room,role);GameExpansion.onJoined(m.notes||[]);GameV20.onJoined();GameV21.onJoined?.();
-      setError('');resetKeys();showUI();return;
+      setError('');resetKeys();GamePublicBeta.onJoined(role);showUI();return;
     }
     if(m.t==='home'){if(role>=0)GameAdventure.receiveHome(m.items);return;}
     if(m.t==='note'){GameExpansion.onNote(m.note);return;}
@@ -83,7 +83,7 @@ function openConnection(){
     }
   });
   socket.addEventListener('close',()=>{
-    ready=false;updateStatus();resetKeys();
+    ready=false;updateStatus();resetKeys();GamePublicBeta.onDisconnected();
     if(room){connected=[false,false];$('waitingBanner').classList.remove('hidden');}
     setError(room?'Связь прервалась. Автоматически переподключаемся…':'Нет связи с сервером. Повторная попытка…');
     reconnectCount++;const delay=Math.min(10_000,500*2**Math.min(reconnectCount,5))+Math.floor(Math.random()*220);
@@ -412,5 +412,5 @@ function saveStageResult(result){try{const all=JSON.parse(localStorage.getItem(R
 GameQuality.init({getSession:()=>({phase,role,room}),onControls:(left,right)=>{if(left)keys.add('gamepad-left');else keys.delete('gamepad-left');if(right)keys.add('gamepad-right');else keys.delete('gamepad-right');updateInput();},onAction:activateKey});
 GameQuality.ambient(0);
 GameAdventure.init({send:wsSend,currentStage:()=>levelIndex,bestStage,inRoom:()=>!!room,startStage:(n)=>{if(room){if(role===0)wsSend({t:'selectStage',stage:n,secrets:GameAdventure.data().secrets.length});else announce('Уровни выбирает создатель комнаты.');}else createRoom(false,n);}});
-GameCloud.init();GameV21.init({send:wsSend,role:()=>role,stage:()=>levelIndex,inRoom:()=>!!room,create:()=>createRoom(true,112),resume:id=>createRoom(false,id),announce,canvas:()=>canvas});GameV20.init({send:wsSend,role:()=>role,stage:()=>levelIndex,inRoom:()=>!!room,create:()=>createRoom(true,100),resume:id=>createRoom(false,id),announce,reconnects:()=>totalReconnects});GameExpansion.init({send:wsSend,inRoom:()=>!!room&&role>=0,createCustom:b=>createRoom(false,0,b),announce,saveMemory:GameAdventure.addMemory,getMemories:()=>GameAdventure.data().memories||[]});openConnection();showUI();requestAnimationFrame(animate);
+GameCloud.init();GamePublicBeta.init({stage:()=>levelIndex,role:()=>role,inRoom:()=>!!room});GameV21.init({send:wsSend,role:()=>role,stage:()=>levelIndex,inRoom:()=>!!room,create:()=>createRoom(true,112),resume:id=>createRoom(false,id),announce,canvas:()=>canvas});GameV20.init({send:wsSend,role:()=>role,stage:()=>levelIndex,inRoom:()=>!!room,create:()=>createRoom(true,100),resume:id=>createRoom(false,id),announce,reconnects:()=>totalReconnects});GameExpansion.init({send:wsSend,inRoom:()=>!!room&&role>=0,createCustom:b=>createRoom(false,0,b),announce,saveMemory:GameAdventure.addMemory,getMemories:()=>GameAdventure.data().memories||[]});openConnection();showUI();requestAnimationFrame(animate);
 })();

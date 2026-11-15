@@ -1,12 +1,13 @@
 {
   "name": "linked-by-light-online",
-  "version": "21.0.0",
+  "version": "22.0.0",
   "description": "Двухпользовательский кооперативный браузерный платформер с серверной синхронизацией",
   "private": true,
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js",
-    "bench:load": "node scripts/load-test.js"
+    "bench:load": "node scripts/load-test.js",
+    "smoke:deploy": "node scripts/smoke-public-beta.js"
   },
   "engines": {
     "node": ">=20"

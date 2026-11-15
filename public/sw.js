@@ -1,6 +1,6 @@
 'use strict';
 // Online-first app: never cache authenticated responses, room URLs or game HTML.
-const CACHE='linked-light-pwa-v21';
+const CACHE='linked-light-pwa-v22';
 const OFFLINE='/offline.html';
 const ICONS=['/icons/icon-192.png','/icons/icon-512.png','/apple-touch-icon.png'];
 self.addEventListener('install',event=>{

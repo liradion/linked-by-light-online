@@ -1,0 +1,26 @@
+/* Public Beta v22: accessible tutorial, feedback and operational notices */
+.beta-btn{border:1px solid #99b9e077;background:#283553;color:#f3f3ff;border-radius:10px;min-height:38px;padding:7px 12px;font:650 12px system-ui;cursor:pointer;touch-action:manipulation}
+.beta-btn:hover{background:#3b4c75}
+.beta-btn:disabled{opacity:.45;cursor:not-allowed}
+.beta-btn:focus-visible,.beta-input:focus-visible{outline:3px solid #ffe4af;outline-offset:2px}
+.beta-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(570px,95vw);max-height:90dvh;overflow:auto;padding:24px;border:1px solid #999ede91;border-radius:20px;color:#e6ecff;background:linear-gradient(135deg,#171c3b,#28264d);box-shadow:0 15px 65px #07091bd9;z-index:1400}
+.beta-dialog::backdrop{background:#02081dc0}
+.beta-heading{font:800 clamp(22px,4vw,29px)/1.15 system-ui;margin:10px 0 15px;color:#fbecff}
+.beta-progress{font:700 12px system-ui;color:#b8c9f8;letter-spacing:.12em}
+.beta-text{font:400 15px/1.6 system-ui;color:#d5dff8}
+.beta-tip{padding:10px 12px;color:#fff5d7;border:1px solid #b5c7ff5e;border-radius:11px;background:#ffffff0b;font:13px/1.45 system-ui}
+.beta-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
+.beta-actions .beta-btn:last-child{background:linear-gradient(115deg,#f0b8bd,#b8d4ff);border-color:transparent;color:#151c33;font-weight:800}
+.beta-close{position:absolute;right:18px;top:15px;min-height:32px;padding:5px 9px}
+.beta-form{display:grid;gap:13px}
+.beta-form label{display:grid;gap:6px;font:700 13px system-ui;color:#ece8ff}
+.beta-form label.beta-consent{display:flex;gap:9px;align-items:flex-start;font:400 13px/1.4 system-ui}
+.beta-form .beta-consent input{width:19px;height:19px;flex-shrink:0;accent-color:#aebafa}
+.beta-input{font:14px/1.4 system-ui;width:100%;min-height:43px;max-width:100%;box-sizing:border-box;background:#121a36;border:1px solid #b5bce58a;border-radius:9px;color:#fcf9ff;padding:9px 11px}
+.beta-notes{resize:vertical;min-height:115px}
+.beta-state{min-height:21px;color:#f9dd9c;font:13px/1.5 system-ui}
+.beta-connection-note{color:#c7deff;font:12px/1.5 system-ui;min-height:16px;margin:10px auto 0;max-width:600px}
+.beta-links{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin-top:7px}
+.beta-links a{font:12px system-ui;color:#bce3ff;text-decoration:underline}
+@media(max-width:650px){.beta-dialog{width:97vw;max-height:97dvh;padding:16px}.beta-btn{font-size:12px;min-height:42px}.beta-form{gap:10px}}
+@media(prefers-reduced-motion:reduce){.beta-dialog,.beta-btn{animation:none;transition:none}}
