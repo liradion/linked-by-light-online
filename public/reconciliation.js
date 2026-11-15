@@ -29,6 +29,7 @@ function geometry(level,world,role){
   if(z.kind==='trails'&&role===1)for(const t of z.trail||[])r.push({x:t.x,y:t.y,w:95,h:12});
   if(z.kind==='lantern'&&z.lantern?.lit&&role===1)r.push({x:c.anchor+360,y:459,w:230,h:17});
   if(z.kind==='tree')for(let i=0;i<(z.tree?.growth||0);i++)r.push({x:c.anchor+i*115,y:440-(i%3)*32,w:125,h:16});
+  if(z.kind==='transform'&&z.transform?.orbLink)r.push({x:c.goal+100,y:398,w:180,h:18});
   if(z.kind==='maze'&&z.maze?.turn%2===1)r.push({x:c.anchor+280,y:455,w:150,h:18});
  }
  return r;
@@ -88,7 +89,8 @@ function createPredictor(){
     const elapsed=clamp((item.at-prev.at)/1000,0,.08);
     const steps=Math.min(5,Math.round(elapsed/DT));
     for(let n=0;n<steps&&used<24;n++,used++)p=integrate(p,{left:prev.left,right:prev.right},solids,level.width,DT,gravity,wind,rain);
-    const jump=item.jumpSeq>appliedJump,ability=item.abilitySeq>appliedAbility;
+    const blocked=level?.v21?.kind==='asymmetry'&&world?.v21?.asymmetry?.phase<2&&p.type===(world.v21.asymmetry.phase===0?1:0);
+     const jump=!blocked&&item.jumpSeq>appliedJump,ability=item.abilitySeq>appliedAbility;
     if(jump||ability)p=integrate(p,{left:item.left,right:item.right,jump,ability},solids,level.width,DT,gravity,wind,rain);
     appliedJump=Math.max(appliedJump,item.jumpSeq);appliedAbility=Math.max(appliedAbility,item.abilitySeq);
     prev=item;
@@ -111,7 +113,8 @@ function createPredictor(){
    renderJump=Math.max(renderJump,live.jumpSeq||0);renderAbility=Math.max(renderAbility,live.abilitySeq||0);
    const gravity=level?.reality?.kind==='gravity'&&world?.reality?.gravityTimer>0?480:1300;
    const wind=Number(world?.expansion?.wind)||0,rain=world?.expansion?.kind==='rain';
-   state=integrate(state,{left:live.left,right:live.right,jump,ability},
+   const blocked=level?.v21?.kind==='asymmetry'&&world?.v21?.asymmetry?.phase<2&&state.type===(world.v21.asymmetry.phase===0?1:0);
+    state=integrate(state,{left:live.left,right:live.right,jump:jump&&!blocked,ability},
     geometry(level,world,state.type),level.width,dt,gravity,wind,rain);
    // Never run too far ahead of the authoritative state if packets stall.
    const bound=clamp(273*estimatedDelay+45,45,160);
