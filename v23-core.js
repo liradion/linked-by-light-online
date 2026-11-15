@@ -70,7 +70,8 @@ function afterStep(g,dt){
   const x=Math.round(a.x/65)*65;
   if(x>c.anchor+80&&Math.abs(a.vx)>30&&!z.shadow.some(t=>Math.abs(t-x)<35))z.shadow.push(x);
   if(z.shadow.length>10)z.shadow.shift();
-  if(z.shadow.length>=5&&near(b,c.goal,260))z.step=3;
+  // Crossing is not enough: the Echo player must explicitly lock the bridge.
+  // Prevents a stage being completed merely by standing near the endpoint.
  }
  if(z.kind==='pendulum'&&z.roles[0]&&z.roles[1])z.done=true;
  if(z.kind==='gravity-duet'&&z.roles.every(Boolean))z.done=true;
