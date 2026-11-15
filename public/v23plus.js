@@ -250,6 +250,8 @@ function draw(ctx,level,players,z,time,who,stats){
   ctx.fillStyle='#fff';ctx.fillText(title,x,y-37);ctx.shadowBlur=0;
  }
  mark(c.anchor,510,level.title,z.done);mark(c.goal,507,z.boss?'Хранитель':'Вторая печать',z.done);
+ if(z.branch===1){ctx.fillStyle='#b6c1f9b3';ctx.fillRect(c.anchor+300,390,175,17);}
+ if(z.kind==='boss-perception')ctx.fillText(who===0?'✦ Видимое слабое место':'◈ Заметный защитный контур',c.goal,310);
  const plat=(x,y,w,h,col)=>{ctx.fillStyle=col;ctx.fillRect(x,y,w,h);};
  if(z.kind==='gravity-duet'&&z.gravity[0]===-1)plat(c.anchor+100,260,690,15,'#aeebfc8d');
  if(z.kind==='resize'){
