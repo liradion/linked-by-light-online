@@ -54,14 +54,14 @@ function openConnection(){
       room=m.room;role=m.role;token=m.token;phase=m.phase;pendingRoom='';if(role>=0)saveToken(room,token);
       history.replaceState({},'',location.pathname+'?room='+encodeURIComponent(room));
       connected=m.connected||[false,false];$('myRole').textContent=role===0?'Искра (ведущий)':role===1?'Эхо (гость)':'Наблюдатель';
-      if(m.home)GameAdventure.receiveHome(m.home);GameAdventure.onJoined(room,role);GameExpansion.onJoined(m.notes||[]);
+      if(role>=0&&m.home)GameAdventure.receiveHome(m.home);GameAdventure.onJoined(room,role);GameExpansion.onJoined(m.notes||[]);
       setError('');resetKeys();showUI();return;
     }
-    if(m.t==='home'){GameAdventure.receiveHome(m.items);return;}
+    if(m.t==='home'){if(role>=0)GameAdventure.receiveHome(m.items);return;}
     if(m.t==='note'){GameExpansion.onNote(m.note);return;}
     if(m.t==='quick'){GameExpansion.onQuick(m);return;}
     if(m.t==='looks'){GameAdventure.receiveLooks(m.looks);return;}
-    if(m.t==='storyChoice'){GameAdventure.storyChoice?.(m);return;}
+    if(m.t==='storyChoice'){if(role>=0)GameAdventure.storyChoice?.(m);return;}
     if(m.t==='members'){
       connected=m.connected||connected;phase=m.phase||phase;showUI();return;
     }
@@ -91,8 +91,8 @@ function updateTouchRole(){
   const badge=$('touchRoleBadge'),icon=$('touchRoleIcon'),name=$('touchRoleName'),hint=$('touchRoleHint');
   if(!badge||!icon||!name||!hint)return;
   const echo=role===1;
-  icon.textContent=echo?'◈':'✦';name.textContent=echo?'Эхо':'Искра';
-  hint.textContent=echo?'прыжок и импульс':'прыжок и рывок';
+  icon.textContent=role<0?'◉':echo?'◈':'✦';name.textContent=role<0?'Зритель':echo?'Эхо':'Искра';
+  hint.textContent=role<0?'без управления':echo?'прыжок и импульс':'прыжок и рывок';
   icon.style.color=echo?'#8ff8ff':'#ffcf83';
   icon.style.background=echo?'#73e3f01a':'#ffb45f1c';
   badge.style.borderColor=echo?'#70e9f388':'#ffbb6e88';
