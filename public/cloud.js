@@ -48,6 +48,35 @@ function mergeV21(a,b){
   },melody:(y.melody?.length||0)>=(x.melody?.length||0)?y.melody||[]:x.melody,
   painting:Array.isArray(y.painting)&&y.painting.length===64?y.painting:x.painting||Array(64).fill(-1)};
 }
+function mergeV23(a,b){
+ const x=a&&typeof a==='object'?a:{},y=b&&typeof b==='object'?b:{};
+ const records={...(y.records||{})};
+ for(const [id,item] of Object.entries(x.records||{})){
+  const old=records[id];if(!old||item.stars>old.stars||item.stars===old.stars&&item.elapsed<old.elapsed)records[id]=item;
+ }
+ const stages=Array.from(new Set([...(x.unlockedStages||[]),...(y.unlockedStages||[])]))
+  .filter(id=>/^v23-(?:0[1-9]|1[0-5])$/.test(id)).slice(-15);
+ return {schema:23,unlockedStages:stages,records};
+}
+function mergeV24(a,b){
+ const x=a&&typeof a==='object'?a:{},y=b&&typeof b==='object'?b:{};
+ const union=(p,q,n)=>Array.from(new Set([...(Array.isArray(p)?p:[]),...(Array.isArray(q)?q:[])])).slice(-n);
+ const quests={};
+ for(const id of ['keeper','navigator','hermit','secret'])quests[id]=Math.max(x.quests?.[id]||0,y.quests?.[id]||0);
+ return {...x,...y,schema:24,npcs:union(x.npcs,y.npcs,4),quests,
+  achievements:union(x.achievements,y.achievements,10),events:union(x.events?.map(v=>JSON.stringify(v)),y.events?.map(v=>JSON.stringify(v)),20).map(v=>{try{return JSON.parse(v);}catch(_){return null;}}).filter(Boolean),
+  kitchen:{...(y.kitchen||{}),finished:union(x.kitchen?.finished,y.kitchen?.finished,4),
+   step:Math.max(x.kitchen?.step||0,y.kitchen?.step||0)},
+  expedition:{...(y.expedition||{}),completed:Math.max(x.expedition?.completed||0,y.expedition?.completed||0),
+   loot:Math.max(x.expedition?.loot||0,y.expedition?.loot||0)},
+  observatory:{...y.observatory,constellations:Math.max(x.observatory?.constellations||0,y.observatory?.constellations||0),
+   progress:Math.max(x.observatory?.progress||0,y.observatory?.progress||0)},
+  workshop:{crafted:union(x.workshop?.crafted,y.workshop?.crafted,3)},
+  minigame:{...(y.minigame||{}),bests:Object.fromEntries(['race','search','puzzle'].map(k=>[k,Math.max(x.minigame?.bests?.[k]||0,y.minigame?.bests?.[k]||0)]))},
+  narrative:{...(y.narrative||{}),epilogue:y.narrative?.epilogue||x.narrative?.epilogue||null,
+   answers:[0,1].map(i=>(y.narrative?.answers?.[i]?.length||0)>=(x.narrative?.answers?.[i]?.length||0)
+    ?y.narrative?.answers?.[i]||[]:x.narrative?.answers?.[i]||[])}};
+}
 function merge(a,b){if(!a||a.version!==11)return b;if(!b||b.version!==11)return a;
  const keys=new Set([...(a.adventure?.secrets||[]),...(b.adventure?.secrets||[])]);
  const pets=new Set([...(a.adventure?.pets||[]),...(b.adventure?.pets||[])]);
@@ -56,7 +85,7 @@ function merge(a,b){if(!a||a.version!==11)return b;if(!b||b.version!==11)return 
   if(!records[k]||v.stars>records[k].stars||v.stars===records[k].stars&&v.elapsed<records[k].elapsed)records[k]=v;
  }
  return {...b,checkpoint:Math.max(a.checkpoint||0,b.checkpoint||0),records,
-  adventure:{...b.adventure,v21:mergeV21(a.adventure?.v21,b.adventure?.v21),v20:mergeV20(a.adventure?.v20,b.adventure?.v20),secrets:Array.from(keys),pets:Array.from(pets),achievements:Array.from(achievements),
+  adventure:{...b.adventure,v23:mergeV23(a.adventure?.v23,b.adventure?.v23),v24:mergeV24(a.adventure?.v24,b.adventure?.v24),v21:mergeV21(a.adventure?.v21,b.adventure?.v21),v20:mergeV20(a.adventure?.v20,b.adventure?.v20),secrets:Array.from(keys),pets:Array.from(pets),achievements:Array.from(achievements),
   shards:Math.max(a.adventure?.shards||0,b.adventure?.shards||0),
   memories:(()=>{
    const all=[...(b.adventure?.memories||[]),...(a.adventure?.memories||[])],seen=new Set();
