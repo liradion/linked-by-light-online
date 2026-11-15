@@ -9,6 +9,7 @@ const {stages}=require('./shared/stages');
 const cloud=require('./cloud-store');
 const pwaIcons=require('./pwa-icons');
 const expansion=require('./expansion-core');
+const v20=require('./v20-core');
 const {createAuth}=require('./auth-server');
 const auth=createAuth({cloud});
 const PORT=Number(process.env.PORT)||3000;
@@ -20,26 +21,26 @@ const SAVE_DIR=process.env.SAVE_DIR||'';
 const SAVE_FILE=SAVE_DIR?path.join(SAVE_DIR,'linked-light-rooms-v11.json'):'';
 function roomBackups(){return {version:11,rooms:Array.from(ROOMS.values()).map(r=>({
  code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
- home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,lastActivity:r.lastActivity,story:r.story||null}))};}
+ home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),lastActivity:r.lastActivity,story:r.story||null}))};}
 function persistRooms(){if(!SAVE_FILE)return;
  try{fs.mkdirSync(SAVE_DIR,{recursive:true});const rooms=Array.from(ROOMS.values()).map(r=>({
   code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
-  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,lastActivity:r.lastActivity,story:r.story||null}));
+  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),lastActivity:r.lastActivity,story:r.story||null}));
   const temp=SAVE_FILE+'.'+process.pid+'.tmp';fs.writeFileSync(temp,JSON.stringify({version:11,rooms}),'utf8');fs.renameSync(temp,SAVE_FILE);
  }catch(e){console.warn('Session persistence failed:',e.message);}}
 function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.rooms))return;
   for(const saved of parsed.rooms.slice(0,200)){
    if(!/^[A-HJ-NP-Z2-9]{6}$/.test(saved.code||''))continue;
-   if(!saved.game||!Number.isSafeInteger(saved.game.stage)||saved.game.stage<0||saved.game.stage>99)continue;
+   if(!saved.game||!Number.isSafeInteger(saved.game.stage)||saved.game.stage<0||saved.game.stage>v20.LAST)continue;
    const seats=(saved.seats||[]).slice(0,2).map(seat=>seat&&/^[0-9a-f]{48}$/.test(seat.token||'')?{token:seat.token,peer:null,online:false,look:cleanLook(seat.look)}:null);
    if(seats.length!==2||!seats[0])continue;
    const game=createGame();initStage(game,saved.game.stage);
    // Restore only expected game state fields; avoid stale socket and input queues.
-   for(const key of ['players','shards','tick','padTimer','completion','transition','stats','lastResult','level','customChallenge','expansion'])
+   for(const key of ['players','shards','tick','padTimer','completion','transition','stats','lastResult','level','customChallenge','expansion','v20'])
     if(saved.game[key]!==undefined)game[key]=saved.game[key];
    game.phase=saved.game.phase==='win'?'win':saved.game.phase==='playing'?'playing':'waiting';
    game.input.forEach(i=>{i.left=false;i.right=false;});
-   ROOMS.set(saved.code,{code:saved.code,seats,game,home:cleanHome(saved.home),unlockedMax:Math.max(0,Math.min(98,Number(saved.unlockedMax)||0)),lastActivity:Date.now(),story:saved.story||null,notes:Array.isArray(saved.notes)?saved.notes.filter(n=>expansion.cleanNote(n?.text)).slice(-24).map(n=>({text:expansion.cleanNote(n.text),role:[0,1].includes(n.role)?n.role:0,at:Number(n.at)||0})):[],customLevel:expansion.cleanBlueprint(saved.customLevel),spectators:new Set(),storyChoices:saved.storyChoices&&typeof saved.storyChoices==='object'?saved.storyChoices:{},ending:saved.ending||null});
+   ROOMS.set(saved.code,{code:saved.code,seats,game,home:cleanHome(saved.home),unlockedMax:Math.max(0,Math.min(98,Number(saved.unlockedMax)||0)),lastActivity:Date.now(),story:saved.story||null,notes:Array.isArray(saved.notes)?saved.notes.filter(n=>expansion.cleanNote(n?.text)).slice(-24).map(n=>({text:expansion.cleanNote(n.text),role:[0,1].includes(n.role)?n.role:0,at:Number(n.at)||0})):[],customLevel:expansion.cleanBlueprint(saved.customLevel),spectators:new Set(),storyChoices:saved.storyChoices&&typeof saved.storyChoices==='object'?saved.storyChoices:{},ending:saved.ending||null,v20Unlocked:Math.max(100,Math.min(v20.LAST,Number(saved.v20Unlocked)||100)),v20Home:v20.cleanHome(saved.v20Home),v20Story:v20.cleanStory(saved.v20Story)});
   }
 }
 function restoreRooms(){if(!SAVE_FILE||!fs.existsSync(SAVE_FILE))return;
@@ -114,7 +115,7 @@ const allowedPets=['none','fox','owl','moth','cat','orb'];
 const newSeat=()=>({token:crypto.randomBytes(24).toString('hex'),peer:null,online:false,look:{skin:'classic',pet:'none'}});
 function cleanLook(x){return {skin:allowedSkins.includes(x?.skin)?x.skin:'classic',pet:allowedPets.includes(x?.pet)?x.pet:'none'};}
 function cleanHome(x){if(!Array.isArray(x))return [];return x.slice(0,16).map(v=>({item:allowedFurniture.includes(v?.item)?v.item:'lamp',slot:Number.isInteger(v?.slot)?Math.max(0,Math.min(15,v.slot)):0}));}
-function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[],story:r.story||null,storyChoices:r.storyChoices||{},customLevel:r.customLevel||null,ending:r.ending||null};}
+function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[],v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v20Unlocked:r.v20Unlocked||100,story:r.story||null,storyChoices:r.storyChoices||{},customLevel:r.customLevel||null,ending:r.ending||null};}
 restoreRooms();
 function countOnline(r){return r.seats.map(s=>!!s?.online);}
 function sendSeatRoom(r){const obj={t:'members',room:r.code,connected:countOnline(r),phase:r.game.phase};
@@ -132,6 +133,7 @@ const server=http.createServer((req,res)=>{
   if(authRequest){auth.handle(req,res).catch(()=>{if(!res.headersSent){res.writeHead(500,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({error:'Ошибка авторизации'}));}});return;}
   if(req.url?.startsWith('/api/cloud/')){cloud.handle(req,res);return;}
   const pathname=new URL(req.url,'http://localhost').pathname;
+  if(pathname==='/version'){res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify({name:'Linked by Light',version:'20.0.0',protocol:2,commit:(process.env.RENDER_GIT_COMMIT||'').slice(0,12)||null}));return;}
   if(pathname==='/health'){
     res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
     res.end(JSON.stringify({ok:true}));return;
@@ -195,16 +197,18 @@ server.on('upgrade',(req,socket,head)=>{
     const now=Date.now();if(now-packetWindow>=2000){packetWindow=now;packetCount=0;}
     if(++packetCount>240){peer.close(1008);return;}
     if(msg.t==='ping'){peer.send({t:'pong',sent:Number.isFinite(msg.sent)?msg.sent:0});return;}
+     if(msg.t==='hello'){peer.send({t:'hello',protocol:2,version:'20.0.0'});return;}
     if(msg.t==='create'){
       if(rateExceeded('create',8))return error('Слишком много комнат за минуту.');
       if(room)return error('Вы уже в комнате.');
       if(ROOMS.size>=MAX_ROOMS)return error('Сервер заполнен. Попробуйте позже.');
       const code=newCode(),game=createGame(),blueprint=expansion.cleanBlueprint(msg.blueprint);
       // Progress is supplied by the host's browser; rooms still run one authoritative server state.
-      const saved=Number.isSafeInteger(msg.stage)?Math.max(0,Math.min(msg.stage===99&&msg.secrets===11?99:98,msg.stage)):0;
+      const requested=Number.isSafeInteger(msg.stage)?msg.stage:0;
+       const saved=v20.hasStage(requested)?100:Math.max(0,Math.min(requested===99&&msg.secrets===11?99:98,requested));
       if(saved>0)initStage(game,saved);
       if(blueprint)expansion.applyBlueprint(game,blueprint);
-      const r={code,seats:[newSeat(),null],game,home:cleanHome(msg.home),notes:[],customLevel:blueprint,spectators:new Set(),storyChoices:{},ending:null,unlockedMax:saved,lastActivity:Date.now()};
+      const r={code,seats:[newSeat(),null],game,home:cleanHome(msg.home),notes:[],customLevel:blueprint,spectators:new Set(),storyChoices:{},ending:null,unlockedMax:Math.min(98,saved),v20Unlocked:100,v20Home:v20.cleanHome(),v20Story:v20.cleanStory(),lastActivity:Date.now()};
       ROOMS.set(code,r);attach(r,0);return;
     }
     if(msg.t==='join'){
@@ -242,13 +246,34 @@ server.on('upgrade',(req,socket,head)=>{
       room.notes=(room.notes||[]).concat(note).slice(-24);
       broadcast(room,{t:'note',note});return;
     }
-    if(msg.t==='home'&&Array.isArray(msg.items)){
+    if(msg.t==='coopAction'||msg.t==='sceneVote'||msg.t==='homeAction'){
+       if(rateExceeded('v20-action',90))return error('Слишком много действий за минуту.');
+       const id=typeof msg.actionId==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(msg.actionId)?msg.actionId:'';
+       if(!id)return error('Некорректный идентификатор действия');
+       const seat=room.seats[role];seat.actionIds=seat.actionIds||new Set();
+       if(seat.actionIds.has(id)){peer.send({t:'actionResult',actionId:id,ok:false,error:'Повторная команда'});return;}
+       seat.actionIds.add(id);if(seat.actionIds.size>256)seat.actionIds.delete(seat.actionIds.values().next().value);
+       let outcome;
+       if(msg.t==='coopAction')outcome=v20.action(room.game,role,msg.kind);
+       else if(msg.t==='sceneVote')outcome=v20.vote(room,role,msg.sceneId,msg.option);
+       else outcome=v20.homeAction(room,role,msg.kind);
+       peer.send({t:'actionResult',actionId:id,...outcome});
+       if(outcome.ok){
+         room.urgentSnapshot=true;
+         if(msg.t==='sceneVote')broadcast(room,{t:'v20Story',story:room.v20Story});
+         if(msg.t==='homeAction')broadcast(room,{t:'v20Home',home:room.v20Home});
+         if(msg.t==='coopAction')broadcast(room,roomSnapshot(room));
+       }
+       return;
+     }
+     if(msg.t==='home'&&Array.isArray(msg.items)){
       room.home=cleanHome(msg.items);broadcast(room,{t:'home',items:room.home});return;
     }
     if(msg.t==='selectStage'&&role===0&&room.seats.every(s=>s?.online)){
       const target=msg.stage;
-      if(!Number.isSafeInteger(target)||target<0||target>99)return error('Неверный номер уровня.');
-      if(target>room.unlockedMax&&(target!==99||msg.secrets!==11))return error('Уровень ещё не открыт.');
+      if(!Number.isSafeInteger(target)||target<0||target>v20.LAST)return error('Неверный номер уровня.');
+      if(v20.hasStage(target)){if(target>(room.v20Unlocked||100))return error('Уровень ещё не открыт.');}
+       else if(target>room.unlockedMax&&(target!==99||msg.secrets!==11))return error('Уровень ещё не открыт.');
       if(target===99&&msg.secrets!==11)return error('Сначала найдите все 11 секретных рун.');
       initStage(room.game,target);room.customLevel=null;room.ending=null;room.game.phase='playing';
       sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
@@ -264,7 +289,7 @@ server.on('upgrade',(req,socket,head)=>{
       room.game.phase='playing';initStage(room.game,room.customLevel?0:room.game.stage);if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='restart'&&role===0&&room.seats.every(s=>s?.online)){
-      initStage(room.game,0);room.customLevel=null;room.ending=null;room.game.phase='playing';sendSeatRoom(room);broadcast(room,snapshot(room.game,countOnline(room)));return;
+      initStage(room.game,v20.hasStage(room.game.stage)?100:0);room.customLevel=null;room.ending=null;room.game.phase='playing';sendSeatRoom(room);broadcast(room,snapshot(room.game,countOnline(room)));return;
     }
     if(msg.t==='resetStage'&&role===0&&room.game.phase==='playing'){
       initStage(room.game,room.customLevel?0:room.game.stage);if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;broadcast(room,roomSnapshot(room));return;
@@ -282,8 +307,9 @@ const loop=setInterval(()=>{
   lastBroadcast++;
   for(const r of ROOMS.values()){
     tick(r.game,countOnline(r));
-    if(r.game.phase==='win'&&!r.ending)r.ending=r.customLevel?{kind:'creator',title:'Мастера света',text:'Ваш собственный уровень пройден вдвоём!',choices:0}:expansion.endingFor(r);
+    if(r.game.phase==='win'&&!r.ending)r.ending=v20.hasStage(r.game.stage)?{kind:'v20',title:'Переплетение миров',text:'Два света сохранили свою связь!',choices:Object.keys(r.v20Story?.choices||{}).length}:r.customLevel?{kind:'creator',title:'Мастера света',text:'Ваш собственный уровень пройден вдвоём!',choices:0}:expansion.endingFor(r);
     r.unlockedMax=Math.max(r.unlockedMax,Math.min(98,r.game.stage));
+     if(v20.hasStage(r.game.stage))r.v20Unlocked=Math.max(r.v20Unlocked||100,r.game.stage);
     const both=r.seats.every(s=>s?.online);
     // 30 Hz while playing (formerly 20 Hz), with next-tick feedback on discrete actions.
     // A disconnected/waiting room sends only 2 Hz; seat changes are sent immediately.
