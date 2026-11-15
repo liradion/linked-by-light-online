@@ -54,6 +54,8 @@ function render(){
  if(scene){const sec=el('section','v20-section v20-story');heading(sec,'История · '+scene.title);
   const portrait=el('div','v20-story-art');portrait.append(el('span','v20-hero-one','✦'),el('span','v20-story-horizon','✧  ⋆  ✧'),el('span','v20-hero-two','◈'));sec.append(portrait);
   for(const l of scene.lines)text(sec,l);
+  const prev=story.choices?.['scene-'+(stage-100)];
+  if(prev!==undefined)text(sec,prev===0?'Память о вашем решении: поддержать друг друга.':'Память о вашем решении: открыть неизвестный путь.');
   if(scene.choices){const value=story.choices?.[scene.id],votes=story.votes?.[scene.id];
    if(value!==undefined)text(sec,'Ваше общее решение: '+scene.choices[value]);
    else {text(sec,votes?'Голоса: '+votes.map(x=>x===null?'ожидаем':scene.choices[x]).join(' / '):'Оба игрока должны выбрать один вариант.');
@@ -131,8 +133,15 @@ function draw(ctx,level,players,v,clock,role){
  if(v.tether.active&&players?.length===2){
   const a=players[0],b=players[1];ctx.lineWidth=3+v.tether.tension*2;ctx.strokeStyle='#fbd5ff';ctx.shadowColor='#ddbcff';ctx.shadowBlur=17;ctx.beginPath();ctx.moveTo(a.x+15,a.y+18);ctx.quadraticCurveTo((a.x+b.x)/2+15,(a.y+b.y)/2-36, b.x+15,b.y+18);ctx.stroke();ctx.shadowBlur=0;
  }
- if(v.boss?.hp>0){const z=v.boss;const y=GROUND-100+Math.sin(clock*2)*7;ctx.shadowColor='#d3a5ff';ctx.shadowBlur=30;ctx.fillStyle=z.warning>0?'#ff889f':'#9e84ff';ctx.beginPath();ctx.arc(z.x,y,38+z.phase*6,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#ffffff';ctx.fillText(z.name+' · '+z.hp+'/'+z.max,z.x,y-75);
-  if(z.warning>0){ctx.strokeStyle='#ff5577';ctx.lineWidth=4;ctx.strokeRect(z.focus-65,GROUND-60,130,62);}
+ if(v.boss?.hp>0){const z=v.boss;const y=GROUND-100+Math.sin(clock*2)*7;ctx.shadowColor='#d3a5ff';ctx.shadowBlur=30;ctx.fillStyle=z.warning>0?'#ff889f':z.style==='clock'?'#9efaff':z.style==='heart'?'#ffc0de':'#9e84ff';
+   const radius=38+z.phase*6;ctx.beginPath();
+   if(z.style==='mirror'){for(let i=0;i<8;i++){const a=i*Math.PI/4;const x=z.x+radius*Math.cos(a),py=y+radius*Math.sin(a);if(i===0)ctx.moveTo(x,py);else ctx.lineTo(x,py);}ctx.closePath();}
+   else {ctx.arc(z.x,y,radius,0,Math.PI*2);}
+   ctx.fill();
+   if(z.style==='clock'){ctx.save();ctx.translate(z.x,y);ctx.strokeStyle='#18274c';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,-radius*.7);ctx.moveTo(0,0);ctx.lineTo(radius*.5,0);ctx.stroke();ctx.restore();}
+   if(z.style==='heart'){ctx.fillStyle='#fff2fc';ctx.font='bold 34px system-ui';ctx.fillText('♡',z.x,y+12);}
+   ctx.shadowBlur=0;ctx.fillStyle='#ffffff';ctx.fillText(z.name+' · '+z.hp+'/'+z.max,z.x,y-75);
+  if(z.warning>0){ctx.strokeStyle='#ff5577';ctx.lineWidth=4;const radius=z.style==='heart'?120:z.style==='clock'?90:72;ctx.strokeRect(z.focus-radius,GROUND-60,2*radius,62);}
  }
  ctx.restore();
 }
