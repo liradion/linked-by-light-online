@@ -114,7 +114,7 @@ function onSnapshot(s){
 }
 function refreshQuick(){
  if(!quick)return;
- const active=!!api.inRoom?.()&&api.role?.()>=0&&api.stage?.()>=100;
+ const active=!!api.inRoom?.()&&api.role?.()>=0&&api.stage?.()>=100&&api.stage?.()<=111;
  quick.style.display=active?'flex':'none';
 }
 function draw(ctx,level,players,v,clock,role){
