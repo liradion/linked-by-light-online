@@ -285,7 +285,7 @@ function draw(ctx,level,players,z,time,who,stats){
  ctx.restore();
 }
 function onMessage(m){
- if(m.t==='v24State')social=m.data;
+ if(m.t==='v24State'){social=m.data;if(role()>=0)GameAdventure.syncV24(m.data);}
  if(m.t==='v25Meta')meta=m.data;
  if(m.t==='v25Replay'){
   if(replay.id!==m.id)replay={id:m.id,stage:m.stage,frames:[],received:0,total:m.total,parts:[]};
