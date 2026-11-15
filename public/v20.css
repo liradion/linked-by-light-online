@@ -1,0 +1,29 @@
+/* v20 deliberately extends, rather than replaces, the original visual language. */
+.v20-button{appearance:none;border:1px solid rgba(159,225,255,.32);border-radius:12px;padding:10px 13px;background:linear-gradient(140deg,#25304e,#352f55);color:#f4f4ff;font:600 13px system-ui;cursor:pointer;touch-action:manipulation;min-height:42px}
+.v20-button:disabled{opacity:.36;cursor:not-allowed}
+.v20-button:focus-visible{outline:3px solid #fff2ae;outline-offset:2px}
+.v20-launch{border-color:#c69affaa;background:linear-gradient(120deg,#6b4a9d,#405c92)}
+.v20-toggle{position:absolute;top:8px;right:8px;z-index:24;background:linear-gradient(110deg,#493766,#263c67);box-shadow:0 6px 20px #0006;min-height:38px}
+.v20-quick{position:absolute;top:50px;right:8px;z-index:23;display:flex;gap:5px;pointer-events:auto}
+.v20-quick .v20-button{padding:7px 9px;min-height:40px;font-size:12px}
+.v20-dialog{position:fixed;inset:5vh auto auto 50%;transform:translateX(-50%);width:min(620px,94vw);max-height:89dvh;overflow:hidden;box-sizing:border-box;background:linear-gradient(160deg,#131b35,#26234a);color:#edf2ff;border:1px solid #a0a9ee7c;border-radius:20px;box-shadow:0 24px 65px #070b20df;z-index:1100;padding:0}
+.v20-dialog::backdrop{background:#050819b8;backdrop-filter:blur(3px)}
+.v20-top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 17px;border-bottom:1px solid #d4d1ff34}
+.v20-body{overflow:auto;max-height:calc(89dvh - 70px);overscroll-behavior:contain;padding:15px}
+.v20-heading{font-size:16px;letter-spacing:.2px;color:#e6dbff;margin:0 0 10px}
+.v20-section{border:1px solid #c4c1ec30;padding:13px;border-radius:13px;margin:13px 0;background:#e5ddff08}
+.v20-line{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #ffffff17;padding:6px 0;font-size:12px}
+.v20-line strong{max-width:65%;text-align:right}
+.v20-text{font:400 13px/1.55 system-ui;color:#d5ddfa;margin:5px 0 11px}
+.v20-actions{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+.v20-levels{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.v20-levels .v20-button{min-width:38px;padding:7px}
+@media(max-width:820px){
+ .v20-toggle{font-size:11px;padding:6px 7px;min-height:35px;max-width:142px}
+ .v20-quick{top:44px;gap:3px}
+ .v20-quick .v20-button{font-size:11px;min-height:44px;padding:6px}
+ .v20-dialog{top:2dvh;max-height:96dvh;width:97vw}
+ .v20-body{max-height:calc(96dvh - 66px);padding:9px}
+ .v20-section{padding:10px}
+}
+@media(prefers-reduced-motion:reduce){.v20-dialog::backdrop{backdrop-filter:none}}
