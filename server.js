@@ -125,7 +125,7 @@ function broadcast(r,obj){
   // Serialize authoritative state once for both players, avoiding per-socket CPU spikes.
   const payload=JSON.stringify(obj),isSnapshot=obj?.t==='snapshot';
   for(const s of r.seats)if(s?.online)s.peer.sendRaw(payload,isSnapshot);
-  for(const peer of r.spectators||[])peer.sendRaw(payload,isSnapshot);
+  if(obj?.t!=='note')for(const peer of r.spectators||[])peer.sendRaw(payload,isSnapshot);
 }
 const server=http.createServer((req,res)=>{
   const authRequest=req.url?.startsWith('/api/auth/')||req.url?.startsWith('/?')&&/(?:\?|&)(?:code|error)=/.test(req.url);
