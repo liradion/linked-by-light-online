@@ -51,6 +51,7 @@ test('new creator maps are pending and require an authorized moderation decision
  assert.equal(x.moderateGallery(listing,'bad','approve'),null);
  assert.deepEqual(x.moderateGallery(listing,'abcdef123456','approve'),{id:'abcdef123456',status:'approved'});
  assert.equal(listing[0].hidden,false);
+ assert.deepEqual(listing[0].reports,[]);
  assert.equal(x.pendingGallery(listing).length,0);
  assert.equal(x.moderateGallery(listing,'abcdef123456','hide').status,'rejected');
  assert.equal(listing[0].hidden,true);
@@ -86,4 +87,16 @@ test('proxy address lookup ignores spoofed headers unless explicitly enabled',()
   if(original===undefined)delete process.env.BETA_TRUST_PROXY;
   else process.env.BETA_TRUST_PROXY=original;
  }
+});
+
+test('approved map review history is restored from secure room checkpoint',()=>{
+ const social=require('../v21-social'),creator=require('../expansion-core');
+ const map=social.published({v:1,title:'Сад света',platforms:[{x:500,y:399,w:100,h:16}]},
+  'ABCDEF',creator.cleanBlueprint);
+ map.reports=['c'.repeat(24)];
+ map.status='approved';
+ const restored=social.cleanGallery([map],creator.cleanBlueprint);
+ assert.equal(restored.length,1);
+ assert.deepEqual(restored[0].reports,['c'.repeat(24)]);
+ assert.equal(social.publicGallery(restored).length,1);
 });
