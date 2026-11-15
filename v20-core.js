@@ -159,6 +159,13 @@ function vote(room,role,sceneId,option){
  if(values[0]!==null&&values[0]===values[1]){s.choices[sceneId]=option;delete s.votes[sceneId];return {ok:true,committed:true,choice:option};}
  return {ok:true,committed:false,disagree:values.every(x=>x!==null),votes:values.slice()};
 }
+function endingForStory(story){
+ const choices=Object.values(story?.choices||{}).filter(v=>v===0||v===1);
+ const helping=choices.filter(v=>v===0).length;
+ if(helping>=4)return {kind:'v20-together',title:'Тепло двух сердец',text:'Вы сохранили связь и помогли мирам вновь услышать друг друга.',choices:choices.length};
+ if(helping<=2)return {kind:'v20-path',title:'Дорога навстречу',text:'Вы открыли новые пути для всех, кто решится пройти их вдвоём.',choices:choices.length};
+ return {kind:'v20-balance',title:'Переплетение миров',text:'Свет и тень нашли равновесие. Ваша общая история продолжается.',choices:choices.length};
+}
 function cleanHome(raw){
  const v=raw&&typeof raw==='object'?raw:{},safe=n=>Math.max(0,Math.min(20,Number.isInteger(n)?n:0));
  return {zone:['living','garden','workshop'].includes(v.zone)?v.zone:'living',
@@ -190,4 +197,4 @@ function homeAction(room,role,kind){
  }
  return {ok:false,error:'Неизвестная домашняя активность'};
 }
-module.exports={FIRST,LAST,hasStage,getStage,scene,init,action,beforeStep,platforms,onAbility,afterStep,completed,snapshot,cleanStory,vote,cleanHome,homeAction};
+module.exports={FIRST,LAST,hasStage,getStage,scene,init,action,beforeStep,platforms,onAbility,afterStep,completed,snapshot,cleanStory,vote,endingForStory,cleanHome,homeAction};
