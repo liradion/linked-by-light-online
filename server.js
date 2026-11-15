@@ -35,11 +35,11 @@ const SAVE_DIR=process.env.SAVE_DIR||'';
 const SAVE_FILE=SAVE_DIR?path.join(SAVE_DIR,'linked-light-rooms-v11.json'):'';
 function roomBackups(){return {version:11,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup(),rooms:Array.from(ROOMS.values()).map(r=>({
  code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
- home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.persist(r.v25),lastActivity:r.lastActivity,story:r.story||null}))};}
+ home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.persist(r.v25),assistVotes:r.assistVotes||[null,null],lastActivity:r.lastActivity,story:r.story||null}))};}
 function persistRooms(){if(!SAVE_FILE)return;
  try{fs.mkdirSync(SAVE_DIR,{recursive:true});const rooms=Array.from(ROOMS.values()).map(r=>({
   code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
-  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.persist(r.v25),lastActivity:r.lastActivity,story:r.story||null}));
+  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.persist(r.v25),assistVotes:r.assistVotes||[null,null],lastActivity:r.lastActivity,story:r.story||null}));
   const temp=SAVE_FILE+'.'+process.pid+'.tmp';fs.writeFileSync(temp,JSON.stringify({version:11,rooms,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup()}),'utf8');fs.renameSync(temp,SAVE_FILE);
  }catch(e){console.warn('Session persistence failed:',e.message);}}
 function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.rooms))return;
@@ -56,7 +56,7 @@ function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.roo
     if(saved.game[key]!==undefined)game[key]=saved.game[key];
    game.phase=saved.game.phase==='win'?'win':saved.game.phase==='playing'?'playing':'waiting';
    game.input.forEach(i=>{i.left=false;i.right=false;});
-   ROOMS.set(saved.code,{code:saved.code,seats,game,home:cleanHome(saved.home),unlockedMax:Math.max(0,Math.min(98,Number(saved.unlockedMax)||0)),lastActivity:Date.now(),story:saved.story||null,notes:Array.isArray(saved.notes)?saved.notes.filter(n=>expansion.cleanNote(n?.text)).slice(-24).map(n=>({text:expansion.cleanNote(n.text),role:[0,1].includes(n.role)?n.role:0,at:Number(n.at)||0})):[],customLevel:expansion.cleanBlueprint(saved.customLevel),spectators:new Set(),storyChoices:saved.storyChoices&&typeof saved.storyChoices==='object'?saved.storyChoices:{},ending:saved.ending||null,v20Unlocked:Math.max(100,Math.min(v20.LAST,Number(saved.v20Unlocked)||100)),v20Home:v20.cleanHome(saved.v20Home),v20Story:v20.cleanStory(saved.v20Story),v21Unlocked:Math.max(v21.FIRST,Math.min(v21.LAST,Number(saved.v21Unlocked)||v21.FIRST)),v21World:social.cleanRoom(saved.v21World),v23Unlocked:Math.max(v23.FIRST,Math.min(v23.LAST,Number(saved.v23Unlocked)||v23.FIRST)),v24World:v24.clean(saved.v24World),v25:v25.clean(saved.v25)});
+   ROOMS.set(saved.code,{code:saved.code,seats,game,home:cleanHome(saved.home),unlockedMax:Math.max(0,Math.min(98,Number(saved.unlockedMax)||0)),lastActivity:Date.now(),story:saved.story||null,notes:Array.isArray(saved.notes)?saved.notes.filter(n=>expansion.cleanNote(n?.text)).slice(-24).map(n=>({text:expansion.cleanNote(n.text),role:[0,1].includes(n.role)?n.role:0,at:Number(n.at)||0})):[],customLevel:expansion.cleanBlueprint(saved.customLevel),spectators:new Set(),storyChoices:saved.storyChoices&&typeof saved.storyChoices==='object'?saved.storyChoices:{},ending:saved.ending||null,v20Unlocked:Math.max(100,Math.min(v20.LAST,Number(saved.v20Unlocked)||100)),v20Home:v20.cleanHome(saved.v20Home),v20Story:v20.cleanStory(saved.v20Story),v21Unlocked:Math.max(v21.FIRST,Math.min(v21.LAST,Number(saved.v21Unlocked)||v21.FIRST)),v21World:social.cleanRoom(saved.v21World),v23Unlocked:Math.max(v23.FIRST,Math.min(v23.LAST,Number(saved.v23Unlocked)||v23.FIRST)),v24World:v24.clean(saved.v24World),v25:v25.clean(saved.v25),assistVotes:[null,null]});
   }
 }
 function restoreRooms(){if(!SAVE_FILE||!fs.existsSync(SAVE_FILE))return;
@@ -141,7 +141,7 @@ const allowedPets=['none','fox','owl','moth','cat','orb'];
 const newSeat=()=>({token:crypto.randomBytes(24).toString('hex'),peer:null,online:false,look:{skin:'classic',pet:'none'}});
 function cleanLook(x){return {skin:allowedSkins.includes(x?.skin)?x.skin:'classic',pet:allowedPets.includes(x?.pet)?x.pet:'none'};}
 function cleanHome(x){if(!Array.isArray(x))return [];return x.slice(0,16).map(v=>({item:allowedFurniture.includes(v?.item)?v.item:'lamp',slot:Number.isInteger(v?.slot)?Math.max(0,Math.min(15,v.slot)):0}));}
-function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[],v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v20Unlocked:r.v20Unlocked||100,v21Unlocked:r.v21Unlocked||v21.FIRST,v23Unlocked:r.v23Unlocked||v23.FIRST,v25Meta:v25.meta(r),story:r.story||null,storyChoices:r.storyChoices||{},customLevel:r.customLevel||null,ending:r.ending||null};}
+function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[],v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v20Unlocked:r.v20Unlocked||100,v21Unlocked:r.v21Unlocked||v21.FIRST,v23Unlocked:r.v23Unlocked||v23.FIRST,v25Meta:v25.meta(r),assistMode:!!r.game.assistMode,assistVotes:r.assistVotes||[null,null],story:r.story||null,storyChoices:r.storyChoices||{},customLevel:r.customLevel||null,ending:r.ending||null};}
 restoreRooms();
 function countOnline(r){return r.seats.map(s=>!!s?.online);}
 function sendSeatRoom(r){const obj={t:'members',room:r.code,connected:countOnline(r),phase:r.game.phase};
@@ -184,7 +184,7 @@ const server=http.createServer((req,res)=>{
     return;
   }
   let file;
-  if(pathname==='/shared/stages.js'||pathname==='/shared/v20-stages.js'||pathname==='/shared/v21-stages.js')file=path.join(__dirname,'shared',pathname.slice('/shared/'.length));
+  if(pathname==='/shared/stages.js'||pathname==='/shared/v20-stages.js'||pathname==='/shared/v21-stages.js'||pathname==='/shared/v23-stages.js')file=path.join(__dirname,'shared',pathname.slice('/shared/'.length));
   else if(pathname==='/'||pathname==='/index.html')file=path.join(PUBLIC,'index.html');
   else if(/^\/[a-zA-Z0-9._-]+$/.test(pathname))file=path.join(PUBLIC,pathname.slice(1));
   else{res.writeHead(404);res.end('Not found');return;}
@@ -275,7 +275,7 @@ server.on('upgrade',(req,socket,head)=>{
       const saved=v23.hasStage(requested)?Math.min(requested,resume23):v21.hasStage(requested)?Math.min(requested,resume21):v20.hasStage(requested)?Math.min(requested,resumeMax):Math.max(0,Math.min(requested===99&&msg.secrets===11?99:98,requested));
       if(saved>0)initStage(game,saved);
       if(blueprint)expansion.applyBlueprint(game,blueprint);
-      const r={code,seats:[newSeat(),null],game,home:cleanHome(msg.home),notes:[],customLevel:blueprint,spectators:new Set(),storyChoices:{},ending:null,unlockedMax:Math.min(98,saved),v20Unlocked:resumeMax,v20Home:v20.cleanHome(msg.v20Home),v20Story:v20.cleanStory({choices:msg.v20Choices}),v21Unlocked:resume21,v21World:social.cleanRoom(msg.v21Profile),v23Unlocked:resume23,v24World:v24.initial(),v25:v25.initial(),lastActivity:Date.now()};
+      const r={code,seats:[newSeat(),null],game,home:cleanHome(msg.home),notes:[],customLevel:blueprint,spectators:new Set(),storyChoices:{},ending:null,unlockedMax:Math.min(98,saved),v20Unlocked:resumeMax,v20Home:v20.cleanHome(msg.v20Home),v20Story:v20.cleanStory({choices:msg.v20Choices}),v21Unlocked:resume21,v21World:social.cleanRoom(msg.v21Profile),v23Unlocked:resume23,v24World:v24.initial(),v25:v25.initial(),assistVotes:[null,null],lastActivity:Date.now()};
       ROOMS.set(code,r);beta.record('roomCreated');attach(r,0);return;
     }
     if(msg.t==='join'){
@@ -399,6 +399,18 @@ server.on('upgrade',(req,socket,head)=>{
          if(msg.t==='v21Action'&&room.game.v21)broadcast(room,roomSnapshot(room));
        }
        return;
+     }
+     if(msg.t==='v26AssistVote'){
+       if(clientProtocol<4)return error('Обновите клиент до v26.');
+       if(rateExceeded('assist-vote',12))return error('Слишком много голосований.');
+       if(typeof msg.enabled!=='boolean')return error('Неверное значение режима.');
+       room.assistVotes=room.assistVotes||[null,null];
+       room.assistVotes[role]=msg.enabled;
+       if(room.assistVotes[0]!==null&&room.assistVotes[0]===room.assistVotes[1]){
+         room.game.assistMode=msg.enabled;room.assistVotes=[null,null];
+         if(room.game.stats)room.game.stats.assisted=msg.enabled;
+       }
+       room.urgentSnapshot=true;broadcast(room,roomSnapshot(room));return;
      }
      if(['v23Action','v24Action','v25Generate','v25ReplayGet','v25MetaGet'].includes(msg.t)){
        if(clientProtocol<4)return error('Для новых глав нужна версия v26.');
