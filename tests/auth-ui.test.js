@@ -28,7 +28,7 @@ test('Google sign-in UI shows for guests and never requires an account to play',
 });
 test('HTML includes Google module after existing co-op client',()=>{
  const html=fs.readFileSync(path.join(__dirname,'../public/index.html'),'utf8');
- assert.ok(html.includes('/client.js?v=15.1'));assert.ok(html.includes('/auth.js?v=13'));
- assert.ok(html.indexOf('/auth.js?v=13')>html.indexOf('/client.js?v=15.1'));
+ assert.ok(html.includes('/client.js?v=19'));assert.ok(html.includes('/auth.js?v=13'));
+ assert.ok(html.indexOf('/auth.js?v=13')>html.indexOf('/client.js?v=19'));
  assert.ok(html.includes('id="createBtn"'),'guest rooms remain available');
 });
