@@ -312,7 +312,7 @@ server.on('upgrade',(req,socket,head)=>{
        seat.actionIds.add(id);if(seat.actionIds.size>256)seat.actionIds.delete(seat.actionIds.values().next().value);
        let result={ok:false,error:'Команда не распознана'};
        if(msg.t==='v21Action'){
-         const puzzle=new Set(['trail_mark','transfer_send','transfer_receive','transfer_deliver','knowledge_symbol','lantern_toggle','transform','transform_collect','weather_wind','weather_rain','cargo_push','tree_grow','maze_rotate','maze_checkpoint','asym_action','asym_cross']);
+         const puzzle=new Set(['trail_mark','transfer_send','transfer_receive','transfer_deliver','knowledge_symbol','lantern_toggle','transform','transform_collect','transform_orb_link','weather_wind','weather_rain','cargo_push','tree_grow','maze_rotate','maze_checkpoint','asym_action','asym_cross']);
          result=puzzle.has(msg.kind)?v21.action(room.game,role,msg.kind,msg):social.act(room,role,msg.kind,msg);
        }
        if(msg.t==='v21Publish'){
