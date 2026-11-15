@@ -5,7 +5,7 @@
  */
 const crypto=require('node:crypto');
 const {URL}=require('node:url');
-const FALLBACK_ORIGIN='https://linked-by-light-online.onrender.com';
+const FALLBACK_ORIGIN='https://linked-by-light-eu.onrender.com';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const b64=b=>Buffer.from(b).toString('base64url');
 const hash=value=>b64(crypto.createHash('sha256').update(value).digest());
