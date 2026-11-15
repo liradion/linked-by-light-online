@@ -51,7 +51,8 @@ function render(){
   id:'scene-'+(stage-99),title:GameV20Stages.stages[stage-100].title,lines:storyLines[stage-100],
   choices:[101,103,105,107,109,111].includes(stage)?['Помочь друг другу','Открыть новый путь']:null
  }:null;
- if(scene){const sec=el('section','v20-section');heading(sec,'История · '+scene.title);
+ if(scene){const sec=el('section','v20-section v20-story');heading(sec,'История · '+scene.title);
+  const portrait=el('div','v20-story-art');portrait.append(el('span','v20-hero-one','✦'),el('span','v20-story-horizon','✧  ⋆  ✧'),el('span','v20-hero-two','◈'));sec.append(portrait);
   for(const l of scene.lines)text(sec,l);
   if(scene.choices){const value=story.choices?.[scene.id],votes=story.votes?.[scene.id];
    if(value!==undefined)text(sec,'Ваше общее решение: '+scene.choices[value]);
@@ -60,13 +61,23 @@ function render(){
   }b.append(sec);
  }
  const hs=el('section','v20-section');heading(hs,'Наш дом · живые комнаты');
+ const homeScene=el('div','v20-house');
+ const area={living:'🪟　🛋️　🔥',garden:'🌷　🌳　🌼',workshop:'🪄　🖼️　🎨'}[h.zone]||'🪟　🛋️　🔥';
+ homeScene.append(el('div','v20-house-backdrop',area));
+ const petIcon=({fox:'🦊',owl:'🦉',moth:'🦋',cat:'🐈',orb:'✨'})[GameAdventure.data()?.pet]||'✨';
+ homeScene.append(el('span','v20-pet',petIcon));
+ const icons={lampion:'🏮',flower:'🌸',crystal:'💎'};
+ homeScene.append(el('div','v20-decor',(h.decor||[]).map(k=>icons[k]||'✦').join(' ')));
+ hs.append(homeScene);
  line(hs,'Зона',({living:'Гостиная',garden:'Сад',workshop:'Мастерская'})[h.zone]||'Гостиная');
  const zones=el('div','v20-actions');for(const [key,label] of [['living','Гостиная'],['garden','Сад'],['workshop','Мастерская']])zones.append(button(label,()=>home(key)));hs.append(zones);
  heading(hs,'Сад света');text(hs,'Искра направляет свет, Эхо отражает. Три последовательных раунда.');
  line(hs,'Прогресс',h.garden?.completed?'Завершено':(h.garden?.step||0)+'/6');
+ const gardenSteps=el('div','v20-steps');for(let i=0;i<6;i++)gardenSteps.append(el('span',i<(h.garden?.step||0)?'v20-step done':'v20-step',i%2?'✧':'☀'));hs.append(gardenSteps);
  hs.append(button(role===0?'☀ Направить свет':'✧ Отразить луч',()=>home(role===0?'shine':'reflect'),!!h.garden?.completed));
  heading(hs,'Мастерская воспоминаний');text(hs,'Искра открывает фрагмент, Эхо помещает его на место. Четыре раунда.');
  line(hs,'Прогресс',h.memory?.completed?'Завершено':(h.memory?.step||0)+'/8');
+ const memorySteps=el('div','v20-steps');for(let i=0;i<8;i++)memorySteps.append(el('span',i<(h.memory?.step||0)?'v20-step done':'v20-step','◈'));hs.append(memorySteps);
  hs.append(button(role===0?'Показать фрагмент':'Разместить фрагмент',()=>home(role===0?'reveal':'place'),!!h.memory?.completed));
  heading(hs,'Питомец и украшения');line(hs,'Настроение',h.pet?.mood||'curious');
  hs.append(button('♡ Погладить питомца',()=>home('pet')));
@@ -112,6 +123,11 @@ function draw(ctx,level,players,v,clock,role){
  if(['tether','combo'].includes(v.kind)){marker(c.tether[0],'Искра · нить','#ffc17f',v.flags.tether);marker(c.tether[1],'Эхо · нить','#80eff7',v.flags.tether);}
  if(['phase','combo'].includes(v.kind)){marker(c.phase[0],'Свет · E','#ffc17f',v.phase.flags[0]);marker(c.phase[1],'Тень · E','#b3a1ff',v.phase.flags[1]);}
  if(['time','combo'].includes(v.kind)){marker(c.time[0],'Время · Z','#ffc17f',v.time.locked>0);marker(c.time[1],'Эхо · Z','#80eff7',v.time.complete);}
+ if(['phase','combo'].includes(v.kind)){
+  const rect=(x,color)=>{ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=12;ctx.fillRect(x,438,112,18);ctx.shadowBlur=0;};
+  if(v.phase.flags[0]&&(role===0||role===-1))rect(900,'#ffca88bb');
+  if(v.phase.state!=='light'&&(role===1||role===-1))rect(1340,'#a5e9ffbb');
+ }
  if(v.tether.active&&players?.length===2){
   const a=players[0],b=players[1];ctx.lineWidth=3+v.tether.tension*2;ctx.strokeStyle='#fbd5ff';ctx.shadowColor='#ddbcff';ctx.shadowBlur=17;ctx.beginPath();ctx.moveTo(a.x+15,a.y+18);ctx.quadraticCurveTo((a.x+b.x)/2+15,(a.y+b.y)/2-36, b.x+15,b.y+18);ctx.stroke();ctx.shadowBlur=0;
  }
