@@ -60,7 +60,8 @@ function beforeStep(g,dt){
  }
  if(z.kind==='transform'){
   for(const p of g.players)if(z.transform.forms[p.type]==='bird'){
-   p.vy=clamp(p.vy-490*dt,-480,950);
+   p.vy=clamp(p.vy-1110*dt,-480,950);
+   if(g.input[p.type]?.jumpQueued&&!p.grounded)p.vy=-350;
   }
  }
 }
