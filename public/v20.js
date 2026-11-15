@@ -106,7 +106,7 @@ function onMessage(m){
  if(dialog?.open)render();
 }
 function onSnapshot(s){
- state=s;if(s.stage>=100&&s.stage<=111&&api.role?.()>=0)GameAdventure.recordV20(s);
+ state=s;if(api.role?.()>=0)GameAdventure.recordV20(s);
  if(lastLevel!==s.stage){lastLevel=s.stage;refreshQuick();}
  if(dialog?.open&&performance.now()-lastRendered>800)render();
 }
