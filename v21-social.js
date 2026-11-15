@@ -170,7 +170,7 @@ function completed(r,board){
  if(puzzles.hasStage(stage)){z.garden.growth=Math.min(12,z.garden.growth+1);const creature=species[(stage-112)%5];if(!z.aquarium.includes(creature))z.aquarium.push(creature);}
  if(!Array.isArray(board))return;
  const w=puzzles.weekKey();
- if(stage!==puzzles.weeklyStage())return;
+ if(r.game.assistMode||result.assisted||stage!==puzzles.weeklyStage())return;
  const time=Number(result.elapsed);
  if(!Number.isFinite(time)||time<=0||time>36000)return;
  if(z.weeklyRecords[w]&&z.weeklyRecords[w]<=time)return;
