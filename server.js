@@ -4,6 +4,9 @@ const http=require('node:http');
 const fs=require('node:fs');
 const path=require('node:path');
 const crypto=require('node:crypto');
+const {performance}=require('node:perf_hooks');
+const {createBenchmarkMetrics}=require('./benchmark-metrics');
+const benchmark=createBenchmarkMetrics();
 const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./game-core');
 const {stages}=require('./shared/stages');
 const cloud=require('./cloud-store');
@@ -95,11 +98,11 @@ function attachWebSocket(socket,head,onMessage,onClose){
   if(head&&head.length)socket.emit('data',head);
   return {
     send:(data)=>{
-      if(data?.t==='snapshot'&&socket.writableLength>MAX_SNAPSHOT_BACKLOG)return;
+      if(data?.t==='snapshot'&&socket.writableLength>MAX_SNAPSHOT_BACKLOG){benchmark.snapshotSkipped();return;}
       sendFrame(socket,1,JSON.stringify(data));
     },
     sendRaw:(payload,isSnapshot)=>{
-      if(isSnapshot&&socket.writableLength>MAX_SNAPSHOT_BACKLOG)return;
+      if(isSnapshot&&socket.writableLength>MAX_SNAPSHOT_BACKLOG){benchmark.snapshotSkipped();return;}
       sendFrame(socket,1,payload);
     },
     close,ping:()=>{if(Date.now()-lastPong>32_000){socket.destroy();return;}sendFrame(socket,9,Buffer.from('alive'));}
@@ -133,6 +136,7 @@ const server=http.createServer((req,res)=>{
   if(authRequest){auth.handle(req,res).catch(()=>{if(!res.headersSent){res.writeHead(500,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({error:'Ошибка авторизации'}));}});return;}
   if(req.url?.startsWith('/api/cloud/')){cloud.handle(req,res);return;}
   const pathname=new URL(req.url,'http://localhost').pathname;
+  if(benchmark.respond(req,res,ROOMS))return;
   if(pathname==='/version'){res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify({name:'Linked by Light',version:'20.0.0',protocol:2,commit:(process.env.RENDER_GIT_COMMIT||'').slice(0,12)||null}));return;}
   if(pathname==='/health'){
     res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
@@ -316,6 +320,8 @@ server.on('upgrade',(req,socket,head)=>{
 });
 let lastBroadcast=0;
 const loop=setInterval(()=>{
+  const benchmarkStart=benchmark.enabled?performance.now():0;
+  let benchmarkFrames=0;
   lastBroadcast++;
   for(const r of ROOMS.values()){
     tick(r.game,countOnline(r));
@@ -332,8 +338,10 @@ const loop=setInterval(()=>{
     if(emit&&r.seats.some(s=>s?.online)){
       r.urgentSnapshot=false;
       broadcast(r,roomSnapshot(r));
+      benchmarkFrames++;
     }
   }
+  if(benchmark.enabled)benchmark.observeTick(benchmarkStart,performance.now(),benchmarkFrames);
 },1000/60);
 loop.unref();
 setInterval(persistRooms,12_000).unref();
