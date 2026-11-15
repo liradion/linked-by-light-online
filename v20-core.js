@@ -33,7 +33,7 @@ function init(g){
   phase:{state:'light',flags:[false,false],complete:false},
   time:{locked:0,complete:false,phase:0,history:[]},
   flags:{tether:false,phase:false,time:false},complete:false,
-  boss:conf.boss?{name:conf.boss,x:1850,hp:conf.kind==='combo'?6:4,max:conf.kind==='combo'?6:4,phase:1,next:0,warning:0,attack:0,active:false,focus:0}:null
+  boss:conf.boss?{name:conf.boss,style:g.stage===103?'mirror':g.stage===107?'clock':'heart',x:1850,hp:g.stage===111?6:g.stage===107?5:4,max:g.stage===111?6:g.stage===107?5:4,phase:1,next:0,warning:0,attack:0,active:false,focus:0}:null
  };
 }
 function action(g,role,kind){
@@ -92,7 +92,7 @@ function platforms(g,role){
 function onAbility(g,player){
  const v=g.v20,b=v?.boss;if(!b||!b.active||b.hp<=0)return;
  if(player.type!==b.next||!near(player,b.x,240))return;
- if(v.kind==='combo'&&!v.tether.active)return;
+ if((v.kind==='combo'||b.style==='mirror')&&!v.tether.active)return;
  b.hp--;b.next=1-b.next;b.phase=clamp(1+Math.floor((b.max-b.hp)/2),1,3);
  b.warning=0;b.attack=0;
 }
@@ -123,13 +123,15 @@ function afterStep(g,dt){
  boss.attack+=dt;
  if(boss.warning>0){boss.warning=Math.max(0,boss.warning-dt);
   if(boss.warning===0){
-   for(const p of g.players)if(near(p,boss.focus,72)&&g.adventure.bond.shield<=0){
-    p.vx+=p.x<boss.focus?-175:175;p.vy=-245;
+   const radius=boss.style==='heart'?120:boss.style==='clock'?90:72;
+   for(const p of g.players)if(near(p,boss.focus,radius)&&g.adventure.bond.shield<=0){
+    const knock=boss.style==='clock'?265:boss.style==='heart'?210:175;
+    p.vx+=p.x<boss.focus?-knock:knock;p.vy=boss.style==='clock'?-320:-245;
    }
   }
  }else if(boss.attack>Math.max(2.3,4.6-boss.phase*.5)){
-  boss.attack=0;boss.warning=1.2;
-  boss.focus=clamp(g.players[(boss.hp+1)%2].x,60,g.level.width-70);
+  boss.attack=0;boss.warning=boss.style==='clock'?1.55:boss.style==='heart'?1.4:1.2;
+  boss.focus=boss.style==='mirror'?clamp(g.players[boss.next].x,60,g.level.width-70):boss.style==='clock'?clamp(g.players[1-boss.next].x,60,g.level.width-70):clamp((g.players[0].x+g.players[1].x)/2,60,g.level.width-70);
  }
 }
 function completed(g){return !g.v20||g.v20.complete&&(!g.v20.boss||g.v20.boss.hp<=0);}
