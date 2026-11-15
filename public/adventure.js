@@ -19,8 +19,8 @@ const BOSS_NAMES=['Сонный Великан','Лесной Хранитель
 const SKINS=[['classic','Классика','✦'],['sunset','Закат','☀'],['aurora','Сияние','◈'],['royal','Корона','♛'],['forest','Лес','❀'],['galaxy','Галактика','✧']];
 const PETS=[['none','Без питомца','·'],['fox','Лисёнок','🦊'],['owl','Совёнок','🦉'],['moth','Мотылёк','🦋'],['cat','Котик','🐈'],['orb','Светлячок','✨']];
 const FURN=[['lamp','Лампа','💡'],['plant','Растение','🌿'],['sofa','Диван','🛋️'],['shelf','Книги','📚'],['star','Звезда','⭐'],['rug','Ковёр','🧶'],['aquarium','Аквариум','🐠'],['telescope','Телескоп','🔭'],['fireplace','Камин','🔥'],['frame','Фото','🖼️'],['garden','Сад','🪴'],['piano','Пианино','🎹']];
-const initial={secrets:[],pets:[],skin:'classic',pet:'none',home:[{item:'lamp',slot:0},{item:'plant',slot:4}],achievements:[],shards:0,choices:{},daily:{day:'',completed:[]},homeUpdatedAt:0,lookUpdatedAt:0};
-function load(){try{let x=JSON.parse(localStorage.getItem(DATA_KEY));if(x&&typeof x==='object')return {...initial,...x,secrets:Array.isArray(x.secrets)?x.secrets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],pets:Array.isArray(x.pets)?x.pets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],home:Array.isArray(x.home)?x.home.slice(0,16):initial.home,choices:x.choices&&typeof x.choices==='object'&&!Array.isArray(x.choices)?x.choices:{},daily:x.daily&&typeof x.daily==='object'?{day:String(x.daily.day||'').slice(0,10),completed:Array.isArray(x.daily.completed)?x.daily.completed.filter(v=>['stage','duet','stars'].includes(v)):[]}:initial.daily};}catch(_){}return {...initial};}
+const initial={secrets:[],pets:[],skin:'classic',pet:'none',home:[{item:'lamp',slot:0},{item:'plant',slot:4}],achievements:[],shards:0,choices:{},memories:[],daily:{day:'',completed:[]},homeUpdatedAt:0,lookUpdatedAt:0};
+function load(){try{let x=JSON.parse(localStorage.getItem(DATA_KEY));if(x&&typeof x==='object')return {...initial,...x,secrets:Array.isArray(x.secrets)?x.secrets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],pets:Array.isArray(x.pets)?x.pets.filter(n=>Number.isInteger(n)&&n>=0&&n<11):[],home:Array.isArray(x.home)?x.home.slice(0,16):initial.home,choices:x.choices&&typeof x.choices==='object'&&!Array.isArray(x.choices)?x.choices:{},memories:Array.isArray(x.memories)?x.memories.filter(v=>typeof v?.text==='string'&&v.text.length<=160).slice(-40):[],daily:x.daily&&typeof x.daily==='object'?{day:String(x.daily.day||'').slice(0,10),completed:Array.isArray(x.daily.completed)?x.daily.completed.filter(v=>['stage','duet','stars'].includes(v)):[]}:initial.daily};}catch(_){}return {...initial};}
 let data=load(),callbacks={},lastBossPhase=0,lastStage=-1,lastPet=false,lastSecret=false,lastHearts=0,sharedHome=null,serverLooks=[null,null],lastSaveTime=0;
 const $=id=>document.getElementById(id),save=()=>{try{localStorage.setItem(DATA_KEY,JSON.stringify(data));}catch(_){}};
 const ownHome=()=>sharedHome||data.home;
@@ -38,6 +38,14 @@ function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className
 function button(label,cb,css=''){const b=el('button','adv-button '+css,label);b.type='button';b.addEventListener('click',cb);return b;}
 function progressChanged(){save();if($('advDialog')?.open)renderDialog();}
 function getProfile(){return {skin:data.skin,pet:data.pet};}
+function addMemory(note){
+ if(!note||typeof note.text!=='string')return;
+ const text=note.text.trim().slice(0,160),at=Number(note.at)||Date.now(),role=[0,1].includes(note.role)?note.role:0;
+ if(!text||!Number.isFinite(at)||at<0)return;
+ const item={at,role,text},memories=Array.isArray(data.memories)?data.memories:[];
+ if(memories.some(n=>n.at===at&&n.role===role&&n.text===text))return;
+ data.memories=memories.concat(item).slice(-40);progressChanged();
+}
 function getHome(){return data.home;}
 function receiveHome(items){if(!Array.isArray(items))return;sharedHome=items.slice(0,16);data.home=sharedHome;data.homeUpdatedAt=Date.now();progressChanged();}
 function receiveLooks(looks){if(Array.isArray(looks))serverLooks=looks;}
@@ -125,7 +133,7 @@ function exportProfile(){const payload=profilePayload();
 function importProfile(obj){if(!obj||obj.version!==11||!obj.adventure||typeof obj.adventure!=='object')throw Error('Неверный формат сохранения');
  const a=obj.adventure;const skin=SKINS.some(v=>v[0]===a.skin)?a.skin:'classic',pet=PETS.some(v=>v[0]===a.pet)?a.pet:'none';
  data={...initial,secrets:Array.from(new Set((Array.isArray(a.secrets)?a.secrets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),pets:Array.from(new Set((Array.isArray(a.pets)?a.pets:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<11))),
- skin,pet,home:Array.isArray(a.home)?a.home.filter(e=>FURN.some(x=>x[0]===e.item)&&Number.isInteger(e.slot)&&e.slot>=0&&e.slot<16).slice(0,16):initial.home,
+ skin,pet,memories:Array.isArray(a.memories)?a.memories.filter(n=>n&&typeof n.text==='string'&&n.text.length<=160&&Number.isFinite(n.at)&&[0,1].includes(n.role)).slice(-40):[],home:Array.isArray(a.home)?a.home.filter(e=>FURN.some(x=>x[0]===e.item)&&Number.isInteger(e.slot)&&e.slot>=0&&e.slot<16).slice(0,16):initial.home,
  achievements:Array.isArray(a.achievements)?a.achievements.filter(x=>typeof x==='string'&&x.length<=40).slice(0,50):[],shards:Math.max(0,Math.min(99999,Number(a.shards)||0)),choices:{},daily:{day:typeof a.daily?.day==='string'?a.daily.day.slice(0,10):'',completed:Array.isArray(a.daily?.completed)?a.daily.completed.filter(v=>['stage','duet','stars'].includes(v)):[]},homeUpdatedAt:Number.isSafeInteger(a.homeUpdatedAt)&&a.homeUpdatedAt>=0?a.homeUpdatedAt:0,lookUpdatedAt:Number.isSafeInteger(a.lookUpdatedAt)&&a.lookUpdatedAt>=0?a.lookUpdatedAt:0};
  if(a.choices&&typeof a.choices==='object')for(const [k,v] of Object.entries(a.choices))if(/^\d{1,2}$/.test(k)&&Number(k)<=10&&[0,1].includes(v))data.choices[k]=v;
  const cp=Number(obj.checkpoint);if(Number.isSafeInteger(cp)&&cp>=0&&cp<=98){try{localStorage.setItem('linked-light-checkpoint-v99',String(cp));}catch(_){}}
@@ -193,5 +201,5 @@ function draw(ctx,level,players,extra,clock){if(!extra)return;
  if(players)players.forEach((p,i)=>{const look=outfitFor(i);if(look.pet==='none')return;const sym=PETS.find(z=>z[0]===look.pet)?.[2]||'✨';ctx.save();ctx.font='22px system-ui';ctx.textAlign='center';ctx.globalAlpha=.8;ctx.fillText(sym,p.x+(i?-21:52),p.y-5+Math.sin(clock*5+i)*6);ctx.restore();});
  if(extra.emotes?.length)extra.emotes.forEach((duration,i)=>{if(duration>0&&players[i]){const p=players[i];ctx.save();ctx.font='bold 26px system-ui';ctx.textAlign='center';ctx.fillText((['♡','✋','♫'])[extra.emoteKinds?.[i]||0],p.x+15,p.y-89-Math.sin(clock*7)*8);ctx.restore();}});
 }
-root.GameAdventure={init,open,onJoined,onSnapshot,storyChoice,receiveHome,receiveLooks,getProfile,getHome,outfitFor,draw,data:()=>data,safeStage,BOSS_NAMES,profilePayload,importProfile};
+root.GameAdventure={init,open,onJoined,onSnapshot,storyChoice,receiveHome,receiveLooks,getProfile,getHome,outfitFor,draw,data:()=>data,safeStage,BOSS_NAMES,profilePayload,importProfile,addMemory};
 })(typeof window!=='undefined'?window:globalThis);
