@@ -7,6 +7,9 @@ const crypto=require('node:crypto');
 const {performance}=require('node:perf_hooks');
 const {createBenchmarkMetrics}=require('./benchmark-metrics');
 const benchmark=createBenchmarkMetrics();
+const {createPublicBeta}=require('./public-beta');
+const configuredBetaRooms=Number(process.env.BETA_MAX_ROOMS);
+const beta=createPublicBeta({maxRooms:process.env.BETA_MAX_ROOMS&&Number.isInteger(configuredBetaRooms)?configuredBetaRooms:200});
 const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./game-core');
 const {stages}=require('./shared/stages');
 const cloud=require('./cloud-store');
@@ -21,21 +24,23 @@ const auth=createAuth({cloud});
 const PORT=Number(process.env.PORT)||3000;
 const PUBLIC=path.join(__dirname,'public');
 const ROOMS=new Map();
+const storageState=()=>({cloudConfigured:cloud.active,diskConfigured:!!SAVE_DIR});
 // Optional persistent session storage: point SAVE_DIR to a mounted durable disk.
 // Free Render containers have ephemeral filesystems, so this does not imply cloud backup there.
 const SAVE_DIR=process.env.SAVE_DIR||'';
 const SAVE_FILE=SAVE_DIR?path.join(SAVE_DIR,'linked-light-rooms-v11.json'):'';
-function roomBackups(){return {version:11,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,rooms:Array.from(ROOMS.values()).map(r=>({
+function roomBackups(){return {version:11,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup(),rooms:Array.from(ROOMS.values()).map(r=>({
  code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),lastActivity:r.lastActivity,story:r.story||null}))};}
 function persistRooms(){if(!SAVE_FILE)return;
  try{fs.mkdirSync(SAVE_DIR,{recursive:true});const rooms=Array.from(ROOMS.values()).map(r=>({
   code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
   home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),lastActivity:r.lastActivity,story:r.story||null}));
-  const temp=SAVE_FILE+'.'+process.pid+'.tmp';fs.writeFileSync(temp,JSON.stringify({version:11,rooms,v21Board:V21_BOARD,v21Gallery:V21_GALLERY}),'utf8');fs.renameSync(temp,SAVE_FILE);
+  const temp=SAVE_FILE+'.'+process.pid+'.tmp';fs.writeFileSync(temp,JSON.stringify({version:11,rooms,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup()}),'utf8');fs.renameSync(temp,SAVE_FILE);
  }catch(e){console.warn('Session persistence failed:',e.message);}}
 function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.rooms))return;
   V21_BOARD=social.cleanBoard(parsed.v21Board);V21_GALLERY=social.cleanGallery(parsed.v21Gallery,expansion.cleanBlueprint);
+  beta.restoreFeedback(parsed.betaFeedback);
   for(const saved of parsed.rooms.slice(0,200)){
    if(!/^[A-HJ-NP-Z2-9]{6}$/.test(saved.code||''))continue;
    if(!saved.game||!Number.isSafeInteger(saved.game.stage)||saved.game.stage<0||saved.game.stage>v21.LAST)continue;
@@ -54,13 +59,20 @@ function restoreRooms(){if(!SAVE_FILE||!fs.existsSync(SAVE_FILE))return;
  try{const raw=fs.readFileSync(SAVE_FILE,'utf8');if(raw.length>8_000_000)throw Error('oversized session file');
   hydrateRooms(JSON.parse(raw));
  }catch(e){console.warn('Unable to restore rooms:',e.message);}}
-async function persistRoomsCloud(){if(!cloud.active)return;
- try{await cloud.saveRooms(roomBackups());}catch(e){console.warn('Cloud room save failed:',e.message);}}
+let cloudSaveInFlight=null;
+async function persistRoomsCloud(){
+ if(!cloud.active)return false;
+ if(cloudSaveInFlight)return cloudSaveInFlight;
+ cloudSaveInFlight=cloud.saveRooms(roomBackups()).then(()=>true).catch(e=>{
+  console.warn('Cloud room save failed:',e.message);return false;
+ }).finally(()=>{cloudSaveInFlight=null;});
+ return cloudSaveInFlight;
+}
 async function restoreRoomsCloud(){if(!cloud.active)return;
  try{const data=await cloud.loadRooms();if(data)hydrateRooms(data);}catch(e){console.warn('Cloud room restore failed:',e.message);}}
 
 const ROOM_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const MAX_ROOMS=200, MAX_PAYLOAD=4096;
+const MAX_ROOMS=beta.maxRooms, MAX_PAYLOAD=4096;
 // Bound stale state queued on slow mobile connections: fresh snapshots supersede old ones.
 const MAX_SNAPSHOT_BACKLOG=24_000;
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.ico':'image/x-icon','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8'};
@@ -141,7 +153,7 @@ const server=http.createServer((req,res)=>{
   if(req.url?.startsWith('/api/cloud/')){cloud.handle(req,res);return;}
   const pathname=new URL(req.url,'http://localhost').pathname;
   if(benchmark.respond(req,res,ROOMS))return;
-  if(pathname==='/version'){res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify({name:'Linked by Light',version:'21.0.0',protocol:3,commit:(process.env.RENDER_GIT_COMMIT||'').slice(0,12)||null}));return;}
+  if(pathname==='/version'){res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify({name:'Linked by Light',version:'22.0.0',protocol:3,commit:(process.env.RENDER_GIT_COMMIT||'').slice(0,12)||null}));return;}
   if(pathname==='/health'){
     res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
     res.end(JSON.stringify({ok:true}));return;
@@ -174,8 +186,10 @@ server.on('upgrade',(req,socket,head)=>{
   const accept=crypto.createHash('sha1').update(key+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
   socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+accept+'\r\n\r\n');
   socket.setNoDelay(true);
+  beta.record('wsAccepted');
   let room=null,role=-1,peer,clientProtocol=1;
   let packetWindow=Date.now(),packetCount=0;
+  const betaAllow=(action,limit)=>benchmark.enabled&&['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)||beta.allow('ws-'+action,req.socket.remoteAddress,limit);
   const opCounts=new Map();
   function rateExceeded(action,limit){const now=Date.now(),entry=opCounts.get(action)||{start:now,count:0};
     if(now-entry.start>=60000){entry.start=now;entry.count=0;}
@@ -208,9 +222,9 @@ server.on('upgrade',(req,socket,head)=>{
     const now=Date.now();if(now-packetWindow>=2000){packetWindow=now;packetCount=0;}
     if(++packetCount>240){peer.close(1008);return;}
     if(msg.t==='ping'){peer.send({t:'pong',sent:Number.isFinite(msg.sent)?msg.sent:0});return;}
-     if(msg.t==='hello'){clientProtocol=msg.protocol===3?3:msg.protocol===2?2:1;if(room&&role>=0&&room.seats[role])room.seats[role].protocol=clientProtocol;peer.send({t:'hello',protocol:3,version:'21.0.0'});return;}
+     if(msg.t==='hello'){clientProtocol=msg.protocol===3?3:msg.protocol===2?2:1;if(room&&role>=0&&room.seats[role])room.seats[role].protocol=clientProtocol;peer.send({t:'hello',protocol:3,version:'22.0.0'});return;}
     if(msg.t==='create'){
-      if(rateExceeded('create',8))return error('Слишком много комнат за минуту.');
+      if(rateExceeded('create',8)||!betaAllow('create',60)){beta.record('blockedCreates');return error('Слишком много комнат за минуту.');}
       if(room)return error('Вы уже в комнате.');
       if(ROOMS.size>=MAX_ROOMS)return error('Сервер заполнен. Попробуйте позже.');
       const code=newCode(),game=createGame(),blueprint=expansion.cleanBlueprint(msg.blueprint);
@@ -236,10 +250,10 @@ server.on('upgrade',(req,socket,head)=>{
       if(saved>0)initStage(game,saved);
       if(blueprint)expansion.applyBlueprint(game,blueprint);
       const r={code,seats:[newSeat(),null],game,home:cleanHome(msg.home),notes:[],customLevel:blueprint,spectators:new Set(),storyChoices:{},ending:null,unlockedMax:Math.min(98,saved),v20Unlocked:resumeMax,v20Home:v20.cleanHome(msg.v20Home),v20Story:v20.cleanStory({choices:msg.v20Choices}),v21Unlocked:resume21,v21World:social.cleanRoom(msg.v21Profile),lastActivity:Date.now()};
-      ROOMS.set(code,r);attach(r,0);return;
+      ROOMS.set(code,r);beta.record('roomCreated');attach(r,0);return;
     }
     if(msg.t==='join'){
-      if(rateExceeded('join',24))return error('Слишком много попыток входа.');
+      if(rateExceeded('join',24)||!betaAllow('join',180)){beta.record('blockedJoins');return error('Слишком много попыток входа.');}
       if(room)return error('Вы уже в комнате.');
       const code=typeof msg.room==='string'?msg.room.trim().toUpperCase():'';
       const r=ROOMS.get(code);if(!r)return error('Комната не найдена. Проверьте код.');
@@ -248,7 +262,9 @@ server.on('upgrade',(req,socket,head)=>{
        if(msg.spectate===true){watch(r);return;}
       const token=typeof msg.token==='string'?msg.token:'';
       let index=r.seats.findIndex(s=>s&&s.token===token);
+      const recovered=index>=0;
       if(index<0){index=r.seats.findIndex(s=>s===null);if(index<0)return error('В комнате уже два игрока.');r.seats[index]=newSeat();}
+      beta.record(recovered?'seatRecovered':'guestJoined');
       attach(r,index);return;
     }
     if(!room||room.seats[role]?.peer!==peer)return;
@@ -317,20 +333,20 @@ server.on('upgrade',(req,socket,head)=>{
        }
        if(msg.t==='v21Publish'){
          if(role!==0)result={ok:false,error:'Только ведущий может публиковать авторскую карту'};
-         else if(V21_GALLERY.filter(x=>x.owner===room.code&&!x.hidden).length>=2)result={ok:false,error:'Не более двух публичных карт от команды'};
+         else if(V21_GALLERY.filter(x=>x.owner===room.code&&['pending','approved','flagged'].includes(x.status)).length>=2)result={ok:false,error:'Не более двух публичных карт от команды'};
          else{
            const entry=social.published(msg.blueprint,room.code,expansion.cleanBlueprint);
-           if(entry){V21_GALLERY.push(entry);if(V21_GALLERY.length>40)V21_GALLERY.shift();result={ok:true,detail:'Карта опубликована и доступна в галерее'};}
+           if(entry){V21_GALLERY.push(entry);if(V21_GALLERY.length>40)V21_GALLERY.shift();result={ok:true,detail:'Карта отправлена на модерацию и появится после проверки'};}
            else result={ok:false,error:'Сначала создайте карту с платформами в редакторе'};
          }
        }
        if(msg.t==='v21Report'){
-         const item=V21_GALLERY.find(x=>x.id===msg.id&&!x.hidden);
+         const item=V21_GALLERY.find(x=>x.id===msg.id&&!x.hidden&&x.status==='approved');
          if(!item||item.owner===room.code)result={ok:false,error:'Не удалось отправить жалобу'};
          else{
            const fingerprint=crypto.createHash('sha256').update(seat.token).digest('hex').slice(0,24);
            if(item.reports.includes(fingerprint))result={ok:false,error:'Жалоба уже получена'};
-           else {item.reports.push(fingerprint);if(item.reports.length>=3)item.hidden=true;result={ok:true,detail:'Жалоба принята; карта скрывается после трёх независимых жалоб'};}
+           else {item.reports.push(fingerprint);if(item.reports.length>=3){item.hidden=true;item.status='flagged';beta.record('moderationFlagged');}result={ok:true,detail:'Жалоба принята; карта скрывается после трёх независимых жалоб'};}
          }
        }
        if(msg.t==='v21GalleryPlay'){
@@ -399,6 +415,7 @@ server.on('upgrade',(req,socket,head)=>{
 });
 let lastBroadcast=0;
 const loop=setInterval(()=>{
+  const betaStart=performance.now();
   const benchmarkStart=benchmark.enabled?performance.now():0;
   let benchmarkFrames=0;
   lastBroadcast++;
@@ -417,6 +434,7 @@ const loop=setInterval(()=>{
      const previousV21=r.v21World?.lastResult;
      social.completed(r,V21_BOARD);
      if(previousV21!==r.v21World?.lastResult){
+       beta.record('stageCompleted');
        broadcast(r,{t:'v21State',data:social.publicState(r)});
        for(const seat of r.seats)if(seat?.online)seat.peer.send({t:'v21Private',data:social.privateState(r,seat===r.seats[0]?0:1)});
      }
@@ -436,7 +454,8 @@ const loop=setInterval(()=>{
       benchmarkFrames++;
     }
   }
-  if(benchmark.enabled)benchmark.observeTick(benchmarkStart,performance.now(),benchmarkFrames);
+  const betaEnd=performance.now();beta.tick(betaStart,betaEnd);
+  if(benchmark.enabled)benchmark.observeTick(benchmarkStart,betaEnd,benchmarkFrames);
 },1000/60);
 loop.unref();
 setInterval(persistRooms,12_000).unref();
