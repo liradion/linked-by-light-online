@@ -18,6 +18,7 @@ const beta=createPublicBeta({maxRooms:onRender?Math.min(requestedBetaRooms,5):re
 const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./game-core');
 const {stages}=require('./shared/stages');
 const cloud=require('./cloud-store');
+const checkpoints=require('./room-checkpoint');
 const pwaIcons=require('./pwa-icons');
 const expansion=require('./expansion-core');
 const v20=require('./v20-core');
@@ -40,12 +41,11 @@ const SAVE_FILE=SAVE_DIR?path.join(SAVE_DIR,'linked-light-rooms-v11.json'):'';
 function roomBackups(){return {version:11,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup(),rooms:Array.from(ROOMS.values()).map(r=>({
  code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.persist(r.v25),assistVotes:r.assistVotes||[null,null],lastActivity:r.lastActivity,story:r.story||null}))};}
-function persistRooms(){if(!SAVE_FILE)return;
- try{fs.mkdirSync(SAVE_DIR,{recursive:true});const rooms=Array.from(ROOMS.values()).map(r=>({
-  code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
-  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.persist(r.v25),assistVotes:r.assistVotes||[null,null],lastActivity:r.lastActivity,story:r.story||null}));
-  const temp=SAVE_FILE+'.'+process.pid+'.tmp';fs.writeFileSync(temp,JSON.stringify({version:11,rooms,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup()}),'utf8');fs.renameSync(temp,SAVE_FILE);
- }catch(e){console.warn('Session persistence failed:',e.message);}}
+function persistRooms(){
+ if(!SAVE_FILE)return false;
+ try{checkpoints.save(SAVE_FILE,roomBackups());return true;}
+ catch(e){console.warn('Session persistence failed:',e.message);return false;}
+}
 function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.rooms))return;
   V21_BOARD=social.cleanBoard(parsed.v21Board);V21_GALLERY=social.cleanGallery(parsed.v21Gallery,expansion.cleanBlueprint);
   beta.restoreFeedback(parsed.betaFeedback);
@@ -63,10 +63,11 @@ function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.roo
    ROOMS.set(saved.code,{code:saved.code,seats,game,home:cleanHome(saved.home),unlockedMax:Math.max(0,Math.min(98,Number(saved.unlockedMax)||0)),lastActivity:Date.now(),story:saved.story||null,notes:Array.isArray(saved.notes)?saved.notes.filter(n=>expansion.cleanNote(n?.text)).slice(-24).map(n=>({text:expansion.cleanNote(n.text),role:[0,1].includes(n.role)?n.role:0,at:Number(n.at)||0})):[],customLevel:expansion.cleanBlueprint(saved.customLevel),spectators:new Set(),storyChoices:saved.storyChoices&&typeof saved.storyChoices==='object'?saved.storyChoices:{},ending:saved.ending||null,v20Unlocked:Math.max(100,Math.min(v20.LAST,Number(saved.v20Unlocked)||100)),v20Home:v20.cleanHome(saved.v20Home),v20Story:v20.cleanStory(saved.v20Story),v21Unlocked:Math.max(v21.FIRST,Math.min(v21.LAST,Number(saved.v21Unlocked)||v21.FIRST)),v21World:social.cleanRoom(saved.v21World),v23Unlocked:Math.max(v23.FIRST,Math.min(v23.LAST,Number(saved.v23Unlocked)||v23.FIRST)),v24World:v24.clean(saved.v24World),v25:v25.clean(saved.v25),assistVotes:[null,null]});
   }
 }
-function restoreRooms(){if(!SAVE_FILE||!fs.existsSync(SAVE_FILE))return;
- try{const raw=fs.readFileSync(SAVE_FILE,'utf8');if(raw.length>8_000_000)throw Error('oversized session file');
-  hydrateRooms(JSON.parse(raw));
- }catch(e){console.warn('Unable to restore rooms:',e.message);}}
+function restoreRooms(){
+ if(!SAVE_FILE)return;
+ const recovered=checkpoints.load(SAVE_FILE,warning=>console.warn('Corrupt session candidate:',warning.file,warning.error));
+ if(recovered)hydrateRooms(recovered.payload);
+}
 let cloudSaveInFlight=null;
 async function persistRoomsCloud(force=false){
  if(!cloud.active)return false;
