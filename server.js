@@ -337,7 +337,7 @@ server.on('upgrade',(req,socket,head)=>{
         if(cached){peer.send({t:'actionResult',actionId:id,...cached});return;}
        }
        let outcome;
-       if(msg.t==='coopAction')outcome=v20.action(room.game,role,msg.kind);
+       if(msg.t==='coopAction')outcome=v20.action(room.game,room.solo?room.soloActiveRole:role,msg.kind);
        else if(msg.t==='sceneVote')outcome=v20.vote(room,role,msg.sceneId,msg.option);
        else outcome=v20.homeAction(room,role,msg.kind);
        actionCache.remember(seat.actionCache,msg,outcome);
@@ -369,11 +369,11 @@ server.on('upgrade',(req,socket,head)=>{
        let result={ok:false,error:'Команда не распознана'};
        if(msg.t==='v21Action'){
          const puzzle=new Set(['trail_mark','transfer_send','transfer_receive','transfer_deliver','knowledge_symbol','lantern_toggle','transform','transform_collect','transform_orb_link','weather_wind','weather_rain','cargo_push','tree_grow','maze_rotate','maze_checkpoint','asym_action','asym_cross']);
-         result=puzzle.has(msg.kind)?v21.action(room.game,role,msg.kind,msg):social.act(room,role,msg.kind,msg);
+         result=puzzle.has(msg.kind)?v21.action(room.game,room.solo?room.soloActiveRole:role,msg.kind,msg):social.act(room,room.solo?room.soloActiveRole:role,msg.kind,msg);
        }
        if(msg.t==='v21Publish'){
          if(!beta.adminEnabled)result={ok:false,error:'Галерея временно закрыта: модератор ещё не подключён'};
-         else if(role!==0)result={ok:false,error:'Только ведущий может публиковать авторскую карту'};
+         else if(!isHost(room,role))result={ok:false,error:'Только ведущий может публиковать авторскую карту'};
          else if(V21_GALLERY.filter(x=>x.owner===room.code&&['pending','approved','flagged'].includes(x.status)).length>=2)result={ok:false,error:'Не более двух публичных карт от команды'};
          else{
            const entry=social.published(msg.blueprint,room.code,expansion.cleanBlueprint);
@@ -392,7 +392,7 @@ server.on('upgrade',(req,socket,head)=>{
        }
        if(msg.t==='v21GalleryPlay'){
          const item=V21_GALLERY.find(x=>x.id===msg.id&&!x.hidden);
-         if(role!==0||!room.seats.every(x=>x?.online))result={ok:false,error:'Оба игрока должны быть в комнате'};
+         if(!isHost(room,role)||!readyPlayers(room)||room.solo)result={ok:false,error:'Для публикации нужен совместный режим'};
          else if(!item)result={ok:false,error:'Карта отсутствует'};
          else{
            initStage(room.game,0);expansion.applyBlueprint(room.game,item.blueprint);
@@ -438,10 +438,10 @@ server.on('upgrade',(req,socket,head)=>{
         if(cached){peer.send({t:'actionResult',actionId:id,...cached});return;}
        }
        let outcome={ok:false,error:'Действие неизвестно'};
-       if(msg.t==='v23Action')outcome=v23.action(room.game,role,msg.kind,msg);
-       if(msg.t==='v24Action')outcome=v24.action(room,role,msg.kind,msg);
+       if(msg.t==='v23Action')outcome=v23.action(room.game,room.solo?room.soloActiveRole:role,msg.kind,msg);
+       if(msg.t==='v24Action')outcome=v24.action(room,room.solo?room.soloActiveRole:role,msg.kind,msg);
        if(msg.t==='v25Generate'){
-         const ready=role===0&&room.seats.every(s=>s?.online);
+         const ready=isHost(room,role)&&readyPlayers(room);
          if(!ready)outcome={ok:false,error:'Ведущий может создать испытание только вдвоём'};
          else{
            const daily=msg.mode==='daily';
@@ -487,7 +487,7 @@ server.on('upgrade',(req,socket,head)=>{
      if(msg.t==='home'&&Array.isArray(msg.items)){
       room.home=cleanHome(msg.items);broadcast(room,{t:'home',items:room.home});return;
     }
-    if(msg.t==='selectStage'&&role===0&&room.seats.every(s=>s?.online)){
+    if(msg.t==='selectStage'&&isHost(room,role)&&readyPlayers(room)){
       const target=msg.stage;
       if(!Number.isSafeInteger(target)||target<0||target>v23.LAST)return error('Неверный номер уровня.');
       if(v23.hasStage(target)){
@@ -503,29 +503,30 @@ server.on('upgrade',(req,socket,head)=>{
       sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='input'&&room.game.phase==='playing'){
-      const old=room.game.input[role];
+      const actingRole=room.solo?room.soloActiveRole:role;
+      const old=room.game.input[actingRole];
       const urgent=['jumpSeq','abilitySeq','bondSeq','emoteSeq'].some(k=>Number.isSafeInteger(msg[k])&&msg[k]>=0&&msg[k]<=1_000_000_000&&msg[k]>old[k]);
-      updateInput(room.game,role,msg);
+      updateInput(room.game,actingRole,msg);
       if(urgent)room.urgentSnapshot=true;
       return;
     }
-    if(msg.t==='start'&&role===0&&room.seats.every(s=>s?.online)&&room.game.phase==='waiting'){
-      if(v23.hasStage(room.game.stage)&&room.seats.some(s=>s.protocol<4))return error('Для новой главы необходимы два клиента v26.');
-      if(v21.hasStage(room.game.stage)&&room.seats.some(s=>s.protocol<3))return error('Для новой главы нужен клиент v21 на обоих устройствах.');
-      if(v20.hasStage(room.game.stage)&&room.seats.some(s=>s.protocol<2))return error('Для новой кампании обновите игру на обоих устройствах.');
-      room.game.phase='playing';initStage(room.game,room.customLevel?0:room.game.stage);if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
+    if(msg.t==='start'&&isHost(room,role)&&readyPlayers(room)&&room.game.phase==='waiting'){
+      if(v23.hasStage(room.game.stage)&&room.seats.some(s=>s?.online&&s.protocol<4))return error('Для новой главы необходимы два клиента v26.');
+      if(v21.hasStage(room.game.stage)&&room.seats.some(s=>s?.online&&s.protocol<3))return error('Для новой главы нужен клиент v21 на обоих устройствах.');
+      if(v20.hasStage(room.game.stage)&&room.seats.some(s=>s?.online&&s.protocol<2))return error('Для новой кампании обновите игру на обоих устройствах.');
+      room.game.phase='playing';initStage(room.game,room.customLevel?0:room.game.stage);room.game.solo=!!room.solo;telemetry.record(room.solo?'soloStarted':'coopStarted');if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
-    if(msg.t==='restart'&&role===0&&room.seats.every(s=>s?.online)){
+    if(msg.t==='restart'&&isHost(room,role)&&readyPlayers(room)){
       initStage(room.game,v23.hasStage(room.game.stage)?v23.FIRST:v21.hasStage(room.game.stage)?v21.FIRST:v20.hasStage(room.game.stage)?100:0);room.customLevel=null;room.ending=null;room.game.phase='playing';sendSeatRoom(room);broadcast(room,snapshot(room.game,countOnline(room)));return;
     }
-    if(msg.t==='resetStage'&&role===0&&room.game.phase==='playing'){
+    if(msg.t==='resetStage'&&isHost(room,role)&&room.game.phase==='playing'){
       initStage(room.game,room.customLevel?0:room.game.stage);if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;broadcast(room,roomSnapshot(room));return;
     }
   },()=>{
     if(!room)return;
     if(role===-1){room.spectators?.delete(peer);return;}
     const seat=room.seats[role];if(!seat||seat.peer!==peer)return;
-    seat.online=false;seat.peer=null;clearMovement(room.game,role);
+    seat.online=false;seat.peer=null;clearMovement(room.game,room.solo?room.soloActiveRole:role);telemetry.record('playerDisconnected');
     room.lastActivity=Date.now();sendSeatRoom(room);
   },benchmark);
 });
@@ -536,12 +537,18 @@ const loop=setInterval(()=>{
   let benchmarkFrames=0;
   lastBroadcast++;
   for(const r of ROOMS.values()){
+    r.game.solo=!!r.solo;
     tick(r.game,countOnline(r));
+    if(r.game.lastResult?.completed){const result=r.game.lastResult;
+      const id=[result.level,result.elapsed,result.deaths,result.stars].join(':');
+      if(r.lastV28ResultKey!==id){r.lastV28ResultKey=id;telemetry.record('stageCompleted',result.level);}
+    }
     v25.capture(r);
     if(r.v25?.lastResult&&r.v25.lastResult!==r.lastReplayNotice){r.lastReplayNotice=r.v25.lastResult;broadcast(r,{t:'v25Meta',data:v25.meta(r)});}
     // A time-capsule letter becomes visible at the next stage. Update only
     // the two authenticated seats; never include private content in snapshots.
     if(r.lastPrivateStage!==r.game.stage){
+      sendIntel(r);
       r.lastPrivateStage=r.game.stage;
       for(let i=0;i<r.seats.length;i++){
         const seat=r.seats[i];if(seat?.online)seat.peer.send({t:'v21Private',data:social.privateState(r,i)});
@@ -550,7 +557,7 @@ const loop=setInterval(()=>{
     if(r.game.phase==='win'&&!r.ending)r.ending=v23.hasStage(r.game.stage)?{kind:'v23',title:'Мастера физики света',text:'Все древние хранители побеждены вдвоём!'}:v21.hasStage(r.game.stage)?{kind:'v21',title:'Навстречу друг другу',text:'Ваши пути снова встретились! Новые воспоминания ждут дома.'}:v20.hasStage(r.game.stage)?v20.endingForStory(r.v20Story):r.customLevel?{kind:'creator',title:'Мастера света',text:'Ваш собственный уровень пройден вдвоём!',choices:0}:expansion.endingFor(r);
     if(r.ending?.kind==='v20-together'&&r.v20Home&&!r.v20Home.decor.includes('lampion')&&r.v20Home.decor.length<6)r.v20Home.decor.push('lampion');
      const previousV21=r.v21World?.lastResult;
-     social.completed(r,V21_BOARD);
+     if(!r.solo)social.completed(r,V21_BOARD);
      if(previousV21!==r.v21World?.lastResult){
        beta.record('stageCompleted');
        broadcast(r,{t:'v21State',data:social.publicState(r)});
@@ -562,7 +569,7 @@ const loop=setInterval(()=>{
      if(v23.hasStage(r.game.stage))r.v23Unlocked=Math.max(r.v23Unlocked||v23.FIRST,r.game.stage);
      if(r.game.v21)r.game.v21.branch=r.v21World?.branch||0;
      if(r.game.v23)r.game.v23.branch=r.v24World?.narrative?.path||0;
-    const both=r.seats.every(s=>s?.online);
+    const both=readyPlayers(r);
     // 30 Hz while playing (formerly 20 Hz), with next-tick feedback on discrete actions.
     // A disconnected/waiting room sends only 2 Hz; seat changes are sent immediately.
     const emit=both&&r.game.phase==='playing'
