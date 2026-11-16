@@ -19,6 +19,8 @@ const beta=createPublicBeta({maxRooms:onRender?Math.min(requestedBetaRooms,5):re
 const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./game-core');
 const {stages}=require('./shared/stages');
 const cloud=require('./cloud-store');
+const {createRuntimeMonitor}=require('./runtime-monitor');
+const recovery=createRuntimeMonitor({storageConfigured:cloud.active,requireDurable:process.env.LL_REQUIRE_DURABLE_STORAGE==='1'});
 const checkpoints=require('./room-checkpoint');
 const actionCache=require('./action-replay-cache');
 const pwaIcons=require('./pwa-icons');
@@ -40,7 +42,7 @@ const storageState=()=>({cloudConfigured:cloud.active,diskConfigured:!!SAVE_DIR}
 // Free Render containers have ephemeral filesystems, so this does not imply cloud backup there.
 const SAVE_DIR=process.env.SAVE_DIR||'';
 const SAVE_FILE=SAVE_DIR?path.join(SAVE_DIR,'linked-light-rooms-v11.json'):'';
-function roomBackups(){return {version:11,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup(),rooms:Array.from(ROOMS.values()).map(r=>({
+function roomBackups(){return {version:11,savedAt:Date.now(),v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup(),rooms:Array.from(ROOMS.values()).map(r=>({
  code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look,actions:actionCache.exportResults(s.actionCache)}:null),game:r.game,
  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.persist(r.v25),assistVotes:r.assistVotes||[null,null],lastActivity:r.lastActivity,story:r.story||null}))};}
 function persistRooms(){
@@ -48,7 +50,12 @@ function persistRooms(){
  try{checkpoints.save(SAVE_FILE,roomBackups());return true;}
  catch(e){console.warn('Session persistence failed:',e.message);return false;}
 }
+let lastHydratedAt=0;
 function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.rooms))return;
+  if(Number.isSafeInteger(parsed.savedAt)&&parsed.savedAt>0){
+    if(lastHydratedAt&&parsed.savedAt<lastHydratedAt)return;
+    lastHydratedAt=parsed.savedAt;
+  }
   V21_BOARD=social.cleanBoard(parsed.v21Board);V21_GALLERY=social.cleanGallery(parsed.v21Gallery,expansion.cleanBlueprint);
   beta.restoreFeedback(parsed.betaFeedback);
   for(const saved of parsed.rooms.slice(0,200)){
@@ -77,13 +84,19 @@ async function persistRoomsCloud(force=false){
   if(!force)return cloudSaveInFlight;
   await cloudSaveInFlight; // Flush the newest snapshot after the previous write.
  }
- cloudSaveInFlight=cloud.saveRooms(roomBackups()).then(()=>true).catch(e=>{
+ const start=performance.now();
+ cloudSaveInFlight=cloud.saveRooms(roomBackups()).then(()=>{
+  recovery.recorded('backup',true,performance.now()-start);return true;
+ }).catch(e=>{
+  recovery.recorded('backup',false,performance.now()-start);
   console.warn('Cloud room save failed:',e.message);return false;
  }).finally(()=>{cloudSaveInFlight=null;});
  return cloudSaveInFlight;
 }
 async function restoreRoomsCloud(){if(!cloud.active)return;
- try{const data=await cloud.loadRooms();if(data)hydrateRooms(data);}catch(e){console.warn('Cloud room restore failed:',e.message);}}
+ try{const data=await cloud.loadRooms();if(data)hydrateRooms(data);recovery.recorded('restore',true);}
+ catch(e){recovery.recorded('restore',false);console.warn('Cloud room restore failed:',e.message);}
+}
 
 const ROOM_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MAX_ROOMS=beta.maxRooms, MAX_PAYLOAD=4096;
@@ -117,6 +130,7 @@ function broadcast(r,obj){
 const betaHttp=createPublicBetaHttp({
  beta,rooms:ROOMS,storageState,getGallery:()=>V21_GALLERY,
  onUpdate:async()=>{persistRooms();await persistRoomsCloud(true);},
+ getOperationalStatus:()=>recovery.diagnostics(),
  onModerated:()=>{for(const r of ROOMS.values())broadcast(r,{t:'v21Gallery',items:social.publicGallery(V21_GALLERY)});}
 });
 const server=http.createServer((req,res)=>{
@@ -134,6 +148,11 @@ const server=http.createServer((req,res)=>{
   if(pathname==='/health'){
     res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
     res.end(JSON.stringify({ok:true}));return;
+  }
+  if(pathname==='/ready'){
+    const status=recovery.status();res.writeHead(status.ready?200:503,
+     {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
+    res.end(JSON.stringify(status));return;
   }
   // Real PNG app icons generated once by the server (no binary assets or CDN).
   const iconSize=pathname==='/icons/icon-192.png'?192:pathname==='/icons/icon-512.png'?512:pathname==='/apple-touch-icon.png'?180:0;
