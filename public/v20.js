@@ -42,8 +42,9 @@ function render(){
   campaign.append(controls);
   text(campaign,'Клавиши: Q — нить, E — измерение, Z — время. На iPhone доступны кнопки сверху игрового поля.');
  }else text(campaign,'Кампания v20 доступна из главного меню или по кнопке ниже.');
- const start=button(role===0?'✦ Перейти в главу v20':'Историю запускает ведущий',()=>api.send?.({t:'selectStage',stage:100}),role!==0);campaign.append(start);
- if(role===0){const levels=el('div','v20-levels');const unlocked=state?.v20Unlocked||100;
+ const canLead=api.isHost?.()??role===0;
+ const start=button(canLead?'✦ Перейти в главу v20':'Историю запускает ведущий',()=>api.send?.({t:'selectStage',stage:100}),!canLead);campaign.append(start);
+ if(canLead){const levels=el('div','v20-levels');const unlocked=state?.v20Unlocked||100;
  for(let id=100;id<=111;id++){levels.append(button(String(id-99),()=>api.send?.({t:'selectStage',stage:id}),id>unlocked));}
  campaign.append(levels);text(campaign,'Номера 1–12: доступные эпизоды. Только ведущий выбирает уровень.');}
  b.append(campaign);
