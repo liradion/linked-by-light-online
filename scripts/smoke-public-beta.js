@@ -34,13 +34,13 @@ async function main(){
  assert.match(statusResponse.headers.get('cache-control')||'',/no-store/);
  const beta=await statusResponse.json();
  assert.equal(beta.version,'26.0.0');assert.equal(beta.beta,true);
- for(const path of ['/','/beta.js','/beta.css','/privacy.html','/terms.html','/shared/v21-stages.js','/shared/v23-stages.js','/v23plus.js','/v23plus.css']){
+ for(const path of ['/','/beta.js','/beta.css','/privacy.html','/terms.html','/shared/v21-stages.js','/shared/v23-stages.js','/v23plus.js','/v28.js','/v28.css','/v23plus.css']){
   const r=await read(path);
   assert.match(r.headers.get('x-content-type-options')||'',/nosniff/);
   if(path==='/'){
    const html=await r.text();
    assert.ok(html.includes('/beta.js?v=22'));
-   assert.ok(html.includes('/client.js?v=26'));
+   assert.ok(html.includes('/client.js?v=28'));
   }
  }
  const result={ok:true,checkedAt:new Date().toISOString(),origin:base.origin,
