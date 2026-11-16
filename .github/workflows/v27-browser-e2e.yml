@@ -1,0 +1,29 @@
+name: v27 browser E2E (Chromium + WebKit)
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browsers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated browser testing dependencies
+        run: npm install --no-save --no-package-lock @playwright/test@1.56.1
+      - name: Install Chromium and WebKit with system libraries
+        run: npx playwright install --with-deps chromium webkit
+      - name: Two-browser multiplayer and reconnect regression
+        run: npx playwright test --config=playwright.config.cjs
+      - name: Upload trace when any browser fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v27-playwright-failure-trace
+          path: test-results/
+          retention-days: 7
