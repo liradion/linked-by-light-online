@@ -102,7 +102,7 @@ function openConnection(){
 function updateTouchRole(){
   const badge=$('touchRoleBadge'),icon=$('touchRoleIcon'),name=$('touchRoleName'),hint=$('touchRoleHint');
   if(!badge||!icon||!name||!hint)return;
-  const echo=role===1;
+  const echo=controlledRole()===1;
   icon.textContent=role<0?'◉':echo?'◈':'✦';name.textContent=role<0?'Зритель':echo?'Эхо':'Искра';
   hint.textContent=role<0?'без управления':echo?'прыжок и импульс':'прыжок и рывок';
   icon.style.color=echo?'#8ff8ff':'#ffcf83';
@@ -337,7 +337,7 @@ function renderPlayers(dt){
       const lead=Math.min(.045,Math.max(0,(performance.now()-latest.recvTime)/1000));
       if(a===b){x=source.x+source.vx*lead;y=source.y+source.vy*lead;}
     }
-    if(i===role&&!level?.v23&&phase==='playing'&&connected.every(Boolean)){
+    if(i===role&&!soloMode&&!level?.v23&&phase==='playing'&&connected.every(Boolean)){
       const p=predictor.display(dt,input,level,latest.world,GameQuality.predictionLead());if(p){x=p.x;y=p.y;}
     }
     return {...source,x,y,type:i,w:30,h:43,trail:[],breathe:i*2,look:GameAdventure.outfitFor(i),emote:latest?.world?.adventure?.emotes?.[i]||0};
@@ -354,7 +354,7 @@ function animate(ts){
   renderPlayers(dt);
   // Animations are visual-only; server physics and multiplayer state are unchanged.
   GameJuice.frame(dt,P,phase==='playing'&&connected.every(Boolean));
-  if(role>=0&&P[role]&&phase==='playing'){const p=P[role],now=performance.now();
+  if(role>=0&&P[controlledRole()]&&phase==='playing'){const p=P[controlledRole()],now=performance.now();
     if(wasOnGround===false&&p.grounded)GameQuality.effect('land');
     if(p.grounded&&Math.abs(p.vx||0)>85&&now-lastFootstep>210){lastFootstep=now;GameQuality.effect('step');}
     wasOnGround=!!p.grounded;}else wasOnGround=null;
@@ -431,6 +431,6 @@ function saveStageResult(result){try{const all=JSON.parse(localStorage.getItem(R
  catch(e){console.warn('Result not saved',e);}}
 GameQuality.init({getSession:()=>({phase,role,room}),onControls:(left,right)=>{if(left)keys.add('gamepad-left');else keys.delete('gamepad-left');if(right)keys.add('gamepad-right');else keys.delete('gamepad-right');updateInput();},onAction:activateKey});
 GameQuality.ambient(0);
-GameAdventure.init({send:wsSend,currentStage:()=>levelIndex,bestStage,inRoom:()=>!!room,startStage:(n)=>{if(room){if(role===0)wsSend({t:'selectStage',stage:n,secrets:GameAdventure.data().secrets.length});else announce('Уровни выбирает создатель комнаты.');}else createRoom(false,n);}});
-GameCloud.init();GameFuture.init({send:wsSend,role:()=>role,room:()=>room,stage:()=>levelIndex,inRoom:()=>!!room,create:stage=>createRoom(true,stage),announce,canvas:()=>canvas});GamePublicBeta.init({stage:()=>levelIndex,role:()=>role,inRoom:()=>!!room});GameV21.init({send:wsSend,role:()=>role,stage:()=>levelIndex,inRoom:()=>!!room,create:()=>createRoom(true,112),resume:id=>createRoom(false,id),announce,canvas:()=>canvas});GameV20.init({send:wsSend,role:()=>role,stage:()=>levelIndex,inRoom:()=>!!room,create:()=>createRoom(true,100),resume:id=>createRoom(false,id),announce,reconnects:()=>totalReconnects});GameExpansion.init({send:wsSend,inRoom:()=>!!room&&role>=0,createCustom:b=>createRoom(false,0,b),announce,saveMemory:GameAdventure.addMemory,getMemories:()=>GameAdventure.data().memories||[]});openConnection();showUI();requestAnimationFrame(animate);
+GameAdventure.init({send:wsSend,currentStage:()=>levelIndex,bestStage,inRoom:()=>!!room,startStage:(n)=>{if(room){if(isHost())wsSend({t:'selectStage',stage:n,secrets:GameAdventure.data().secrets.length});else announce('Уровни выбирает создатель комнаты.');}else createRoom(false,n);}});
+GameCloud.init();GameV28.init({send:wsSend,role:()=>role,phase:()=>phase,room:()=>room,inRoom:()=>!!room,canvas:()=>canvas,camera:()=>camera,connected:()=>ready,createSolo:()=>createRoom(true,0,null,true),switchSolo:()=>wsSend({t:'v28SoloSwitch',activeRole:1-soloActiveRole}),reconnect:()=>{if(socket?.readyState===WebSocket.CONNECTING)socket.close();else if(!ready)openConnection();},announce});GameFuture.init({send:wsSend,role:()=>controlledRole(),room:()=>room,stage:()=>levelIndex,inRoom:()=>!!room,create:stage=>createRoom(true,stage),announce,canvas:()=>canvas});GamePublicBeta.init({stage:()=>levelIndex,role:()=>role,inRoom:()=>!!room});GameV21.init({send:wsSend,role:()=>controlledRole(),stage:()=>levelIndex,inRoom:()=>!!room,create:()=>createRoom(true,112),resume:id=>createRoom(false,id),announce,canvas:()=>canvas});GameV20.init({send:wsSend,role:()=>controlledRole(),stage:()=>levelIndex,inRoom:()=>!!room,create:()=>createRoom(true,100),resume:id=>createRoom(false,id),announce,reconnects:()=>totalReconnects});GameExpansion.init({send:wsSend,inRoom:()=>!!room&&role>=0,createCustom:b=>createRoom(false,0,b),announce,saveMemory:GameAdventure.addMemory,getMemories:()=>GameAdventure.data().memories||[]});openConnection();showUI();requestAnimationFrame(animate);
 })();
