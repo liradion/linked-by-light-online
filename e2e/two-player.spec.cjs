@@ -7,7 +7,13 @@ test('two real browsers form one v26-compatible v23 cooperative room',async({bro
   for(const c of [hostContext,guestContext])
    await c.addInitScript(()=>{try{localStorage.setItem('linked-light-v22-intro','done');}catch(_){}});
   const host=await hostContext.newPage(),guest=await guestContext.newPage();
+  const pageErrors=[];host.on('pageerror',e=>pageErrors.push(e.message));
   await host.goto('/');
+  const diagnostic=await host.evaluate(()=>({
+   future:!!window.GameFuture,menu:!!document.getElementById('menuView'),
+   buttons:[...document.querySelectorAll('button')].map(b=>b.textContent.trim()).filter(x=>/Физика|Создать/.test(x))
+  }));
+  console.log('Initial browser state:',JSON.stringify({diagnostic,pageErrors}));
   const newChapter=host.getByRole('button',{name:/Физика света v23/}).first();
   await expect(newChapter).toBeVisible({timeout:12000});
   await newChapter.click();
