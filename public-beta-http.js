@@ -36,7 +36,7 @@ function sameOrigin(req){
   return origin.host===host&&['https:','http:'].includes(origin.protocol);
  }catch(_){return false;}
 }
-function createPublicBetaHttp({beta,rooms,storageState,getGallery,onUpdate,onModerated=()=>{}}){
+function createPublicBetaHttp({beta,rooms,storageState,getGallery,onUpdate,onModerated=()=>{},getOperationalStatus=()=>({})}){
  return async function handle(req,res){
   const pathname=new URL(req.url,'http://localhost').pathname;
   const publicApi=pathname.startsWith('/api/beta/');
@@ -61,7 +61,8 @@ function createPublicBetaHttp({beta,rooms,storageState,getGallery,onUpdate,onMod
    if(!beta.admin(req)){respond(res,404,{error:'Not found'});return true;}
    if(pathname==='/api/admin/v22/overview'&&req.method==='GET'){
     respond(res,200,{ops:beta.getDiagnostics(rooms,storageState()),
-     feedback:beta.feedbackQueue(),pendingGallery:beta.pendingGallery(getGallery())});
+     feedback:beta.feedbackQueue(),pendingGallery:beta.pendingGallery(getGallery()),
+     storage:getOperationalStatus()});
     return true;
    }
    if(pathname==='/api/admin/v22/gallery'&&req.method==='POST'){
