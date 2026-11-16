@@ -53,3 +53,15 @@ test('v28 contextual tutorial covers first ten stages, not story registry',()=>{
  assert.equal(v28.tutorial(-1,1),null);
  assert.match(v28.tutorial(0,1,42).text,/Подсказка/);
 });
+
+test('v28 Echo host controls leadership actions without taking over Spark mechanics',()=>{
+ const {action,initial}=require('../v24-world');
+ const r={hostRole:1,v24World:initial()};
+ assert.equal(action(r,0,'recipe_select',{value:2}).ok,false);
+ assert.equal(action(r,1,'recipe_select',{value:2}).ok,true);
+ assert.equal(action(r,0,'expedition_start').ok,false);
+ assert.equal(action(r,1,'expedition_start').ok,true);
+ assert.equal(action(r,0,'minigame_start',{value:'race'}).ok,false);
+ assert.equal(action(r,1,'minigame_start',{value:'race'}).ok,true);
+ assert.equal(action(r,0,'kitchen',{ingredient:0}).ok,true,'The physical Spark still starts the duet recipe');
+});
