@@ -42,7 +42,11 @@ function load(filename,warning=()=>{}){
   try{candidates.push(readCandidate(file,envelope));}
   catch(err){warning({file:path.basename(file),error:err.message});}
  }
- // A newer v26 rollback may update the old snapshot after v27's journal.
+ // Prefer a checksummed v27 journal over an unchecksummed v26 file written
+ // in the same save operation. A later v26 rollback is still authoritative.
+ const primary=candidates.find(x=>x.source===filename+'.v27');
+ const legacy=candidates.find(x=>x.source===filename);
+ if(primary&&(!legacy||legacy.modifiedAt-primary.modifiedAt<1500))return primary;
  candidates.sort((a,b)=>b.modifiedAt-a.modifiedAt||b.revision-a.revision);
  return candidates[0]||null;
 }
