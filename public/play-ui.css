@@ -92,3 +92,87 @@ body{background:radial-gradient(ellipse at 52% 110%,#26304d 0%,transparent 52%),
  .game-quick-menu{top:80px;max-height:75dvh}
 }
 @media(prefers-reduced-motion:reduce){.game-menu-shade,.game-quick-menu{transition:none}.frame .touch-controls.compact .touch-button{transition:none}}
+
+
+/* v27.1 — distraction-free play. Original game canvas and inputs are preserved. */
+.clean-play-toggle{
+  position:absolute;top:12px;right:12px;z-index:3;
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:39px;min-width:43px;padding:8px 12px;
+  border:1px solid #b6a9e48c;border-radius:13px;
+  color:#f4f3ff;background:#171d34da;
+  box-shadow:0 6px 18px #05071975;backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);font:700 12px system-ui;
+  cursor:pointer;touch-action:manipulation;
+}
+.clean-play-toggle:hover{background:#303954ec;border-color:#d1c6ffbb}
+.clean-play-toggle:focus-visible{outline:3px solid #fff0b3;outline-offset:2px}
+html.clean-play-mode,html.clean-play-mode body{height:100%;overflow:hidden}
+html.clean-play-mode body{
+  display:block!important;padding:0!important;margin:0!important;
+  overscroll-behavior:none;
+}
+html.clean-play-mode .game-shell{
+  position:relative;display:block!important;width:100%!important;max-width:none!important;
+  height:100dvh!important;min-height:100dvh!important;margin:0!important;padding:0!important;
+}
+html.clean-play-mode .frame{
+  display:block;position:relative;width:100%!important;
+  height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;
+  border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden;
+}
+html.clean-play-mode .frame canvas{
+  width:100%!important;height:100%!important;aspect-ratio:auto!important;
+  object-fit:contain;object-position:center;
+}
+html.clean-play-mode .topline,
+html.clean-play-mode .frame .hud,
+html.clean-play-mode .info-bottom,
+html.clean-play-mode .rotate-tip,
+html.clean-play-mode .game-quick-menu,
+html.clean-play-mode .game-menu-shade,
+html.clean-play-mode .adv-story,
+html.clean-play-mode .adv-cinematic,
+html.clean-play-mode .quality-stats{display:none!important}
+html.clean-play-mode .clean-play-toggle{
+  top:max(9px,env(safe-area-inset-top));
+  right:max(9px,env(safe-area-inset-right));
+  width:40px;height:40px;min-width:40px;min-height:40px;
+  padding:0;border-radius:12px;opacity:.8;
+}
+html.clean-play-mode .clean-play-toggle:hover,
+html.clean-play-mode .clean-play-toggle:focus-visible{opacity:1}
+html.clean-play-mode .touch-controls.compact{
+  display:flex!important;position:absolute!important;z-index:4!important;
+  left:max(10px,env(safe-area-inset-left))!important;
+  right:max(10px,env(safe-area-inset-right))!important;
+  bottom:max(10px,env(safe-area-inset-bottom))!important;
+  justify-content:space-between;gap:12px;padding:0!important;
+  margin:0!important;pointer-events:none;
+}
+html.clean-play-mode .touch-controls.compact .touch-cluster{pointer-events:auto}
+html.clean-play-mode .touch-controls.compact .touch-center-badge,
+html.clean-play-mode .touch-controls.compact .adv-extra-controls{display:none!important}
+html.clean-play-mode .touch-controls.compact .touch-button{
+  display:inline-flex!important;align-items:center;justify-content:center;
+  width:var(--mobile-button-size,54px)!important;height:var(--mobile-button-size,54px)!important;
+  min-width:var(--mobile-button-size,54px)!important;min-height:var(--mobile-button-size,54px)!important;
+  border-radius:17px!important;
+  background:linear-gradient(140deg,#2b385cd7,#172039d9)!important;
+  border:1px solid #aaaed58c!important;color:#f4f6ff!important;
+  box-shadow:0 6px 20px #0007!important;
+}
+html.clean-play-mode .touch-controls.compact .touch-button[data-input="ability"]{
+  border-color:#80dce7b5!important;color:#a6f9ff!important;
+}
+html.clean-play-mode .touch-controls.compact .touch-button.pressed,
+html.clean-play-mode .touch-controls.compact .touch-button:active{
+  background:#5b528ce8!important;transform:scale(.95);
+}
+@media(pointer:coarse) and (orientation:landscape){
+  html.clean-play-mode .clean-play-toggle{width:38px;height:38px;min-height:38px;min-width:38px}
+  html.clean-play-mode .touch-controls.compact{gap:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  html.clean-play-mode .touch-controls.compact .touch-button{transition:none!important}
+}
