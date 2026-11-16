@@ -26,7 +26,7 @@ test('v20 real WebSocket room, actions, observer isolation and seat recovery',{t
   }
   const page=await (await fetch('http://127.0.0.1:'+port+'/')).text();
   assert.ok(page.indexOf('/shared/v20-stages.js')<page.indexOf('/v20.js'));
-  assert.ok(page.indexOf('/v20.js')<page.indexOf('/client.js?v=26'));
+  assert.ok(page.indexOf('/v20.js')<page.indexOf('/client.js?v=28'));
   a=await socket(port);a.send({t:'hello',protocol:2});a.send({t:'create',stage:100});const j=await take(a,m=>m.t==='joined');
   assert.equal(j.role,0);
   b=await socket(port);b.send({t:'hello',protocol:2});b.send({t:'join',room:j.room});const j2=await take(b,m=>m.t==='joined');
