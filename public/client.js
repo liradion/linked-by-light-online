@@ -123,7 +123,8 @@ function showUI(){
     if(summary)summary.textContent=latest.ending.text||'Ваша общая история продолжается.';
     if(eyebrow)eyebrow.textContent=levelIndex>=122?'ФИЗИКА СВЕТА · 15 ИСПЫТАНИЙ':levelIndex>=112?'НАВСТРЕЧУ ДРУГ ДРУГУ · 10 ИСПЫТАНИЙ':levelIndex>=100?'ПЕРЕПЛЕТЕНИЕ МИРОВ · 12 УРОВНЕЙ':'ОСНОВНАЯ КАМПАНИЯ · 99 УРОВНЕЙ';
   }
-  else overlay.dataset.view='';
+  // Preserve the menu/lobby view selected above. Resetting dataset.view here
+  // hid the entire landing menu in browsers whenever the game had no ending.
   overlay.classList.toggle('hidden',!!room&&phase==='playing');
   $('waitingBanner').classList.toggle('hidden',!room||phase!=='playing'||connected.every(Boolean));
   $('touchControls').style.visibility=!!room&&role>=0&&phase==='playing'?'visible':'hidden';
