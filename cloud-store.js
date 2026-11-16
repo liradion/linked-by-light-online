@@ -35,22 +35,69 @@ async function write(key,payload,expectedRevision){if(!validateKey(key))throw Er
  return rows.length?{revision:expectedRevision+1}:{conflict:true};
 }
 // Server-only encrypted room checkpoints. These never expose seat tokens to clients.
-const roomKey=crypto.createHash('sha256').update('linked-light-room-state-v1:'+SERVICE_KEY).digest();
+const legacyKey=secret=>crypto.createHash('sha256').update('linked-light-room-state-v1:'+secret).digest();
+const keySource=process.env.LL_ROOM_ENCRYPTION_KEY||'';
+if(keySource&&!/^[a-f0-9]{64}$/i.test(keySource))throw Error('LL_ROOM_ENCRYPTION_KEY must be exactly 64 hexadecimal characters');
+const roomKey=keySource?Buffer.from(keySource,'hex'):legacyKey(SERVICE_KEY);
+const oldKey=legacyKey(SERVICE_KEY);
+const previousKey=process.env.LL_ROOM_LEGACY_SERVICE_KEY
+ ?legacyKey(process.env.LL_ROOM_LEGACY_SERVICE_KEY):null;
+const decryptKeys=[roomKey,oldKey,...(previousKey?[previousKey]:[])];
+const archiveEnabled=process.env.LL_V27_ARCHIVE==='1';
+let lastArchive=0;
+
 function protectRooms(obj){const nonce=crypto.randomBytes(12),c=crypto.createCipheriv('aes-256-gcm',roomKey,nonce);
  const plain=JSON.stringify(obj);if(Buffer.byteLength(plain)>2_000_000)throw Error('room state too large');
  const encrypted=Buffer.concat([c.update(plain),c.final()]);
  return [nonce,c.getAuthTag(),encrypted].map(b=>b.toString('base64url')).join('.');}
-function unprotectRooms(blob){const parts=String(blob).split('.').map(x=>Buffer.from(x,'base64url'));
+function unprotectRooms(blob){
+ const parts=String(blob).split('.').map(x=>Buffer.from(x,'base64url'));
  if(parts.length!==3||parts[0].length!==12||parts[1].length!==16||parts[2].length>2_000_000)throw Error('bad room checkpoint');
- const c=crypto.createDecipheriv('aes-256-gcm',roomKey,parts[0]);c.setAuthTag(parts[1]);
- return JSON.parse(Buffer.concat([c.update(parts[2]),c.final()]).toString('utf8'));}
-async function saveRooms(state){if(!active)return false;
- await query('POST','linked_light_room_state','on_conflict=id',
- [{id:'server',encrypted:protectRooms(state)}],{'Prefer':'resolution=merge-duplicates,return=representation'});
- return true;}
-async function loadRooms(){if(!active)return null;
- const rows=await query('GET','linked_light_room_state','id=eq.server&select=encrypted',null);
- return rows.length?unprotectRooms(rows[0].encrypted):null;}
+ for(const key of decryptKeys)try{
+  const c=crypto.createDecipheriv('aes-256-gcm',key,parts[0]);c.setAuthTag(parts[1]);
+  const plain=Buffer.concat([c.update(parts[2]),c.final()]);
+  const obj=JSON.parse(plain.toString('utf8'));
+  if(obj?.version===11&&Array.isArray(obj.rooms))return obj;
+ }catch(_){}
+ throw Error('room checkpoint cannot be decrypted with configured keys');
+}
+async function saveRooms(state){
+ if(!active)return false;
+ if(state?.version!==11||!Array.isArray(state.rooms))throw Error('invalid room checkpoint state');
+ const encrypted=protectRooms(state);
+ const rows=await query('POST','linked_light_room_state','on_conflict=id',
+  [{id:'server',encrypted}],{'Prefer':'resolution=merge-duplicates,return=representation'});
+ if(!rows.length||rows[0].encrypted!==encrypted)throw Error('room checkpoint write not acknowledged');
+ if(archiveEnabled&&Date.now()-lastArchive>=15*60_000){
+  // Only the optional migration enables this table; primary save remains v26 compatible.
+  try{
+   const digest=crypto.createHash('sha256').update(JSON.stringify(state)).digest('hex');
+   await query('POST','linked_light_room_snapshots','',
+    [{checkpoint_id:crypto.randomUUID(),schema_version:27,checksum:digest,encrypted}]);
+   lastArchive=Date.now();
+  }catch(e){console.warn('Optional room archive write failed:',e.message);}
+ }
+ return true;
+}
+async function loadRooms(){
+ if(!active)return null;
+ try{
+  const rows=await query('GET','linked_light_room_state','id=eq.server&select=encrypted',null);
+  if(rows.length)return unprotectRooms(rows[0].encrypted);
+ }catch(e){
+  if(!archiveEnabled)throw e;
+  console.warn('Primary room checkpoint unavailable, trying v27 archive:',e.message);
+ }
+ if(!archiveEnabled)return null;
+ const archive=await query('GET','linked_light_room_snapshots',
+  'select=encrypted,checksum&order=created_at.desc&limit=24',null);
+ for(const item of archive)try{
+  const restored=unprotectRooms(item.encrypted);
+  const digest=crypto.createHash('sha256').update(JSON.stringify(restored)).digest('hex');
+  if(digest===item.checksum)return restored;
+ }catch(_){}
+ return null;
+}
 const memory=new Map();
 function reply(res,status,obj){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(obj));}
 async function handle(req,res){const pathname=new URL(req.url,'http://localhost').pathname;if(!pathname.startsWith('/api/cloud/'))return false;
