@@ -8,6 +8,9 @@ const colors={amber:'#ffc17f',blue:'#80eff7'};
 let levelIndex=0,level=structuredClone(stageDefs[0]),P=[],camera=0,clock=0;
 let particles=[],rings=[],screenShake=0,collectibles=[],toastTimer=0;
 let room='',role=-1,token='',phase='waiting',connected=[false,false],socket=null,ready=false;
+let hostRole=0,soloMode=false,soloActiveRole=0,pendingHostRole=0,pendingSolo=false;
+const isHost=()=>role>=0&&role===hostRole;
+const controlledRole=()=>soloMode?soloActiveRole:role;
 let pendingRoom='',pendingCreate=false,pendingCreateStage=0,pendingBlueprint=null,connectedBefore=false,reconnectCount=0,totalReconnects=0,wsTimer=null;
 let latest=null,snapshots=[],fpsTime=performance.now(),sound=true,ac=null;
 const keys=new Set(),input={left:false,right:false,jumpSeq:0,abilitySeq:0,bondSeq:0,emoteSeq:0};
@@ -30,6 +33,7 @@ function refreshCampaignMenu(){
 function setError(message){$('networkError').textContent=message;}
 function wsSend(m){if(socket&&socket.readyState===WebSocket.OPEN)socket.send(JSON.stringify(m));}
 function updateStatus(){const online=socket?.readyState===WebSocket.OPEN;
+  GameV28.connection(online);
   $('statusDot').className='status-dot '+(online?'online':'offline');
   $('connectionStatus').textContent=online?'На связи':room?'Нет связи':'Подключение…';
   $('ping').textContent=online&&latency?`${latency} мс`:'';
@@ -44,18 +48,20 @@ function openConnection(){
   socket=new WebSocket(protocol+'//'+location.host+'/ws');ready=false;updateStatus();
   socket.addEventListener('open',()=>{
     if(connectedBefore){totalReconnects++;GamePublicBeta.onRecovered();}reconnectCount=0;ready=true;connectedBefore=true;setError('');updateStatus();
-    wsSend({t:'hello',protocol:4});
+    wsSend({t:'hello',protocol:4});wsSend({t:'v28Visit',invite:!!invite});
     if(room||pendingRoom){const code=room||pendingRoom;wsSend({t:'join',room:code,token:token||roomToken(code),spectate:role===-1&&!!room||pendingSpectate});}
-    else if(pendingCreate){wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome(),unlockedV20:GameAdventure.data().v20?.unlockedStages||[],v20Home:GameAdventure.data().v20?.house||{},v20Choices:GameAdventure.data().v20?.choices||{},unlockedV21:GameAdventure.data().v21?.unlockedStages||[],v21Profile:{unlockedStages:GameAdventure.data().v21?.unlockedStages||[],completed:GameAdventure.data().v21?.completed||[],trophies:GameAdventure.data().v21?.trophies||[],aquarium:GameAdventure.data().v21?.aquarium||[]},unlockedV23:GameAdventure.data().v23?.unlockedStages||[],v24Profile:GameAdventure.data().v24||{}});pendingCreate=false;pendingBlueprint=null;}
+    else if(pendingCreate){wsSend({t:'create',hostRole:pendingHostRole,solo:pendingSolo,stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome(),unlockedV20:GameAdventure.data().v20?.unlockedStages||[],v20Home:GameAdventure.data().v20?.house||{},v20Choices:GameAdventure.data().v20?.choices||{},unlockedV21:GameAdventure.data().v21?.unlockedStages||[],v21Profile:{unlockedStages:GameAdventure.data().v21?.unlockedStages||[],completed:GameAdventure.data().v21?.completed||[],trophies:GameAdventure.data().v21?.trophies||[],aquarium:GameAdventure.data().v21?.aquarium||[]},unlockedV23:GameAdventure.data().v23?.unlockedStages||[],v24Profile:GameAdventure.data().v24||{}});pendingCreate=false;pendingBlueprint=null;}
     else showUI();
   });
   socket.addEventListener('message',e=>{
     let m;try{m=JSON.parse(e.data);}catch(_){return;}
     if(m.t==='joined'){
       room=m.room;role=m.role;token=m.token;phase=m.phase;pendingRoom='';
+      hostRole=m.hostRole===1?1:0;soloMode=m.solo===true;soloActiveRole=soloMode?(m.soloActiveRole===1?1:0):role;
+      GameV28.onJoined(m);
       latest=null;snapshots=[];lastAck=0;predictor.reset();if(role>=0)saveToken(room,token);
       history.replaceState({},'',location.pathname+'?room='+encodeURIComponent(room));
-      connected=m.connected||[false,false];$('myRole').textContent=role===0?'Искра (ведущий)':role===1?'Эхо (гость)':'Наблюдатель';
+      connected=m.connected||[false,false];$('myRole').textContent=role<0?'Наблюдатель':(role===0?'Искра':'Эхо')+(isHost()?' (ведущий)':' (партнёр)');
       if(role>=0&&m.home)GameAdventure.receiveHome(m.home);GameAdventure.onJoined(room,role);GameExpansion.onJoined(m.notes||[]);GameV20.onJoined();GameV21.onJoined?.();
       setError('');resetKeys();GamePublicBeta.onJoined(role);showUI();return;
     }
@@ -66,6 +72,7 @@ function openConnection(){
     if(m.t==='storyChoice'){if(role>=0)GameAdventure.storyChoice?.(m);return;}
     if(['v20Home','v20Story','actionResult'].includes(m.t)){GameV20.onMessage(m);GameFuture.onMessage(m);return;}
     if(['v24State','v25Meta','v25Replay'].includes(m.t)){GameFuture.onMessage(m);return;}
+    if(['v28Ping','v28Intel'].includes(m.t)){GameV28.message(m);return;}
     if(['v21State','v21Private','v21Gallery','v21WeeklyBoard'].includes(m.t)){GameV21.onMessage(m);return;}
     if(m.t==='members'){
       connected=m.connected||connected;phase=m.phase||phase;showUI();return;
@@ -109,10 +116,10 @@ function showUI(){
   $('slot1').textContent=connected[1]?'● В сети':'○ Ожидаем игрока';
   $('roomCode').textContent=room||'------';
   if(!room)refreshCampaignMenu();
-  $('startBtn').disabled=!(role===0&&connected[0]&&connected[1]&&ready&&phase==='waiting');
-  $('restartBtn').disabled=role!==0||!connected.every(Boolean);
-  $('resetBtn').disabled=role!==0;
-  $('lobbyHint').textContent=role===0?'Отправьте приглашение. Когда оба игрока подключатся, нажмите «Начать вдвоём».':'Вы подключены. Ждём, когда создатель комнаты запустит игру.';
+  $('startBtn').disabled=!(isHost()&&connected.every(Boolean)&&ready&&phase==='waiting');
+  $('restartBtn').disabled=!isHost()||!connected.every(Boolean);
+  $('resetBtn').disabled=!isHost();
+  $('lobbyHint').textContent=soloMode?'Соло: управляйте двумя героями по очереди. Tab меняет героя. Начать можно без партнёра.':isHost()?'Отправьте приглашение. Когда оба игрока подключатся, нажмите «Начать вдвоём».':'Вы подключены. Ждём, когда создатель комнаты запустит игру.';
   if(!room)overlay.dataset.view='menu';
   else if(phase==='waiting')overlay.dataset.view='lobby';
   else if(phase==='win')overlay.dataset.view='win';
@@ -129,10 +136,10 @@ function showUI(){
   $('waitingBanner').classList.toggle('hidden',!room||phase!=='playing'||connected.every(Boolean));
   $('touchControls').style.visibility=!!room&&role>=0&&phase==='playing'?'visible':'hidden';
 }
-function createRoom(newGame=false,stageOverride=null,blueprint=null){
- setError('');pendingCreate=true;pendingRoom='';pendingBlueprint=blueprint;pendingCreateStage=Number.isInteger(stageOverride)?stageOverride:(newGame?0:bestStage());
+function createRoom(newGame=false,stageOverride=null,blueprint=null,soloRequested=false){
+ setError('');pendingCreate=true;pendingRoom='';pendingBlueprint=blueprint;pendingSolo=!!soloRequested;pendingHostRole=GameV28.selectedHostRole();pendingCreateStage=Number.isInteger(stageOverride)?stageOverride:(newGame?0:bestStage());
  if(!ready)openConnection();
- else{wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome(),unlockedV20:GameAdventure.data().v20?.unlockedStages||[],v20Home:GameAdventure.data().v20?.house||{},v20Choices:GameAdventure.data().v20?.choices||{},unlockedV21:GameAdventure.data().v21?.unlockedStages||[],v21Profile:{unlockedStages:GameAdventure.data().v21?.unlockedStages||[],completed:GameAdventure.data().v21?.completed||[],trophies:GameAdventure.data().v21?.trophies||[],aquarium:GameAdventure.data().v21?.aquarium||[]},unlockedV23:GameAdventure.data().v23?.unlockedStages||[],v24Profile:GameAdventure.data().v24||{}});pendingCreate=false;pendingBlueprint=null;}
+ else{wsSend({t:'create',hostRole:pendingHostRole,solo:pendingSolo,stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome(),unlockedV20:GameAdventure.data().v20?.unlockedStages||[],v20Home:GameAdventure.data().v20?.house||{},v20Choices:GameAdventure.data().v20?.choices||{},unlockedV21:GameAdventure.data().v21?.unlockedStages||[],v21Profile:{unlockedStages:GameAdventure.data().v21?.unlockedStages||[],completed:GameAdventure.data().v21?.completed||[],trophies:GameAdventure.data().v21?.trophies||[],aquarium:GameAdventure.data().v21?.aquarium||[]},unlockedV23:GameAdventure.data().v23?.unlockedStages||[],v24Profile:GameAdventure.data().v24||{}});pendingCreate=false;pendingBlueprint=null;}
 }
 function joinRoom(code){const value=(code||'').trim().toUpperCase();if(!/^[A-HJ-NP-Z2-9]{6}$/.test(value)){setError('Введите шестизначный код комнаты.');return;}
   pendingRoom=value;pendingSpectate=false;setError('');if(ready)wsSend({t:'join',room:value,token:roomToken(value)});else openConnection();
@@ -161,7 +168,7 @@ $('copyBtn').parentElement.append(spectatorCopy);
 $('soundBtn').addEventListener('click',()=>{sound=!sound;GameQuality.setSound(sound);$('soundBtn').textContent=sound?'♫ Вкл.':'♫ Выкл.';if(sound)GameQuality.audioUnlock();});
 function resetKeys(){keys.clear();input.left=false;input.right=false;
   document.querySelectorAll('.touch-button').forEach(b=>b.classList.remove('pressed'));sendInput();}
-function updateInput(){const left=role===0?'a':'arrowleft',right=role===0?'d':'arrowright';
+function updateInput(){const left=controlledRole()===0?'a':'arrowleft',right=controlledRole()===0?'d':'arrowright';
   input.left=keys.has(left)||keys.has('touch-left')||keys.has('gamepad-left');input.right=keys.has(right)||keys.has('touch-right')||keys.has('gamepad-right');sendInput();}
 function activateKey(kind){if(role<0)return;GameExpansion.haptic(12);GameQuality.audioUnlock();if(kind==='jump')GameQuality.effect('jump');else if(kind==='ability')GameQuality.effect('ability');if(kind==='jump'){input.jumpSeq++;predJumpAt=performance.now();}else if(kind==='ability')input.abilitySeq++;else if(kind==='bond')input.bondSeq++;else if(kind==='emote')input.emoteSeq++;sendInput();}
 const prevent=new Set(['arrowleft','arrowright','arrowup','arrowdown',' ','enter']);
@@ -169,14 +176,16 @@ window.addEventListener('keydown',e=>{
   if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)||document.activeElement?.isContentEditable)return;
   const k=e.key.toLowerCase();if(prevent.has(k))e.preventDefault();
   if(e.repeat||!room||role<0||phase!=='playing')return;
-  if(k==='r'&&role===0){wsSend({t:'resetStage'});return;}
-  const left=role===0?'a':'arrowleft',right=role===0?'d':'arrowright',jump=role===0?'w':'arrowup',ability=role===0?'f':'enter';
+  if(k==='r'&&isHost()){wsSend({t:'resetStage'});return;}
+  if(k==='tab'&&soloMode){e.preventDefault();wsSend({t:'v28SoloSwitch',activeRole:1-soloActiveRole});return;}
+  if(k==='t'){GameV28.togglePing();return;}
+  const left=controlledRole()===0?'a':'arrowleft',right=controlledRole()===0?'d':'arrowright',jump=controlledRole()===0?'w':'arrowup',ability=controlledRole()===0?'f':'enter';
   GameQuality.audioUnlock();if(k===jump)activateKey('jump');if(k===ability)activateKey('ability');
-  if(k==='g')activateKey('bond');if(k==='t')activateKey('emote');
+  if(k==='g')activateKey('bond');
   if(k==='v'){GameV21.open('level');return;}
   if(k==='q'&&levelIndex>=100&&levelIndex<=111)GameV20.act('tether_attach');
   if(k==='e'&&levelIndex>=100&&levelIndex<=111)GameV20.act('phase_shift');
-  if(k==='z'&&levelIndex>=100&&levelIndex<=111)GameV20.act(role===0?'time_lock':'time_echo');
+  if(k==='z'&&levelIndex>=100&&levelIndex<=111)GameV20.act(controlledRole()===0?'time_lock':'time_echo');
   if(k===left||k===right){keys.add(k);updateInput();}
 });
 window.addEventListener('keyup',e=>{keys.delete(e.key.toLowerCase());updateInput();});
@@ -261,7 +270,7 @@ function consumeSnapshot(s){
   const receivedAt=performance.now();GameQuality.snapshotArrived(receivedAt);
   latest={...s,recvTime:receivedAt};
   const predictedStage=s.customLevel?GameExpansion.toStage(stageDefs[0],s.customLevel):stageDefs[s.stage];
-  if(role>=0&&!stageDefs[s.stage]?.v23&&phase==='playing'&&s.players?.[role])predictor.reconcile({...s.players[role],type:role,w:30,h:43},s.ack?.[role]||0,predictedStage,s.world,s.stage,performance.now(),s.processedCommands?.[role],GameQuality.predictionLead());
+  if(role>=0&&!soloMode&&!stageDefs[s.stage]?.v23&&phase==='playing'&&s.players?.[role])predictor.reconcile({...s.players[role],type:role,w:30,h:43},s.ack?.[role]||0,predictedStage,s.world,s.stage,performance.now(),s.processedCommands?.[role],GameQuality.predictionLead());
   GameQuality.ambient(Math.floor(Math.min(98,s.stage)/9));
   if(role>=0&&!s.customLevel&&(phase==='playing'||phase==='win')&&levelIndex<99)saveCheckpoint(levelIndex);
   level=s.customLevel?GameExpansion.toStage(stageDefs[0],s.customLevel):structuredClone(stageDefs[levelIndex]);level.gateOpen=s.world.gateOpen;level.bridgeLatched=s.world.bridgeLatched;level.padLatched=!!s.world.padLatched;
@@ -283,7 +292,9 @@ function consumeSnapshot(s){
     r.anchors.forEach((a,i)=>a.active=!!state.anchors?.[i]);
   }
   collectibles=level.shards.map((x,i)=>({x,y:i%2?390:432,taken:!!s.world.shards[i]}));
-  GameJuice.snapshot(previous,s,level);if(role>=0)GameAdventure.onSnapshot(s);GameExpansion.onSnapshot(s);GameV20.onSnapshot(s);GameV21.onSnapshot(s);GameFuture.onSnapshot(s);if(role>=0)GameAdventure.recordV23(s);
+  GameJuice.snapshot(previous,s,level);if(role>=0)GameAdventure.onSnapshot(s);GameExpansion.onSnapshot(s);GameV20.onSnapshot(s);GameV21.onSnapshot(s);GameFuture.onSnapshot(s);
+  hostRole=s.hostRole===1?1:0;soloMode=s.solo===true;if(soloMode)soloActiveRole=s.soloActiveRole===1?1:0;
+  GameV28.onSnapshot(s);if(role>=0)GameAdventure.recordV23(s);
   if(previous?.world?.reality&&!previous.world.reality.done&&s.world.reality?.done){
     announce('✦ Две реальности соединены!',2.6);tone(860,.22,'sine',.05);GameQuality.effect('star');
   }
@@ -395,7 +406,7 @@ function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-
  for(const item of collectibles)if(!item.taken){const y=item.y+Math.sin(clock*2+item.x)*6;glowCircle(item.x,y,24,'#f8df9140');ctx.save();ctx.translate(item.x,y);ctx.rotate(clock*.8);ctx.fillStyle='#ffe7a7';ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,r=i%2?4:12;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}ctx.closePath();ctx.fill();ctx.restore();}
  GameBiomes.signature(ctx,level,clock);
  if(typeof GameReality!=='undefined')GameReality.draw(ctx,level,P,latest?.world?.reality,clock,role);
- GameAdventure.draw(ctx,level,P,latest?.world?.adventure,clock);GameV20.draw(ctx,level,P,latest?.world?.v20,clock,role);GameV21.draw(ctx,level,P,latest?.world?.v21,clock,role);GameFuture.draw(ctx,level,P,latest?.world?.v23,clock,role,latest?.stats);
+ GameAdventure.draw(ctx,level,P,latest?.world?.adventure,clock);GameV20.draw(ctx,level,P,latest?.world?.v20,clock,role);GameV21.draw(ctx,level,P,latest?.world?.v21,clock,role);GameFuture.draw(ctx,level,P,latest?.world?.v23,clock,controlledRole(),latest?.stats);GameV28.draw(ctx);
  drawPortal(level.portal,GROUND-65,portalReady());
  // environmental hints
  ctx.textAlign='center';ctx.font='700 14px system-ui';ctx.fillStyle='#f5e5ff88';for(const w of level.walls)if(!w.broken)ctx.fillText('ИСКРА · F',w.x+w.w/2,w.y-22);for(const crystal of level.crystals)if(!crystal.on)ctx.fillText('ЭХО · ENTER',crystal.x,crystal.y-56);
