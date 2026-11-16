@@ -46,7 +46,7 @@ const decryptKeys=[roomKey,oldKey,...(previousKey?[previousKey]:[])];
 const archiveEnabled=process.env.LL_V27_ARCHIVE==='1';
 let lastArchive=0;
 
-function protectRooms(obj){const nonce=crypto.randomBytes(12),c=crypto.createCipheriv('aes-256-gcm',roomKey,nonce);
+function protectRooms(obj,key=roomKey){const nonce=crypto.randomBytes(12),c=crypto.createCipheriv('aes-256-gcm',key,nonce);
  const plain=JSON.stringify(obj);if(Buffer.byteLength(plain)>2_000_000)throw Error('room state too large');
  const encrypted=Buffer.concat([c.update(plain),c.final()]);
  return [nonce,c.getAuthTag(),encrypted].map(b=>b.toString('base64url')).join('.');}
@@ -61,15 +61,20 @@ function unprotectRooms(blob){
  }catch(_){}
  throw Error('room checkpoint cannot be decrypted with configured keys');
 }
+async function upsertRoomSlot(id,encrypted){
+ const rows=await query('POST','linked_light_room_state','on_conflict=id',
+  [{id,encrypted}],{'Prefer':'resolution=merge-duplicates,return=representation'});
+ if(!rows.length||rows[0].encrypted!==encrypted)throw Error('room checkpoint write not acknowledged');
+}
 async function saveRooms(state){
  if(!active)return false;
  if(state?.version!==11||!Array.isArray(state.rooms))throw Error('invalid room checkpoint state');
- const encrypted=protectRooms(state);
- const rows=await query('POST','linked_light_room_state','on_conflict=id',
-  [{id:'server',encrypted}],{'Prefer':'resolution=merge-duplicates,return=representation'});
- if(!rows.length||rows[0].encrypted!==encrypted)throw Error('room checkpoint write not acknowledged');
+ // v26 rollback can still decrypt the legacy server row after v27's deploy.
+ const legacy=protectRooms(state,oldKey);
+ await upsertRoomSlot('server',legacy);
+ const encrypted=keySource?protectRooms(state,roomKey):legacy;
+ if(keySource)await upsertRoomSlot('server-v27',encrypted);
  if(archiveEnabled&&Date.now()-lastArchive>=15*60_000){
-  // Only the optional migration enables this table; primary save remains v26 compatible.
   try{
    const digest=crypto.createHash('sha256').update(JSON.stringify(state)).digest('hex');
    await query('POST','linked_light_room_snapshots','',
@@ -81,14 +86,22 @@ async function saveRooms(state){
 }
 async function loadRooms(){
  if(!active)return null;
- try{
-  const rows=await query('GET','linked_light_room_state','id=eq.server&select=encrypted',null);
-  if(rows.length)return unprotectRooms(rows[0].encrypted);
- }catch(e){
-  if(!archiveEnabled)throw e;
-  console.warn('Primary room checkpoint unavailable, trying v27 archive:',e.message);
+ const candidates=[],errors=[];
+ for(const slot of keySource?['server-v27','server']:['server']){
+  try{
+   const rows=await query('GET','linked_light_room_state','id=eq.'+slot+'&select=encrypted',null);
+   if(rows.length)candidates.push(unprotectRooms(rows[0].encrypted));
+  }catch(e){errors.push(e.message);}
  }
- if(!archiveEnabled)return null;
+ if(candidates.length){
+  // Prefer the newest state; a v26 rollback may have written legacy after v27.
+  candidates.sort((a,b)=>(Number(b.savedAt)||0)-(Number(a.savedAt)||0));
+  return candidates[0];
+ }
+ if(!archiveEnabled){
+  if(errors.length)throw Error('All room snapshot slots unreadable');
+  return null;
+ }
  const archive=await query('GET','linked_light_room_snapshots',
   'select=encrypted,checksum&order=created_at.desc&limit=24',null);
  for(const item of archive)try{
@@ -96,6 +109,7 @@ async function loadRooms(){
   const digest=crypto.createHash('sha256').update(JSON.stringify(restored)).digest('hex');
   if(digest===item.checksum)return restored;
  }catch(_){}
+ if(errors.length)throw Error('No readable room snapshot in legacy, v27, or archive slots');
  return null;
 }
 const memory=new Map();
