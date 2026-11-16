@@ -6,6 +6,8 @@ test('v28 anonymized funnel accepts only allowlisted counters and stage indices'
  const z=createTelemetry();
  assert.equal(z.record('visit'),true);
  assert.equal(z.record('roomCreated'),true);
+ assert.equal(z.record('stageEntered',0),true);
+ assert.equal(z.record('playerDisconnected',0),true);
  assert.equal(z.record('stageCompleted',0),true);
  assert.equal(z.record('stageCompleted',136),true);
  assert.equal(z.record('stageCompleted',500),true);
@@ -14,6 +16,7 @@ test('v28 anonymized funnel accepts only allowlisted counters and stage indices'
  assert.deepEqual(a.stages.filter(Boolean),[1,1]);
  assert.ok(!JSON.stringify(a).includes('test@example.com'));
  assert.equal(a.counters.stageCompleted,3);
+ assert.equal(a.reached[0],1);assert.equal(a.exits[0],1);
  const restored=createTelemetry(a).snapshot();
  assert.deepEqual(a,restored);
  assert.equal(restored.stages.length,137);
