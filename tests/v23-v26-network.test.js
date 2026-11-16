@@ -67,7 +67,7 @@ test('v23–v26 real WebSocket rooms, private story updates, daily seeds and ass
   guest.send({t:'v24Action',actionId:'kitchen-1',kind:'kitchen',ingredient:1});
   assert.equal((await next(guest,m=>m.t==='actionResult'&&m.actionId==='kitchen-1')).ok,true);
   host.send({t:'v24Action',actionId:'kitchen-0',kind:'kitchen',ingredient:0});
-  assert.equal((await next(host,m=>m.t==='actionResult'&&m.actionId==='kitchen-0')).ok,false);
+  assert.equal((await next(host,m=>m.t==='actionResult'&&m.actionId==='kitchen-0')).replayed,true);
   host.send({t:'v26AssistVote',enabled:true});
   await next(host,m=>m.t==='snapshot'&&m.assistVotes?.[0]===true);
   guest.send({t:'v26AssistVote',enabled:true});

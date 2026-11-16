@@ -9,6 +9,7 @@ const {createBenchmarkMetrics}=require('./benchmark-metrics');
 const benchmark=createBenchmarkMetrics();
 const {createPublicBeta}=require('./public-beta');
 const {createPublicBetaHttp,clientAddress}=require('./public-beta-http');
+const {attachWebSocket}=require('./websocket-transport');
 const configuredBetaRooms=Number(process.env.BETA_MAX_ROOMS);
 const requestedBetaRooms=process.env.BETA_MAX_ROOMS&&Number.isInteger(configuredBetaRooms)?configuredBetaRooms:200;
 // First v26 public beta rollout on Render: protect the Free instance against
@@ -18,6 +19,10 @@ const beta=createPublicBeta({maxRooms:onRender?Math.min(requestedBetaRooms,5):re
 const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./game-core');
 const {stages}=require('./shared/stages');
 const cloud=require('./cloud-store');
+const {createRuntimeMonitor}=require('./runtime-monitor');
+const recovery=createRuntimeMonitor({storageConfigured:cloud.active,requireDurable:process.env.LL_REQUIRE_DURABLE_STORAGE==='1'});
+const checkpoints=require('./room-checkpoint');
+const actionCache=require('./action-replay-cache');
 const pwaIcons=require('./pwa-icons');
 const expansion=require('./expansion-core');
 const v20=require('./v20-core');
@@ -37,22 +42,26 @@ const storageState=()=>({cloudConfigured:cloud.active,diskConfigured:!!SAVE_DIR}
 // Free Render containers have ephemeral filesystems, so this does not imply cloud backup there.
 const SAVE_DIR=process.env.SAVE_DIR||'';
 const SAVE_FILE=SAVE_DIR?path.join(SAVE_DIR,'linked-light-rooms-v11.json'):'';
-function roomBackups(){return {version:11,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup(),rooms:Array.from(ROOMS.values()).map(r=>({
- code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
+function roomBackups(){return {version:11,savedAt:Date.now(),v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup(),rooms:Array.from(ROOMS.values()).map(r=>({
+ code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look,actions:actionCache.exportResults(s.actionCache)}:null),game:r.game,
  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.persist(r.v25),assistVotes:r.assistVotes||[null,null],lastActivity:r.lastActivity,story:r.story||null}))};}
-function persistRooms(){if(!SAVE_FILE)return;
- try{fs.mkdirSync(SAVE_DIR,{recursive:true});const rooms=Array.from(ROOMS.values()).map(r=>({
-  code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
-  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.persist(r.v25),assistVotes:r.assistVotes||[null,null],lastActivity:r.lastActivity,story:r.story||null}));
-  const temp=SAVE_FILE+'.'+process.pid+'.tmp';fs.writeFileSync(temp,JSON.stringify({version:11,rooms,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup()}),'utf8');fs.renameSync(temp,SAVE_FILE);
- }catch(e){console.warn('Session persistence failed:',e.message);}}
+function persistRooms(){
+ if(!SAVE_FILE)return false;
+ try{checkpoints.save(SAVE_FILE,roomBackups());return true;}
+ catch(e){console.warn('Session persistence failed:',e.message);return false;}
+}
+let lastHydratedAt=0;
 function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.rooms))return;
+  if(Number.isSafeInteger(parsed.savedAt)&&parsed.savedAt>0){
+    if(lastHydratedAt&&parsed.savedAt<lastHydratedAt)return;
+    lastHydratedAt=parsed.savedAt;
+  }
   V21_BOARD=social.cleanBoard(parsed.v21Board);V21_GALLERY=social.cleanGallery(parsed.v21Gallery,expansion.cleanBlueprint);
   beta.restoreFeedback(parsed.betaFeedback);
   for(const saved of parsed.rooms.slice(0,200)){
    if(!/^[A-HJ-NP-Z2-9]{6}$/.test(saved.code||''))continue;
    if(!saved.game||!Number.isSafeInteger(saved.game.stage)||saved.game.stage<0||saved.game.stage>v23.LAST)continue;
-   const seats=(saved.seats||[]).slice(0,2).map(seat=>seat&&/^[0-9a-f]{48}$/.test(seat.token||'')?{token:seat.token,peer:null,online:false,look:cleanLook(seat.look)}:null);
+   const seats=(saved.seats||[]).slice(0,2).map(seat=>seat&&/^[0-9a-f]{48}$/.test(seat.token||'')?{token:seat.token,peer:null,online:false,look:cleanLook(seat.look),actionCache:actionCache.clean(seat.actions)}:null);
    if(seats.length!==2||!seats[0])continue;
    const game=createGame();initStage(game,saved.game.stage);
    // Restore only expected game state fields; avoid stale socket and input queues.
@@ -63,10 +72,11 @@ function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.roo
    ROOMS.set(saved.code,{code:saved.code,seats,game,home:cleanHome(saved.home),unlockedMax:Math.max(0,Math.min(98,Number(saved.unlockedMax)||0)),lastActivity:Date.now(),story:saved.story||null,notes:Array.isArray(saved.notes)?saved.notes.filter(n=>expansion.cleanNote(n?.text)).slice(-24).map(n=>({text:expansion.cleanNote(n.text),role:[0,1].includes(n.role)?n.role:0,at:Number(n.at)||0})):[],customLevel:expansion.cleanBlueprint(saved.customLevel),spectators:new Set(),storyChoices:saved.storyChoices&&typeof saved.storyChoices==='object'?saved.storyChoices:{},ending:saved.ending||null,v20Unlocked:Math.max(100,Math.min(v20.LAST,Number(saved.v20Unlocked)||100)),v20Home:v20.cleanHome(saved.v20Home),v20Story:v20.cleanStory(saved.v20Story),v21Unlocked:Math.max(v21.FIRST,Math.min(v21.LAST,Number(saved.v21Unlocked)||v21.FIRST)),v21World:social.cleanRoom(saved.v21World),v23Unlocked:Math.max(v23.FIRST,Math.min(v23.LAST,Number(saved.v23Unlocked)||v23.FIRST)),v24World:v24.clean(saved.v24World),v25:v25.clean(saved.v25),assistVotes:[null,null]});
   }
 }
-function restoreRooms(){if(!SAVE_FILE||!fs.existsSync(SAVE_FILE))return;
- try{const raw=fs.readFileSync(SAVE_FILE,'utf8');if(raw.length>8_000_000)throw Error('oversized session file');
-  hydrateRooms(JSON.parse(raw));
- }catch(e){console.warn('Unable to restore rooms:',e.message);}}
+function restoreRooms(){
+ if(!SAVE_FILE)return;
+ const recovered=checkpoints.load(SAVE_FILE,warning=>console.warn('Corrupt session candidate:',warning.file,warning.error));
+ if(recovered)hydrateRooms(recovered.payload);
+}
 let cloudSaveInFlight=null;
 async function persistRoomsCloud(force=false){
  if(!cloud.active)return false;
@@ -74,13 +84,19 @@ async function persistRoomsCloud(force=false){
   if(!force)return cloudSaveInFlight;
   await cloudSaveInFlight; // Flush the newest snapshot after the previous write.
  }
- cloudSaveInFlight=cloud.saveRooms(roomBackups()).then(()=>true).catch(e=>{
+ const start=performance.now();
+ cloudSaveInFlight=cloud.saveRooms(roomBackups()).then(()=>{
+  recovery.recorded('backup',true,performance.now()-start);return true;
+ }).catch(e=>{
+  recovery.recorded('backup',false,performance.now()-start);
   console.warn('Cloud room save failed:',e.message);return false;
  }).finally(()=>{cloudSaveInFlight=null;});
  return cloudSaveInFlight;
 }
 async function restoreRoomsCloud(){if(!cloud.active)return;
- try{const data=await cloud.loadRooms();if(data)hydrateRooms(data);}catch(e){console.warn('Cloud room restore failed:',e.message);}}
+ try{const data=await cloud.loadRooms();if(data)hydrateRooms(data);recovery.recorded('restore',true);}
+ catch(e){recovery.recorded('restore',false);console.warn('Cloud room restore failed:',e.message);}
+}
 
 const ROOM_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MAX_ROOMS=beta.maxRooms, MAX_PAYLOAD=4096;
@@ -88,53 +104,6 @@ const MAX_ROOMS=beta.maxRooms, MAX_PAYLOAD=4096;
 const MAX_SNAPSHOT_BACKLOG=24_000;
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.ico':'image/x-icon','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8'};
 
-function sendFrame(socket,opcode,content=Buffer.alloc(0)){
-  if(socket.destroyed||!socket.writable)return;
-  const body=Buffer.isBuffer(content)?content:Buffer.from(content,'utf8');
-  if(body.length>65535)return;
-  const h=Buffer.alloc(body.length<126?2:4);h[0]=0x80|opcode;
-  if(body.length<126)h[1]=body.length;else{h[1]=126;h.writeUInt16BE(body.length,2);}
-  if(socket.writableLength<300_000)socket.write(Buffer.concat([h,body]));
-}
-function attachWebSocket(socket,head,onMessage,onClose){
-  let buf=Buffer.alloc(0),fragment=null,closed=false,lastPong=Date.now();
-  const stop=()=>{if(closed)return;closed=true;onClose();};
-  const close=(code=1000)=>{if(socket.destroyed)return;const b=Buffer.alloc(2);b.writeUInt16BE(code,0);sendFrame(socket,8,b);socket.end();};
-  socket.on('close',stop);socket.on('error',stop);
-  socket.on('data',data=>{
-    buf=Buffer.concat([buf,data]);if(buf.length>MAX_PAYLOAD+8192){close(1009);return;}
-    while(buf.length>=2){
-      const a=buf[0],b=buf[1],fin=!!(a&0x80),opcode=a&0x0f,masked=!!(b&0x80);
-      if((a&0x70)||!masked){close(1002);return;}
-      let length=b&0x7f,offset=2;
-      if(length===126){if(buf.length<4)return;length=buf.readUInt16BE(2);offset=4;}
-      if(length===127){close(1009);return;}
-      if(length>MAX_PAYLOAD){close(1009);return;}
-      if(buf.length<offset+4+length)return;
-      const mask=buf.subarray(offset,offset+4),payload=Buffer.from(buf.subarray(offset+4,offset+4+length));
-      buf=buf.subarray(offset+4+length);
-      for(let i=0;i<length;i++)payload[i]^=mask[i%4];
-      if(opcode>=8){if(!fin||length>125){close(1002);return;}if(opcode===8){close();return;}if(opcode===9)sendFrame(socket,10,payload);if(opcode===10)lastPong=Date.now();continue;}
-      if(opcode===1){if(fragment){close(1002);return;}fragment=payload;}
-      else if(opcode===0){if(!fragment){close(1002);return;}fragment=Buffer.concat([fragment,payload]);}
-      else{close(1003);return;}
-      if(fragment.length>MAX_PAYLOAD){close(1009);return;}
-      if(fin){const text=fragment.toString('utf8');fragment=null;try{onMessage(JSON.parse(text));}catch(_){/* invalid packet ignored */}}
-    }
-  });
-  if(head&&head.length)socket.emit('data',head);
-  return {
-    send:(data)=>{
-      if(data?.t==='snapshot'&&socket.writableLength>MAX_SNAPSHOT_BACKLOG){benchmark.snapshotSkipped();return;}
-      sendFrame(socket,1,JSON.stringify(data));
-    },
-    sendRaw:(payload,isSnapshot)=>{
-      if(isSnapshot&&socket.writableLength>MAX_SNAPSHOT_BACKLOG){benchmark.snapshotSkipped();return;}
-      sendFrame(socket,1,payload);
-    },
-    close,ping:()=>{if(Date.now()-lastPong>32_000){socket.destroy();return;}sendFrame(socket,9,Buffer.from('alive'));}
-  };
-}
 function newCode(){for(let tries=0;tries<50;tries++){
   const code=Array.from(crypto.randomBytes(6),byte=>ROOM_ALPHABET[byte%ROOM_ALPHABET.length]).join('');
   if(!ROOMS.has(code))return code;
@@ -142,7 +111,7 @@ function newCode(){for(let tries=0;tries<50;tries++){
 const allowedFurniture=['lamp','plant','sofa','shelf','star','rug','aquarium','telescope','fireplace','frame','garden','piano'];
 const allowedSkins=['classic','sunset','aurora','royal','forest','galaxy'];
 const allowedPets=['none','fox','owl','moth','cat','orb'];
-const newSeat=()=>({token:crypto.randomBytes(24).toString('hex'),peer:null,online:false,look:{skin:'classic',pet:'none'}});
+const newSeat=()=>({token:crypto.randomBytes(24).toString('hex'),peer:null,online:false,look:{skin:'classic',pet:'none'},actionCache:new Map()});
 function cleanLook(x){return {skin:allowedSkins.includes(x?.skin)?x.skin:'classic',pet:allowedPets.includes(x?.pet)?x.pet:'none'};}
 function cleanHome(x){if(!Array.isArray(x))return [];return x.slice(0,16).map(v=>({item:allowedFurniture.includes(v?.item)?v.item:'lamp',slot:Number.isInteger(v?.slot)?Math.max(0,Math.min(15,v.slot)):0}));}
 function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[],v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v20Unlocked:r.v20Unlocked||100,v21Unlocked:r.v21Unlocked||v21.FIRST,v23Unlocked:r.v23Unlocked||v23.FIRST,v25Meta:v25.meta(r),assistMode:!!r.game.assistMode,assistVotes:r.assistVotes||[null,null],story:r.story||null,storyChoices:r.storyChoices||{},customLevel:r.customLevel||null,ending:r.ending||null};}
@@ -161,6 +130,7 @@ function broadcast(r,obj){
 const betaHttp=createPublicBetaHttp({
  beta,rooms:ROOMS,storageState,getGallery:()=>V21_GALLERY,
  onUpdate:async()=>{persistRooms();await persistRoomsCloud(true);},
+ getOperationalStatus:()=>recovery.diagnostics(),
  onModerated:()=>{for(const r of ROOMS.values())broadcast(r,{t:'v21Gallery',items:social.publicGallery(V21_GALLERY)});}
 });
 const server=http.createServer((req,res)=>{
@@ -178,6 +148,11 @@ const server=http.createServer((req,res)=>{
   if(pathname==='/health'){
     res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
     res.end(JSON.stringify({ok:true}));return;
+  }
+  if(pathname==='/ready'){
+    const status=recovery.status();res.writeHead(status.ready?200:503,
+     {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
+    res.end(JSON.stringify(status));return;
   }
   // Real PNG app icons generated once by the server (no binary assets or CDN).
   const iconSize=pathname==='/icons/icon-192.png'?192:pathname==='/icons/icon-512.png'?512:pathname==='/apple-touch-icon.png'?180:0;
@@ -242,6 +217,7 @@ server.on('upgrade',(req,socket,head)=>{
   };
   peer=attachWebSocket(socket,head,msg=>{
     if(!msg||typeof msg!=='object'||Array.isArray(msg))return;
+    if(room&&role>=0&&room.seats[role]?.peer!==peer){peer.close(1008);return;}
     const now=Date.now();if(now-packetWindow>=2000){packetWindow=now;packetCount=0;}
     if(++packetCount>240){peer.close(1008);return;}
     if(msg.t==='ping'){peer.send({t:'pong',sent:Number.isFinite(msg.sent)?msg.sent:0});return;}
@@ -327,13 +303,16 @@ server.on('upgrade',(req,socket,head)=>{
        if(rateExceeded('v20-action',90))return error('Слишком много действий за минуту.');
        const id=typeof msg.actionId==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(msg.actionId)?msg.actionId:'';
        if(!id)return error('Некорректный идентификатор действия');
-       const seat=room.seats[role];seat.actionIds=seat.actionIds||new Set();
-       if(seat.actionIds.has(id)){peer.send({t:'actionResult',actionId:id,ok:false,error:'Повторная команда'});return;}
-       seat.actionIds.add(id);if(seat.actionIds.size>256)seat.actionIds.delete(seat.actionIds.values().next().value);
+       const seat=room.seats[role];seat.actionCache=seat.actionCache||new Map();
+       if(msg.t!=='v25ReplayGet'){
+        const cached=actionCache.lookup(seat.actionCache,msg);
+        if(cached){peer.send({t:'actionResult',actionId:id,...cached});return;}
+       }
        let outcome;
        if(msg.t==='coopAction')outcome=v20.action(room.game,role,msg.kind);
        else if(msg.t==='sceneVote')outcome=v20.vote(room,role,msg.sceneId,msg.option);
        else outcome=v20.homeAction(room,role,msg.kind);
+       actionCache.remember(seat.actionCache,msg,outcome);
        peer.send({t:'actionResult',actionId:id,...outcome});
        if(outcome.ok){
          room.urgentSnapshot=true;
@@ -354,9 +333,11 @@ server.on('upgrade',(req,socket,head)=>{
        }
        const id=typeof msg.actionId==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(msg.actionId)?msg.actionId:'';
        if(!id)return error('Некорректный идентификатор команды');
-       const seat=room.seats[role];seat.actionIds=seat.actionIds||new Set();
-       if(seat.actionIds.has(id)){peer.send({t:'actionResult',actionId:id,ok:false,error:'Команда уже обработана'});return;}
-       seat.actionIds.add(id);if(seat.actionIds.size>256)seat.actionIds.delete(seat.actionIds.values().next().value);
+       const seat=room.seats[role];seat.actionCache=seat.actionCache||new Map();
+       if(msg.t!=='v25ReplayGet'){
+        const cached=actionCache.lookup(seat.actionCache,msg);
+        if(cached){peer.send({t:'actionResult',actionId:id,...cached});return;}
+       }
        let result={ok:false,error:'Команда не распознана'};
        if(msg.t==='v21Action'){
          const puzzle=new Set(['trail_mark','transfer_send','transfer_receive','transfer_deliver','knowledge_symbol','lantern_toggle','transform','transform_collect','transform_orb_link','weather_wind','weather_rain','cargo_push','tree_grow','maze_rotate','maze_checkpoint','asym_action','asym_cross']);
@@ -392,6 +373,7 @@ server.on('upgrade',(req,socket,head)=>{
            result={ok:true,detail:'Авторская карта загружена'};
          }
        }
+       actionCache.remember(seat.actionCache,msg,result);
        peer.send({t:'actionResult',actionId:id,...result});
        if(result.ok){
          room.urgentSnapshot=true;
@@ -422,10 +404,11 @@ server.on('upgrade',(req,socket,head)=>{
        if(msg.t==='v25MetaGet'){peer.send({t:'v25Meta',data:v25.meta(room)});return;}
        const id=typeof msg.actionId==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(msg.actionId)?msg.actionId:'';
        if(!id)return error('Некорректный идентификатор действия');
-       const seat=room.seats[role];seat.actionIds=seat.actionIds||new Set();
-       if(seat.actionIds.has(id)){peer.send({t:'actionResult',actionId:id,ok:false,error:'Повторное действие'});return;}
-       seat.actionIds.add(id);
-       if(seat.actionIds.size>256)seat.actionIds.delete(seat.actionIds.values().next().value);
+       const seat=room.seats[role];seat.actionCache=seat.actionCache||new Map();
+       if(msg.t!=='v25ReplayGet'){
+        const cached=actionCache.lookup(seat.actionCache,msg);
+        if(cached){peer.send({t:'actionResult',actionId:id,...cached});return;}
+       }
        let outcome={ok:false,error:'Действие неизвестно'};
        if(msg.t==='v23Action')outcome=v23.action(room.game,role,msg.kind,msg);
        if(msg.t==='v24Action')outcome=v24.action(room,role,msg.kind,msg);
@@ -460,6 +443,7 @@ server.on('upgrade',(req,socket,head)=>{
           outcome={ok:true,detail:'Повтор отправлен частями'};
          }
        }
+       if(msg.t!=='v25ReplayGet')actionCache.remember(seat.actionCache,msg,outcome);
        peer.send({t:'actionResult',actionId:id,...outcome});
        if(outcome.ok){
          room.urgentSnapshot=true;
@@ -515,7 +499,7 @@ server.on('upgrade',(req,socket,head)=>{
     const seat=room.seats[role];if(!seat||seat.peer!==peer)return;
     seat.online=false;seat.peer=null;clearMovement(room.game,role);
     room.lastActivity=Date.now();sendSeatRoom(room);
-  });
+  },benchmark);
 });
 let lastBroadcast=0;
 const loop=setInterval(()=>{
