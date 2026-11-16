@@ -50,7 +50,7 @@ test('v21 genuine WebSocket campaign, story, home, gallery and reconnection',{ti
   host.send({t:'v21Action',actionId:'dupe-1',kind:'garden_tend'});
   assert.equal((await take(host,m=>m.t==='actionResult'&&m.actionId==='dupe-1')).ok,true);
   host.send({t:'v21Action',actionId:'dupe-1',kind:'garden_tend'});
-  assert.equal((await take(host,m=>m.t==='actionResult'&&m.actionId==='dupe-1')).ok,false);
+  assert.equal((await take(host,m=>m.t==='actionResult'&&m.actionId==='dupe-1')).replayed,true);
   guest.send({t:'v21Action',actionId:'garden-2',kind:'garden_tend'});
   assert.equal((await take(guest,m=>m.t==='actionResult'&&m.actionId==='garden-2')).ok,true);
   host.send({t:'v21Action',actionId:'paint-left',kind:'paint_cell',x:1,y:2,value:4});
