@@ -16,10 +16,10 @@ function start(){
  render();
 }
 const chapters=[
- {title:'Добро пожаловать в Linked by Light',description:'Это кооперативная игра для двоих. Один создаёт комнату, второй подключается по приглашению. Регистрация не обязательна для игры.'},
- {title:'Сначала создайте комнату',description:'Выберите «Создать комнату» или «Новая глава v21». В комнате появится шестизначный код. Не публикуйте свой код или ссылку в открытом доступе.'},
- {title:'Пригласите второго игрока',description:'Нажмите «Скопировать приглашение» и отправьте ссылку другу. Он открывает её в Safari или браузере на компьютере. Не пересылайте ссылку незнакомым людям.'},
- {title:'Начните вдвоём',description:'Когда появятся оба игрока, ведущий нажимает «Начать вдвоём». Первый герой — Искра, второй — Эхо. Уровни нужно проходить совместно.'},
+ {title:'Добро пожаловать в Linked by Light',description:'Можно играть вдвоём из разных городов или одному, переключая двух героев. Регистрация для игры не обязательна.'},
+ {title:'Сначала создайте комнату',description:'Выберите Искру или Эхо независимо от устройства, создайте комнату или начните соло-режим. Не публикуйте ссылку на комнату в открытом доступе.'},
+ {title:'Пригласите второго игрока',description:'Нажмите «Поделиться приглашением», чтобы отправить ссылку через меню телефона, либо скопируйте её. Партнёр войдёт автоматически, без ввода кода.'},
+ {title:'Начните вдвоём',description:'Роли не привязаны к iPhone или компьютеру. Ведущий запускает игру после входа партнёра; в соло можно начать сразу и переключать героев клавишей Tab.'},
  {title:'Управление и сохранение',description:'Если связь прервётся, игра попробует вернуть вас в комнату. Сохраняйте профиль и ключ восстановления отдельно. После перезапуска бесплатного сервера комната может быть недоступна.'}
 ];
 function render(){
@@ -106,11 +106,14 @@ function buildFeedback(){
  });
  actions.append(cancel,submit);form.append(actions);feedbackDialog.append(form);document.body.append(feedbackDialog);
 }
-function onJoined(role){
- if(notice)notice.textContent=role===0
-  ?'Вы — Искра. Отправьте приглашение второму игроку, затем нажмите «Начать вдвоём».'
-  :role===1?'Вы — Эхо. Подождите, пока ведущий запустит совместное приключение.'
-  :'Вы наблюдатель. Управление персонажами недоступно.';
+function onJoined(data){
+ const role=typeof data==='number'?data:data?.role;
+ const isHost=role>=0&&(typeof data==='number'?role===0:role===data?.hostRole);
+ const solo=data?.solo===true;
+ if(notice)notice.textContent=role<0?'Вы наблюдатель. Управление недоступно.':solo
+  ?'Соло: управляйте Искрой и Эхом по очереди; Tab или экранная кнопка меняет героя.'
+  :isHost?'Вы ведущий. Поделитесь ссылкой и начинайте, когда партнёр войдёт.'
+  :'Вы подключились по приглашению. Ждите запуска игры ведущим.';
 }
 function onDisconnected(){
  if(notice)notice.textContent='Соединение прервано. Выполняется автоматическое переподключение; не закрывайте страницу.';
@@ -135,7 +138,9 @@ function init(callbacks){
  fetch('/api/beta/status',{cache:'no-store'}).then(r=>r.ok?r.json():null)
   .then(x=>{config=x;if(x&&!x.durableRooms&&notice)notice.textContent='Бета: серверные комнаты могут сбрасываться после перезапуска.';})
   .catch(()=>{});
- if(!saved())setTimeout(()=>{if(!saved()&&!dialog?.open)start();},900);
+ // Invitations should connect without a blocking onboarding dialog.
+ if(!saved()&&!new URLSearchParams(location.search).has('room'))
+  setTimeout(()=>{if(!saved()&&!dialog?.open)start();},900);
 }
 root.GamePublicBeta={init,onJoined,onDisconnected,onRecovered,start,feedback};
 })(typeof window!=='undefined'?window:globalThis);
