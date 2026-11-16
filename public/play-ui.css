@@ -176,3 +176,19 @@ html.clean-play-mode .touch-controls.compact .touch-button:active{
 @media(prefers-reduced-motion:reduce){
   html.clean-play-mode .touch-controls.compact .touch-button{transition:none!important}
 }
+
+/* v27.2 — keep the normal HUD and objective clear of the mode switch. */
+.topline .clean-play-entry{
+  display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;min-width:36px;min-height:36px;padding:5px 9px;
+  border-color:#ac9ad18a;border-radius:11px;
+  background:linear-gradient(135deg,#343457,#263a55);
+  color:#eae7ff;font-size:18px;line-height:1;
+}
+.topline .clean-play-entry:hover{background:#4b4772}
+.topline .clean-play-entry:focus-visible{outline:3px solid #fff0b3;outline-offset:2px}
+html:not(.clean-play-mode) .clean-play-toggle{display:none!important}
+html.clean-play-mode .clean-play-toggle{display:inline-flex}
+@media(pointer:coarse) and (orientation:landscape){
+  .topline .clean-play-entry{min-width:31px;min-height:32px;padding:4px 7px;font-size:16px}
+}
