@@ -20,6 +20,7 @@ const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./
 const {stages}=require('./shared/stages');
 const cloud=require('./cloud-store');
 const checkpoints=require('./room-checkpoint');
+const actionCache=require('./action-replay-cache');
 const pwaIcons=require('./pwa-icons');
 const expansion=require('./expansion-core');
 const v20=require('./v20-core');
@@ -40,7 +41,7 @@ const storageState=()=>({cloudConfigured:cloud.active,diskConfigured:!!SAVE_DIR}
 const SAVE_DIR=process.env.SAVE_DIR||'';
 const SAVE_FILE=SAVE_DIR?path.join(SAVE_DIR,'linked-light-rooms-v11.json'):'';
 function roomBackups(){return {version:11,v21Board:V21_BOARD,v21Gallery:V21_GALLERY,betaFeedback:beta.feedbackBackup(),rooms:Array.from(ROOMS.values()).map(r=>({
- code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look}:null),game:r.game,
+ code:r.code,seats:r.seats.map(s=>s?{token:s.token,look:s.look,actions:actionCache.exportResults(s.actionCache)}:null),game:r.game,
  home:r.home||[],notes:r.notes||[],customLevel:r.customLevel||null,storyChoices:r.storyChoices||{},ending:r.ending||null,unlockedMax:r.unlockedMax,v20Unlocked:r.v20Unlocked||100,v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v21Unlocked:r.v21Unlocked||v21.FIRST,v21World:r.v21World||social.roomsProfile(),v23Unlocked:r.v23Unlocked||v23.FIRST,v24World:r.v24World||v24.initial(),v25:v25.persist(r.v25),assistVotes:r.assistVotes||[null,null],lastActivity:r.lastActivity,story:r.story||null}))};}
 function persistRooms(){
  if(!SAVE_FILE)return false;
@@ -53,7 +54,7 @@ function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.roo
   for(const saved of parsed.rooms.slice(0,200)){
    if(!/^[A-HJ-NP-Z2-9]{6}$/.test(saved.code||''))continue;
    if(!saved.game||!Number.isSafeInteger(saved.game.stage)||saved.game.stage<0||saved.game.stage>v23.LAST)continue;
-   const seats=(saved.seats||[]).slice(0,2).map(seat=>seat&&/^[0-9a-f]{48}$/.test(seat.token||'')?{token:seat.token,peer:null,online:false,look:cleanLook(seat.look)}:null);
+   const seats=(saved.seats||[]).slice(0,2).map(seat=>seat&&/^[0-9a-f]{48}$/.test(seat.token||'')?{token:seat.token,peer:null,online:false,look:cleanLook(seat.look),actionCache:actionCache.clean(seat.actions)}:null);
    if(seats.length!==2||!seats[0])continue;
    const game=createGame();initStage(game,saved.game.stage);
    // Restore only expected game state fields; avoid stale socket and input queues.
@@ -97,7 +98,7 @@ function newCode(){for(let tries=0;tries<50;tries++){
 const allowedFurniture=['lamp','plant','sofa','shelf','star','rug','aquarium','telescope','fireplace','frame','garden','piano'];
 const allowedSkins=['classic','sunset','aurora','royal','forest','galaxy'];
 const allowedPets=['none','fox','owl','moth','cat','orb'];
-const newSeat=()=>({token:crypto.randomBytes(24).toString('hex'),peer:null,online:false,look:{skin:'classic',pet:'none'}});
+const newSeat=()=>({token:crypto.randomBytes(24).toString('hex'),peer:null,online:false,look:{skin:'classic',pet:'none'},actionCache:new Map()});
 function cleanLook(x){return {skin:allowedSkins.includes(x?.skin)?x.skin:'classic',pet:allowedPets.includes(x?.pet)?x.pet:'none'};}
 function cleanHome(x){if(!Array.isArray(x))return [];return x.slice(0,16).map(v=>({item:allowedFurniture.includes(v?.item)?v.item:'lamp',slot:Number.isInteger(v?.slot)?Math.max(0,Math.min(15,v.slot)):0}));}
 function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[],v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v20Unlocked:r.v20Unlocked||100,v21Unlocked:r.v21Unlocked||v21.FIRST,v23Unlocked:r.v23Unlocked||v23.FIRST,v25Meta:v25.meta(r),assistMode:!!r.game.assistMode,assistVotes:r.assistVotes||[null,null],story:r.story||null,storyChoices:r.storyChoices||{},customLevel:r.customLevel||null,ending:r.ending||null};}
@@ -197,6 +198,7 @@ server.on('upgrade',(req,socket,head)=>{
   };
   peer=attachWebSocket(socket,head,msg=>{
     if(!msg||typeof msg!=='object'||Array.isArray(msg))return;
+    if(room&&role>=0&&room.seats[role]?.peer!==peer){peer.close(1008);return;}
     const now=Date.now();if(now-packetWindow>=2000){packetWindow=now;packetCount=0;}
     if(++packetCount>240){peer.close(1008);return;}
     if(msg.t==='ping'){peer.send({t:'pong',sent:Number.isFinite(msg.sent)?msg.sent:0});return;}
@@ -282,13 +284,16 @@ server.on('upgrade',(req,socket,head)=>{
        if(rateExceeded('v20-action',90))return error('Слишком много действий за минуту.');
        const id=typeof msg.actionId==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(msg.actionId)?msg.actionId:'';
        if(!id)return error('Некорректный идентификатор действия');
-       const seat=room.seats[role];seat.actionIds=seat.actionIds||new Set();
-       if(seat.actionIds.has(id)){peer.send({t:'actionResult',actionId:id,ok:false,error:'Повторная команда'});return;}
-       seat.actionIds.add(id);if(seat.actionIds.size>256)seat.actionIds.delete(seat.actionIds.values().next().value);
+       const seat=room.seats[role];seat.actionCache=seat.actionCache||new Map();
+       if(msg.t!=='v25ReplayGet'){
+        const cached=actionCache.lookup(seat.actionCache,msg);
+        if(cached){peer.send({t:'actionResult',actionId:id,...cached});return;}
+       }
        let outcome;
        if(msg.t==='coopAction')outcome=v20.action(room.game,role,msg.kind);
        else if(msg.t==='sceneVote')outcome=v20.vote(room,role,msg.sceneId,msg.option);
        else outcome=v20.homeAction(room,role,msg.kind);
+       actionCache.remember(seat.actionCache,msg,outcome);
        peer.send({t:'actionResult',actionId:id,...outcome});
        if(outcome.ok){
          room.urgentSnapshot=true;
@@ -309,9 +314,11 @@ server.on('upgrade',(req,socket,head)=>{
        }
        const id=typeof msg.actionId==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(msg.actionId)?msg.actionId:'';
        if(!id)return error('Некорректный идентификатор команды');
-       const seat=room.seats[role];seat.actionIds=seat.actionIds||new Set();
-       if(seat.actionIds.has(id)){peer.send({t:'actionResult',actionId:id,ok:false,error:'Команда уже обработана'});return;}
-       seat.actionIds.add(id);if(seat.actionIds.size>256)seat.actionIds.delete(seat.actionIds.values().next().value);
+       const seat=room.seats[role];seat.actionCache=seat.actionCache||new Map();
+       if(msg.t!=='v25ReplayGet'){
+        const cached=actionCache.lookup(seat.actionCache,msg);
+        if(cached){peer.send({t:'actionResult',actionId:id,...cached});return;}
+       }
        let result={ok:false,error:'Команда не распознана'};
        if(msg.t==='v21Action'){
          const puzzle=new Set(['trail_mark','transfer_send','transfer_receive','transfer_deliver','knowledge_symbol','lantern_toggle','transform','transform_collect','transform_orb_link','weather_wind','weather_rain','cargo_push','tree_grow','maze_rotate','maze_checkpoint','asym_action','asym_cross']);
@@ -347,6 +354,7 @@ server.on('upgrade',(req,socket,head)=>{
            result={ok:true,detail:'Авторская карта загружена'};
          }
        }
+       actionCache.remember(seat.actionCache,msg,result);
        peer.send({t:'actionResult',actionId:id,...result});
        if(result.ok){
          room.urgentSnapshot=true;
@@ -377,10 +385,11 @@ server.on('upgrade',(req,socket,head)=>{
        if(msg.t==='v25MetaGet'){peer.send({t:'v25Meta',data:v25.meta(room)});return;}
        const id=typeof msg.actionId==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(msg.actionId)?msg.actionId:'';
        if(!id)return error('Некорректный идентификатор действия');
-       const seat=room.seats[role];seat.actionIds=seat.actionIds||new Set();
-       if(seat.actionIds.has(id)){peer.send({t:'actionResult',actionId:id,ok:false,error:'Повторное действие'});return;}
-       seat.actionIds.add(id);
-       if(seat.actionIds.size>256)seat.actionIds.delete(seat.actionIds.values().next().value);
+       const seat=room.seats[role];seat.actionCache=seat.actionCache||new Map();
+       if(msg.t!=='v25ReplayGet'){
+        const cached=actionCache.lookup(seat.actionCache,msg);
+        if(cached){peer.send({t:'actionResult',actionId:id,...cached});return;}
+       }
        let outcome={ok:false,error:'Действие неизвестно'};
        if(msg.t==='v23Action')outcome=v23.action(room.game,role,msg.kind,msg);
        if(msg.t==='v24Action')outcome=v24.action(room,role,msg.kind,msg);
@@ -415,6 +424,7 @@ server.on('upgrade',(req,socket,head)=>{
           outcome={ok:true,detail:'Повтор отправлен частями'};
          }
        }
+       if(msg.t!=='v25ReplayGet')actionCache.remember(seat.actionCache,msg,outcome);
        peer.send({t:'actionResult',actionId:id,...outcome});
        if(outcome.ok){
          room.urgentSnapshot=true;
