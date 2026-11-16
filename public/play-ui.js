@@ -59,34 +59,49 @@
       if(event.key==='Escape'&&drawer.classList.contains('is-open'))setOpen(false);
     });
 
-    // Clean-play mode hides decoration, not gameplay controls or network warnings.
+    // Toggle in the header; tiny restore control inside the unobstructed game.
     const gameFrame=document.getElementById('frame');
     if(gameFrame){
+      const cleanEntry=document.createElement('button');
+      cleanEntry.type='button';
+      cleanEntry.id='cleanPlayEntry';
+      cleanEntry.className='mini-btn clean-play-entry';
+      cleanEntry.textContent='◫';
+      cleanEntry.setAttribute('aria-label','Скрыть интерфейс игры');
+      cleanEntry.title='Чистое игровое поле';
+      right.insertBefore(cleanEntry,trigger);
       const cleanToggle=document.createElement('button');
       cleanToggle.type='button';
       cleanToggle.id='cleanPlayToggle';
       cleanToggle.className='clean-play-toggle';
-      const storageKey='linked-light-clean-ui';
+      cleanToggle.textContent='☰';
+      cleanToggle.setAttribute('aria-label','Показать интерфейс игры');
+      cleanToggle.title='Показать интерфейс';
       gameFrame.append(cleanToggle);
+      const storageKey='linked-light-clean-ui';
       const applyCleanMode=(enabled,remember=true)=>{
         document.documentElement.classList.toggle('clean-play-mode',enabled);
-        cleanToggle.textContent=enabled?'☰':'◫ Чистое поле';
-        cleanToggle.setAttribute('aria-pressed',String(enabled));
-        cleanToggle.setAttribute('aria-label',enabled?'Показать интерфейс игры':'Скрыть интерфейс игры');
-        cleanToggle.title=enabled?'Показать интерфейс':'Чистое игровое поле';
+        cleanEntry.setAttribute('aria-pressed',String(enabled));
         if(enabled)setOpen(false);
         if(remember){try{localStorage.setItem(storageKey,enabled?'1':'0');}catch(_){}}
+      };
+      const switchMode=()=>{
+        const next=!document.documentElement.classList.contains('clean-play-mode');
+        applyCleanMode(next);
+        (next?cleanToggle:cleanEntry).focus({preventScroll:true});
       };
       let enabled=false;
       try{enabled=localStorage.getItem(storageKey)==='1';}catch(_){}
       applyCleanMode(enabled,false);
-      cleanToggle.addEventListener('click',()=>applyCleanMode(!document.documentElement.classList.contains('clean-play-mode')));
+      cleanEntry.addEventListener('click',switchMode);
+      cleanToggle.addEventListener('click',switchMode);
       document.addEventListener('keydown',event=>{
         if(event.repeat||event.altKey||event.ctrlKey||event.metaKey)return;
         if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)||document.activeElement?.isContentEditable)return;
+        if(document.querySelector('dialog[open]'))return;
         if(event.key.toLowerCase()==='h'||(event.key==='Escape'&&document.documentElement.classList.contains('clean-play-mode'))){
           event.preventDefault();
-          applyCleanMode(!document.documentElement.classList.contains('clean-play-mode'));
+          switchMode();
         }
       });
     }
