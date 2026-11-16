@@ -47,7 +47,15 @@ function onSnapshot(s){
   if(show){
    const secs=Number(s.stats?.elapsed)||0;
    hint.querySelector('.v28-tip-title').textContent=(solo?'Соло · ':'Обучение · ')+'Уровень '+(s.stage+1)+'/10';
-   hint.querySelector('.v28-tip-text').textContent=(secs>40?'Подсказка: ':'')+tips[s.stage]+(solo?' Нажмите Tab для смены героя.':'');
+   const level=api.level?.(),p=s.players?.[controlRole()];
+   let context=tips[s.stage];
+   if(p&&level){
+    const nearbyWall=level.walls?.some((w,i)=>!s.world?.walls?.[i]&&Math.abs(w.x-p.x)<220);
+    const nearbyCrystal=level.crystals?.some((c,i)=>!s.world?.crystals?.[i]&&Math.abs(c.x-p.x)<220);
+    if(nearbyWall)context=controlRole()===0?'Преграда впереди: попробуйте рывок F (или кнопку способности).':'Преграду может разрушить Искра. Попросите её применить рывок.';
+    else if(nearbyCrystal)context=controlRole()===1?'Кристалл рядом: нажмите Enter (или кнопку способности).':'Попросите Эхо активировать кристалл своим импульсом.';
+   }
+   hint.querySelector('.v28-tip-text').textContent=(secs>40?'Подсказка: ':'')+context+(solo?' Нажмите Tab для смены героя.':'');
   }
  }
 }
