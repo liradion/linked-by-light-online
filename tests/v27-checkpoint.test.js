@@ -50,3 +50,13 @@ test('envelope refuses unsupported and oversized state shapes',()=>{
  assert.equal(validate({version:10,rooms:[]}),false);
  assert.equal(validate({version:11,rooms:new Array(201).fill(room())}),false);
 });
+
+test('same-generation altered legacy payload cannot override checksummed journal',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ll-v27-')),file=path.join(dir,'rooms.json');
+ try{
+  const good=state(room('ABCDEF',122)),modified=state(room('ABCDEF',124));
+  save(file,good,1000);
+  fs.writeFileSync(file,JSON.stringify(modified));
+  assert.equal(load(file).payload.rooms[0].game.stage,122);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
