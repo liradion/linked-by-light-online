@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id);
 const create=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
 let api={},roleSelect=null,soloButton=null,shareButton=null,readyStatus=null,hint=null,pingToggle=null,pingWheel=null;
-let solo=false,activeRole=0,hostRole=0,pings=[],intel=[],currentStage=-1,connected=false,lastOffline=performance.now(),hintStage=-1,tipDismissed=false,pingKind='';
+let solo=false,activeRole=0,hostRole=0,pings=[],intel=[],intelStage=-1,currentStage=-1,connected=false,lastOffline=performance.now(),tipDismissed=false,pingKind='';
 const types={here:['📍','Иди сюда'],wait:['✋','Подожди'],help:['❗','Помоги'],danger:['⚠️','Опасность'],go:['➡️','Вперёд'],look:['👀','Посмотри']};
 const tips=[
  'Освойте движение и прыжок. Двигайтесь к порталу вдвоём.',
@@ -27,7 +27,7 @@ function message(m){
  }
  if(m.t==='v28Intel'&&Number.isInteger(m.stage)){
   intel=(Array.isArray(m.items)?m.items:[]).filter(x=>Number.isFinite(x.x)&&Number.isFinite(x.y)&&typeof x.text==='string').slice(0,6);
-  currentStage=m.stage;
+  intelStage=m.stage;
  }
 }
 function onJoined(m){
@@ -39,7 +39,7 @@ function onSnapshot(s){
  if(!s)return;
  solo=s.solo===true;hostRole=s.hostRole===1?1:0;
  if(solo)activeRole=s.soloActiveRole===1?1:0;
- if(s.stage!==currentStage){currentStage=s.stage;pings=[];intel=[];tipDismissed=false;}
+ if(s.stage!==currentStage){currentStage=s.stage;pings=[];if(intelStage!==s.stage)intel=[];tipDismissed=false;}
  updatePingLabel();
  if(hint){
   const show=Number.isInteger(s.stage)&&s.stage<10&&s.stage>=0&&s.phase==='playing'&&api.role?.()>=0&&!tipDismissed;
@@ -52,7 +52,7 @@ function onSnapshot(s){
  }
 }
 function connection(online){
- connected=!!online;if(!connected)lastOffline=performance.now();
+ const was=connected;connected=!!online;if(was&&!connected)lastOffline=performance.now();
  if(readyStatus&&connected)readyStatus.hidden=true;
 }
 function updateWake(){
