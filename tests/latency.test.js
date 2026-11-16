@@ -81,8 +81,9 @@ test('two-player live rooms receive ~30Hz snapshots with less idle traffic',{tim
 });
 test('server drops obsolete queued snapshots instead of buffering arbitrary seconds',()=>{
  const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
- assert.match(server,/MAX_SNAPSHOT_BACKLOG=24_000/);
- assert.match(server,/socket\.writableLength>MAX_SNAPSHOT_BACKLOG/);
+ const transport=fs.readFileSync(path.join(root,'websocket-transport.js'),'utf8');
+ assert.match(transport,/MAX_SNAPSHOT_BACKLOG=24_000/);
+ assert.match(transport,/socket\.writableLength>MAX_SNAPSHOT_BACKLOG/);
  assert.match(server,/lastBroadcast%2===0/);
  assert.match(server,/lastBroadcast%30===0/);
 });
