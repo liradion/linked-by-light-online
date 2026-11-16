@@ -117,7 +117,7 @@ function physics(){
 const quests=[['keeper','Хранитель рассвета'],['navigator','Звёздный картограф'],['hermit','Странствующий мастер'],['secret','Тайный путешественник']];
 const pretty={keeper:'Хранитель',navigator:'Картограф',hermit:'Мастер',secret:'Тайный'};
 function living(){
- const z=social||{};
+ const z=social||{},canLead=api.isHost?.()??role()===0;
  const intro=section(content,'v24 · Живой мир');
  p(intro,'Побочные задания и совместные развлечения не влияют на результаты основной кампании и не требуют покупок.');
  const npc=section(content,'Новые персонажи и побочные задания');
@@ -131,7 +131,7 @@ function living(){
  const kitchen=section(content,'Совместная кухня');
  row(kitchen,'Готовность',(z.kitchen?.step||0)+'/8');
  const recipes=['Лунный хлеб','Звёздный суп','Ягодный пирог','Солнечный чай'];
- for(let i=0;i<4;i++)kitchen.append(button(recipes[i],()=>lifeAction('recipe_select',{value:i}),role()!==0));
+ for(let i=0;i<4;i++)kitchen.append(button(recipes[i],()=>lifeAction('recipe_select',{value:i}),!canLead));
  p(kitchen,'Выбирайте ингредиенты в порядке 1 → 2 → 3 → 4, повторите дважды. Роли чередуются.');
  const ingredients=el('div','v2346-actions');
  for(let i=0;i<4;i++)ingredients.append(button('Ингредиент '+(i+1),()=>lifeAction('kitchen',{ingredient:i})));
@@ -139,7 +139,7 @@ function living(){
  const ex=section(content,'Экспедиция на пять комнат');
  row(ex,'Пройдено комнат',String(z.expedition?.room||0)+'/5');
  row(ex,'Собрано находок',z.expedition?.loot||0);
- ex.append(button('Отправиться в экспедицию',()=>lifeAction('expedition_start'),role()!==0||!!z.expedition?.active));
+ ex.append(button('Отправиться в экспедицию',()=>lifeAction('expedition_start'),!canLead||!!z.expedition?.active));
  if(z.expedition?.active){
   const required=((z.expedition.seed||0)+(z.expedition.room||0)*7)%3;
   p(ex,'Подсказка для следующей двери: '+(required+1));
@@ -153,11 +153,11 @@ function living(){
  const craft=section(content,'Мастерская изобретений');
  p(craft,'Найдите детали в экспедиции и соберите созвездие, чтобы изготовить предмет для общего дома.');
  const crafted=z.workshop?.crafted||[];
- actions(craft,[['sky-lantern','Небесный фонарь'],['compass','Компас'],['glider','Планер']].map(([v,t])=>button(t,()=>lifeAction('craft',{value:v}),role()!==0||crafted.includes(v))));
+ actions(craft,[['sky-lantern','Небесный фонарь'],['compass','Компас'],['glider','Планер']].map(([v,t])=>button(t,()=>lifeAction('craft',{value:v}),!canLead||crafted.includes(v))));
  const games=section(content,'Домашний мини-турнир');
  row(games,'Счёт',(z.minigame?.score||[0,0]).join(' : '));
  row(games,'Раунд',(z.minigame?.round||0)+'/6');
- actions(games,[['race','Гонка'],['search','Поиск'],['puzzle','Головоломка']].map(([v,t])=>button(t,()=>lifeAction('minigame_start',{value:v}),role()!==0)));
+ actions(games,[['race','Гонка'],['search','Поиск'],['puzzle','Головоломка']].map(([v,t])=>button(t,()=>lifeAction('minigame_start',{value:v}),!canLead)));
  actions(games,[0,1,2].map(i=>button('Действие '+(i+1),()=>lifeAction('minigame_move',{value:i}),!z.minigame?.active)));
  const narrative=section(content,'Сюжетные развилки и диалоги');
  row(narrative,'Совместный выбор',z.narrative?.path?'Путь смелости':'Путь заботы');
