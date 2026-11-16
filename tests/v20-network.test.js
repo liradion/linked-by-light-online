@@ -38,7 +38,7 @@ test('v20 real WebSocket room, actions, observer isolation and seat recovery',{t
   assert.equal((await take(a,m=>m.t==='actionResult'&&m.actionId==='attach-01')).ok,true);
   assert.equal((await take(b,m=>m.t==='snapshot'&&m.world.v20?.tether?.active)).world.v20.tether.active,true);
   a.send({t:'coopAction',actionId:'attach-01',kind:'tether_attach'});
-  assert.equal((await take(a,m=>m.t==='actionResult'&&m.actionId==='attach-01')).ok,false);
+  assert.equal((await take(a,m=>m.t==='actionResult'&&m.actionId==='attach-01')).replayed,true);
   a.send({t:'homeAction',actionId:'garden-1',kind:'shine'});
   assert.equal((await take(a,m=>m.t==='actionResult'&&m.actionId==='garden-1')).ok,true);
   b.send({t:'homeAction',actionId:'garden-2',kind:'reflect'});
