@@ -1,16 +1,17 @@
 'use strict';
 // Idempotent mutation acknowledgements survive reconnection and room checkpoints.
 // State itself stays fully authoritative on the server.
+const crypto=require('node:crypto');
 const MAX_RESULTS=128;
 const idValid=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(id);
 function fingerprint(message){
- return JSON.stringify({t:message.t,kind:message.kind,mode:message.mode,seed:message.seed,
-  npc:message.npc,value:message.value,ingredient:message.ingredient,stage:message.stage,which:message.which});
+ const canonical=Object.fromEntries(Object.entries(message).filter(([k])=>k!=='actionId').sort(([a],[b])=>a.localeCompare(b)));
+ return crypto.createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
 }
 function clean(rows){
  const map=new Map();
  for(const item of (Array.isArray(rows)?rows:[]).slice(-MAX_RESULTS)){
-  if(!idValid(item?.id)||typeof item.fingerprint!=='string'||item.fingerprint.length>400
+  if(!idValid(item?.id)||typeof item.fingerprint!=='string'||!/^[a-f0-9]{64}$/.test(item.fingerprint)
     ||typeof item.ok!=='boolean')continue;
   const result={ok:item.ok};
   if(typeof item.detail==='string')result.detail=item.detail.slice(0,200);
