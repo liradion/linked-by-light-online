@@ -107,7 +107,7 @@ function physics(){
   actions(container,a);
  }else p(container,'Выберите уровень главы v23 ниже. Первая карта доступна сразу.');
  const grid=section(content,'Выбрать испытание');
- if(role()===0){
+ if(api.isHost?.()||!api.isHost&&role()===0){
   const unlocked=state?.v23Unlocked??122;
   const g=el('div','v2346-level-grid');
   lvls.forEach((l,i)=>g.append(button((i+1)+'. '+l.title,()=>api.send?.({t:'selectStage',stage:i+122}),i+122>unlocked)));
@@ -173,14 +173,14 @@ function living(){
 function endless(){
  const box=section(content,'v25 · Endless Together');
  p(box,'Общие seed-карты собираются сервером из заранее проверенных платформ. Один seed — одинаковая геометрия на обоих устройствах.');
- actions(box,[button('✧ Ежедневное испытание',()=>send('v25Generate',{mode:'daily'}),role()!==0)]);
+ actions(box,[button('✧ Ежедневное испытание',()=>send('v25Generate',{mode:'daily'}),!(api.isHost?.()??role()===0))]);
  const seed=el('input','v2346-input');seed.inputMode='numeric';seed.placeholder='Seed: 1…4294967295';seed.maxLength=10;
  box.append(seed);
  box.append(button('Создать испытание по seed',()=>{
   const n=Number(seed.value);
   if(!Number.isInteger(n)||n<=0||n>0xffffffff)return api.announce?.('Введите целый положительный seed до 4294967295');
   send('v25Generate',{seed:n,mode:'custom'});
- },role()!==0));
+ },!(api.isHost?.()??role()===0)));
  if(meta){
   row(box,'Текущий seed',meta.seed||'—');
   row(box,'Ежедневный мир',meta.dailyKey||'Не выбран');
