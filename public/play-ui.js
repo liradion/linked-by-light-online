@@ -58,6 +58,38 @@
     document.addEventListener('keydown',event=>{
       if(event.key==='Escape'&&drawer.classList.contains('is-open'))setOpen(false);
     });
+
+    // Clean-play mode hides decoration, not gameplay controls or network warnings.
+    const gameFrame=document.getElementById('frame');
+    if(gameFrame){
+      const cleanToggle=document.createElement('button');
+      cleanToggle.type='button';
+      cleanToggle.id='cleanPlayToggle';
+      cleanToggle.className='clean-play-toggle';
+      const storageKey='linked-light-clean-ui';
+      gameFrame.append(cleanToggle);
+      const applyCleanMode=(enabled,remember=true)=>{
+        document.documentElement.classList.toggle('clean-play-mode',enabled);
+        cleanToggle.textContent=enabled?'☰':'◫ Чистое поле';
+        cleanToggle.setAttribute('aria-pressed',String(enabled));
+        cleanToggle.setAttribute('aria-label',enabled?'Показать интерфейс игры':'Скрыть интерфейс игры');
+        cleanToggle.title=enabled?'Показать интерфейс':'Чистое игровое поле';
+        if(enabled)setOpen(false);
+        if(remember){try{localStorage.setItem(storageKey,enabled?'1':'0');}catch(_){}}
+      };
+      let enabled=false;
+      try{enabled=localStorage.getItem(storageKey)==='1';}catch(_){}
+      applyCleanMode(enabled,false);
+      cleanToggle.addEventListener('click',()=>applyCleanMode(!document.documentElement.classList.contains('clean-play-mode')));
+      document.addEventListener('keydown',event=>{
+        if(event.repeat||event.altKey||event.ctrlKey||event.metaKey)return;
+        if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)||document.activeElement?.isContentEditable)return;
+        if(event.key.toLowerCase()==='h'||(event.key==='Escape'&&document.documentElement.classList.contains('clean-play-mode'))){
+          event.preventDefault();
+          applyCleanMode(!document.documentElement.classList.contains('clean-play-mode'));
+        }
+      });
+    }
     const status=document.querySelector('.statusbar');
     if(status)status.setAttribute('aria-live','polite');
   }
