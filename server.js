@@ -291,6 +291,9 @@ server.on('upgrade',(req,socket,head)=>{
     }
     if(!room||room.seats[role]?.peer!==peer)return;
     room.lastActivity=Date.now();
+    if(msg.t==='v28InviteShared'){
+      if(!peer.sharedInvite&&isHost(room,role)){peer.sharedInvite=true;telemetry.record('inviteShared');}return;
+    }
     if(msg.t==='v28Ping'){
       if(clientProtocol<4||room.game.phase!=='playing'||rateExceeded('v28-ping',14)||!v28.validPing(msg,room.game.level))return;
       const event=v28.pingData(msg,room.solo?room.soloActiveRole:role);
@@ -301,7 +304,7 @@ server.on('upgrade',(req,socket,head)=>{
       if(!room.solo||!isHost(room,role)||![0,1].includes(msg.activeRole))return error('Недоступно переключение героев');
       clearMovement(room.game,room.soloActiveRole);
       room.soloActiveRole=msg.activeRole;room.urgentSnapshot=true;
-      clearMovement(room.game,room.soloActiveRole);
+      clearMovement(room.game,room.soloActiveRole);room.game.input[room.soloActiveRole].resync=true;
       sendIntel(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='customize'){
@@ -415,6 +418,7 @@ server.on('upgrade',(req,socket,head)=>{
        return;
      }
      if(msg.t==='v26AssistVote'){
+       if(room.solo)return error('Помощь по голосованию доступна вдвоём');
        if(clientProtocol<4)return error('Обновите клиент до v26.');
        if(rateExceeded('assist-vote',12))return error('Слишком много голосований.');
        if(typeof msg.enabled!=='boolean')return error('Неверное значение режима.');
