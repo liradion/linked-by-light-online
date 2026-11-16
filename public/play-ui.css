@@ -1,0 +1,94 @@
+/* Linked by Light — calm and playable interface v27.
+   Visual layer only: existing input events, room state and game canvas stay untouched. */
+:root{--ui-night:#11172c;--ui-line:#a5a4d357;--ui-text:#f4f3ff;--ui-cyan:#8beaf5;--ui-lilac:#c8a6fa}
+html,body{width:100%;max-width:100%}
+body{background:radial-gradient(ellipse at 52% 110%,#26304d 0%,transparent 52%),#080b19}
+.game-shell{width:min(1450px,100%);position:relative}
+.topline{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;column-gap:14px;min-height:46px;margin-bottom:9px;padding:2px 5px}
+.topline .brand{min-width:0;font-size:11px;letter-spacing:.13em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topline .brand-mark{flex-shrink:0;border-radius:50%;background:radial-gradient(circle at 40% 35%,#695685,#1d223c);border-color:#9989c666}
+.topline .steps{justify-self:center;white-space:nowrap}
+.topline>div:last-child{display:flex;justify-content:flex-end;align-items:center;gap:7px!important;min-width:0}
+.topline .statusbar{white-space:nowrap;min-width:0}
+.topline .mini-btn{min-height:38px;border-radius:13px;border:1px solid #9796bb66;background:#252a46bc;color:#f7f3ff;font-weight:650}
+.topline #soundBtn{white-space:nowrap}
+.game-menu-trigger{display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;background:linear-gradient(130deg,#39345d,#283453)!important;border-color:#b5a1dc88!important}
+.game-menu-trigger[aria-expanded="true"]{background:linear-gradient(130deg,#5e4a81,#334e6a)!important}
+.game-menu-trigger:focus-visible,.game-menu-close:focus-visible,.game-quick-menu button:focus-visible{outline:3px solid #fff0af;outline-offset:2px}
+.frame{border:1px solid #8c89b34f;border-radius:18px;background:radial-gradient(ellipse at center,#303650,#111729 72%);box-shadow:0 10px 32px #030716a6}
+.frame .hud{padding:clamp(8px,1.4vw,17px);gap:10px}
+.frame .chapter,.frame .goal{border-radius:14px;background:#10172baf;border:1px solid #9b9bc13b;box-shadow:0 8px 21px #070c1e33;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.frame .chapter{padding:10px 13px;max-width:38%}
+.frame .chapter strong{font-size:clamp(13px,1.45vw,19px);letter-spacing:-.02em}
+.frame .goal{max-width:30%;padding:10px 13px;text-align:right;font-weight:650;color:#f0eaff;line-height:1.35;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.frame .touch-controls.compact .touch-button{background:linear-gradient(150deg,#334268db,#171c39e8);border:1px solid #b8b8df8a;color:#f7f6ff;box-shadow:0 6px 20px #03071666,inset 0 1px 0 #ffffff28}
+.frame .touch-controls.compact .touch-button[data-input="ability"]{background:linear-gradient(130deg,#244966d9,#34335eda);border-color:#8cdaea9c;color:#b1f9ff}
+.frame .touch-controls.compact .touch-button:active,.frame .touch-controls.compact .touch-button.pressed{background:#74629b!important;transform:scale(.96)}
+/* Unified menu: native game buttons are relocated here, not cloned or rewritten. */
+.game-menu-shade{position:fixed;inset:0;z-index:41;border:0;background:#070b1a99;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,visibility .18s ease}
+.game-menu-shade.is-open{visibility:visible;opacity:1;pointer-events:auto}
+.game-quick-menu{position:absolute;right:8px;top:54px;z-index:42;width:min(395px,calc(100vw - 24px));max-height:min(78dvh,680px);overflow:auto;overscroll-behavior:contain;padding:16px;border-radius:21px;background:linear-gradient(150deg,#1c2440f7,#12182efb);border:1px solid #a49bd186;box-shadow:0 24px 70px #040716df;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-7px) scale(.985);transition:opacity .18s ease,transform .18s ease,visibility .18s ease;scrollbar-width:thin}
+.game-quick-menu.is-open{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0) scale(1)}
+.game-menu-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 12px;color:#f7f4ff}
+.game-menu-head strong{font-size:17px;letter-spacing:.01em}
+.game-menu-close{border:1px solid #aba6d06d;background:#343c5d;border-radius:11px;color:#f7f4ff;min-width:40px;min-height:38px;cursor:pointer}
+.game-menu-group{padding:10px 0;border-top:1px solid #a7a7d02e}
+.game-menu-group-title{display:block;margin:0 0 10px;color:#b3b7d5;font-size:10px;font-weight:850;letter-spacing:.15em;text-transform:uppercase}
+.game-menu-navigation .adv-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+.game-menu-navigation .adv-nav button,.game-menu-tools button,.game-menu-worlds button,.game-menu-skills button{position:static!important;inset:auto!important;transform:none!important;max-width:none!important;margin:0!important;min-height:43px;text-align:left;padding:9px 12px;border-radius:12px;font:650 12px/1.3 system-ui;letter-spacing:0;box-shadow:none;background:linear-gradient(130deg,#2a3453,#282b46);border:1px solid #929bc468;color:#f2f3ff;touch-action:manipulation;cursor:pointer}
+.game-menu-navigation .adv-nav button:hover,.game-menu-tools button:hover,.game-menu-worlds button:hover,.game-menu-skills button:hover{border-color:#c4b0ef;background:#39436c}
+.game-menu-tools,.game-menu-worlds,.game-menu-skills{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.game-menu-worlds>.v20-quick,.game-menu-skills>.v20-quick,.game-menu-skills>.v21-quick{position:static!important;inset:auto!important;width:100%;grid-column:1/-1;flex-wrap:wrap;gap:7px}
+.game-menu-worlds .v20-quick button,.game-menu-skills .v20-quick button{flex:1;min-width:77px}
+.game-quick-menu [hidden]{display:none!important}
+.game-quick-menu .v2346-toggle[style*="display: none"],.game-quick-menu .v21-toggle[style*="display: none"]{display:none!important}
+/* Platform adaptation: maximize the height available for the actual level. */
+@media(pointer:coarse) and (orientation:landscape){
+ html,body{height:100%;width:100%;overflow:hidden}
+ body{padding:0!important;align-items:stretch}
+ .game-shell{height:100dvh;width:100%;max-width:none;margin:0;padding:env(safe-area-inset-top) max(5px,env(safe-area-inset-right)) max(3px,env(safe-area-inset-bottom)) max(5px,env(safe-area-inset-left));display:flex;flex-direction:column;box-sizing:border-box}
+ .topline{flex:none;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);min-height:36px;max-height:44px;margin:0 0 3px;padding:0 5px;column-gap:8px}
+ .topline .brand{font-size:clamp(8px,1.2vw,11px);letter-spacing:.06em}
+ .topline .brand-mark{width:24px;height:24px;min-width:24px;font-size:14px}
+ .topline .brand>span:last-child{display:none}
+ .topline .steps{gap:4px;font-size:9px}
+ .topline .steps .step{min-width:23px;height:23px;font-size:10px}
+ .topline>div:last-child{gap:5px!important}
+ .topline .mini-btn{min-height:32px;padding:5px 9px;font-size:11px;border-radius:11px}
+ .topline .statusbar{font-size:10px;gap:5px}
+ .topline #soundBtn{padding:5px 8px}
+ .game-menu-trigger{min-width:67px}
+ .frame{flex:1;min-height:0;border-radius:13px;border-color:#6c72915a}
+ .frame canvas{height:100%;width:100%;object-fit:contain;object-position:center;aspect-ratio:auto}
+ .frame .hud{inset:6px 6px auto;padding:0;gap:5px}
+ .frame .chapter{padding:6px 9px;max-width:26%;font-size:9px}
+ .frame .chapter strong{font-size:11px}
+ .frame .goal{padding:7px 9px;max-width:28%;font-size:10px;line-height:1.25;-webkit-line-clamp:2}
+ .frame .world-tag{font-size:8px}
+ .touch-controls.compact{bottom:calc(5px + env(safe-area-inset-bottom))!important;left:calc(7px + env(safe-area-inset-left))!important;right:calc(7px + env(safe-area-inset-right))!important;gap:8px}
+ .touch-controls.compact .touch-button{border-radius:16px!important}
+ .touch-center-badge{min-height:29px;padding:4px 8px;align-self:end;margin-bottom:5px;opacity:.88}
+ .touch-role-text small{display:none}
+ .adv-extra-controls .touch-button{width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;border-radius:11px!important;font-size:17px!important}
+ .game-quick-menu{position:absolute;top:calc(40px + env(safe-area-inset-top));right:calc(7px + env(safe-area-inset-right));max-height:calc(100dvh - 55px - env(safe-area-inset-top) - env(safe-area-inset-bottom));width:min(350px,68vw);padding:12px;border-radius:16px}
+ .game-menu-head strong{font-size:15px}
+ .game-menu-navigation .adv-nav button,.game-menu-tools button,.game-menu-worlds button,.game-menu-skills button{min-height:38px;padding:7px 9px;font-size:11px}
+ .game-menu-group{padding:7px 0}
+ .game-menu-group-title{margin-bottom:7px}
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-width:720px){
+ .topline #connectionStatus{display:none}
+ .topline .steps .step:not(.active){display:none}
+ .topline .brand{font-size:8px}
+ .topline .brand-mark{width:21px;height:21px;min-width:21px}
+ .topline .mini-btn{font-size:10px;padding:5px 7px}
+ .touch-center-badge{display:none}
+ .game-quick-menu{width:min(330px,80vw)}
+}
+@media(pointer:coarse) and (orientation:portrait){
+ .topline{display:flex;flex-wrap:wrap;justify-content:space-between}
+ .topline .brand{font-size:9px}
+ .topline .steps{order:3;width:100%;justify-content:center}
+ .game-quick-menu{top:80px;max-height:75dvh}
+}
+@media(prefers-reduced-motion:reduce){.game-menu-shade,.game-quick-menu{transition:none}.frame .touch-controls.compact .touch-button{transition:none}}
