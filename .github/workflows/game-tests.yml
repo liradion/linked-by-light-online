@@ -16,6 +16,12 @@ jobs:
       - name: Verify JavaScript syntax
         run: |
           node --check server.js
+          node --check websocket-transport.js
+          node --check room-checkpoint.js
+          node --check action-replay-cache.js
+          node --check runtime-monitor.js
+          node --check tests/v27-recovery-network.test.js
+          node --check tests/v27-cloud-migration.test.js
           node --check public-beta.js
           node --check public-beta-http.js
           node --check public/beta.js
