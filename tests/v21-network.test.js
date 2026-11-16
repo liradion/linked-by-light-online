@@ -32,7 +32,7 @@ test('v21 genuine WebSocket campaign, story, home, gallery and reconnection',{ti
   }
   const html=await (await fetch('http://127.0.0.1:'+port+'/')).text();
   assert.ok(html.indexOf('/shared/v21-stages.js')<html.indexOf('/v21.js'));
-  assert.ok(html.indexOf('/v21.js')<html.indexOf('/client.js?v=26'));
+  assert.ok(html.indexOf('/v21.js')<html.indexOf('/client.js?v=28'));
   host=await link(port);host.send({t:'hello',protocol:3});
   host.send({t:'create',stage:112,unlockedV21:['v21-01','v21-02']});const joined=await take(host,m=>m.t==='joined');
   assert.equal(joined.role,0);assert.equal(joined.protocol,4);
