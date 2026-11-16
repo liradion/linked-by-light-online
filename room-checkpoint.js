@@ -58,9 +58,10 @@ function atomicWrite(filename,value){
 function save(filename,payload,now=Date.now()){
  if(!validate(payload))throw Error('Invalid checkpoint payload');
  fs.mkdirSync(path.dirname(filename),{recursive:true});
- const current=load(filename);
- const revision=(current?.revision||0)+1;
  const journal=filename+'.v27';
+ let lastRevision=0;
+ try{lastRevision=readCandidate(journal,true).revision;}catch(_){}
+ const revision=lastRevision+1;
  if(fs.existsSync(journal)){
   try{
    readCandidate(journal,true);
