@@ -390,22 +390,37 @@ function init(callbacks){
  const header=el('header','v2346-header');
  header.append(el('strong','', 'Linked by Light · v23–v26'),button('Закрыть ✕',()=>dialog.close()));dialog.append(header);
  const tabs=el('nav','v2346-tabs');
- for(const [key,label] of [['physics','v23 · Физика'],['world','v24 · Мир'],['endless','v25 · Повторы'],['access','v26 · Доступность']])
-  tabs.append(button(label,()=>open(key)));
+ const tabLabels=[['physics','v23 · Физика'],['world','v24 · Мир'],['endless','v25 · Повторы'],['access','v26 · Доступность']];
+ for(const [key,label] of tabLabels){const item=button(label,()=>open(key));item.dataset.futureTab=key;tabs.append(item);}
  dialog.append(tabs);content=el('div','v2346-content');dialog.append(content);document.body.append(dialog);
- const menu=$('createBtn')?.parentElement;
+ root.GameI18n?.mountDialogLanguage?.(dialog);
+ const menuButtons=[],menu=$('createBtn')?.parentElement;
  if(menu){
-  menu.append(button('✦ Физика света v23',()=>api.create?.(122)));
+  const create=button('✦ Физика света v23',()=>api.create?.(122));menu.append(create);menuButtons.push([create,'✦ Физика света v23','']);
   const done=GameAdventure.data()?.v23?.unlockedStages||[];
   let max=122;for(let i=122;i<=136;i++){if(!done.includes('v23-'+String(i-121).padStart(2,'0')))break;max=i;}
-  if(max>122)menu.append(button('Продолжить v23 · '+(max-121)+'/15',()=>api.create?.(max)));
+  if(max>122){const suffix=(max-121)+'/15';const resume=button(loc('Продолжить v23 · ')+suffix,()=>api.create?.(max));menu.append(resume);menuButtons.push([resume,'Продолжить v23 · ',suffix]);}
  }
+ let giftMessage='',giftPreview=null;
  const gift=new URLSearchParams(location.search);
  if(['stars','forest','aurora'].includes(gift.get('gift'))){
   const wish=(gift.get('wish')||'').replace(/[\u0000-\u001f<>]/g,'').slice(0,60);
-  const msg=wish||'Вас пригласили в совместное приключение!';
-  const hint=$('networkError');if(hint)hint.textContent='✦ Подарочное приглашение: '+msg;
+  giftMessage=wish||loc('Вас пригласили в совместное приключение!');
+  giftPreview=$('networkError');
+  if(giftPreview)giftPreview.textContent=loc('✦ Подарочное приглашение: ')+giftMessage;
  }
+ root.GameI18n?.subscribe?.(()=>{
+  toggle.textContent=loc('✦ Новые миры v23–v26');
+  header.querySelector('.v2346-button').textContent=loc('Закрыть ✕');
+  for(const [key,label] of tabLabels){
+   const item=tabs.querySelector('[data-future-tab="'+key+'"]');
+   if(item)item.textContent=loc(label);
+  }
+  for(const [item,label,suffix] of menuButtons)item.textContent=loc(label)+suffix;
+  if(giftPreview)giftPreview.textContent=loc('✦ Подарочное приглашение: ')+(wishFromGift()||loc('Вас пригласили в совместное приключение!'));
+  if(dialog.open)sync();
+ });
+ function wishFromGift(){return (gift.get('wish')||'').replace(/[\u0000-\u001f<>]/g,'').slice(0,60);}
 }
-root.GameFuture={init,onMessage,onSnapshot,draw,open,applySettings,settings:()=>({...settings})};
+root.GameFuture={init,onMessage,onSnapshot,draw,open,applySettings,settings:()=>({...settings}),localize:loc};
 })(typeof window!=='undefined'?window:globalThis);
