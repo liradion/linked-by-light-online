@@ -10,8 +10,8 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 test('commercial clean-play UI has loadable JS/CSS and versioned references',()=>{
  const js=read('public/play-ui.js'),css=read('public/play-ui.css'),html=read('public/index.html');
  assert.doesNotThrow(()=>new vm.Script(js));
- assert.match(html,/\/play-ui\.js\?v=27\.7/);
- assert.match(html,/\/play-ui\.css\?v=27\.8/);
+ assert.match(html,/\/play-ui\.js\?v=27\.8/);
+ assert.match(html,/\/play-ui\.css\?v=27\.9/);
  assert.equal((css.match(/\{/g)||[]).length,(css.match(/\}/g)||[]).length);
 });
 test('first-run invitation and room UI are device-agnostic',()=>{
@@ -21,8 +21,8 @@ test('first-run invitation and room UI are device-agnostic',()=>{
  assert.match(client,/id='shareInviteBtn'/);
  assert.match(client,/typeof navigator\.share==='function'/);
  assert.match(client,/navigator\.clipboard\.writeText\(message/);
- assert.match(html,/\/client\.js\?v=26\.6/);
- assert.match(html,/\/play-ui\.css\?v=27\.8/);
+ assert.match(html,/\/client\.js\?v=26\.7/);
+ assert.match(html,/\/play-ui\.css\?v=27\.9/);
 });
 test('clean-play preserves original primary inputs and recovery controls',()=>{
  const html=read('public/index.html'),css=read('public/play-ui.css'),js=read('public/play-ui.js');
@@ -91,4 +91,18 @@ test('remappable keyboard controls initialize before client and retain native to
  assert.match(client,/GameControls\.normalize\(e\.key\)/);
  assert.match(client,/GameControls\.init\(\{onChange:/);
  assert.match(menu,/'#controlsOpen'/);
+});
+
+test('gamepad binding module loads before quality and client and preserves touch control markup',()=>{
+ const html=read('public/index.html'),ui=read('public/play-ui.js');
+ const module=read('public/gamepad-bindings.js'),quality=read('public/quality.js'),client=read('public/client.js');
+ assert.doesNotThrow(()=>new vm.Script(module));
+ assert.match(html,/\/gamepad-bindings\.js\?v=1/);
+ assert.ok(html.indexOf('/gamepad-bindings.js?v=1')<html.indexOf('/quality.js?v=15.2'));
+ assert.ok(html.indexOf('/quality.js?v=15.2')<html.indexOf('/client.js?v=26.7'));
+ assert.match(client,/GamePadBindings\.init\(\)/);
+ assert.match(quality,/root\.GamePadBindings/);
+ assert.match(ui,/'#gamepadOpen'/);
+ assert.match(html,/data-input="ability"/);
+ assert.match(read('public/play-ui.css'),/\.gamepad-dialog/);
 });
