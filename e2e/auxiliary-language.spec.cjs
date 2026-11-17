@@ -1,0 +1,90 @@
+'use strict';
+const {test,expect}=require('@playwright/test');
+
+test('cloud recovery and Google account dialogs switch RU/EN without changing keys or auth',async({page})=>{
+ const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ await page.locator('#languageSelect').selectOption('en');
+ await expect(page.locator('#cloudOpen')).toContainText('Cloud');
+ await page.locator('#cloudOpen').click();
+ const cloud=page.locator('#cloudDialog');
+ await expect(cloud).toBeVisible();
+ await expect(cloud.locator('.quality-head strong')).toHaveText('☁ Cloud saves');
+ await expect(cloud.locator('#cloudKey')).toHaveAttribute('placeholder','48 characters');
+ await expect(cloud.locator('.quality-note:not([id])')).toContainText('Anyone with the key');
+ await cloud.locator('[data-dialog-language]').selectOption('ru');
+ await expect(cloud.locator('.quality-head strong')).toHaveText('☁ Облачные сохранения');
+ await expect(cloud.locator('#cloudKey')).toHaveAttribute('placeholder','48 символов');
+ await cloud.locator('[data-dialog-language]').selectOption('en');
+ await expect(page.locator('#languageSelect')).toHaveValue('en');
+ await page.locator('#cloudClose').click();
+
+ await expect(page.locator('#googleAccountBtn')).toContainText('Sign in');
+ await page.locator('#googleAccountBtn').click();
+ const account=page.locator('#googleAccountDialog');
+ await expect(account).toBeVisible();
+ await expect(account.locator('.quality-head strong')).toHaveText('Google account');
+ await expect(account.locator('#googleAccountAbout')).toContainText('achievements');
+ await expect(account.locator('#googleAccountState')).toContainText(/guest|not available|Signed in/);
+ await account.locator('[data-dialog-language]').selectOption('ru');
+ await expect(account.locator('.quality-head strong')).toHaveText('Аккаунт Google');
+ await expect(account.locator('#googleAccountAbout')).toContainText('достижения');
+ await account.locator('[data-dialog-language]').selectOption('en');
+ await expect(account.locator('#googleSignIn')).toHaveText('Sign in with Google');
+ await page.locator('#googleAccountClose').click();
+ expect(errors).toEqual([]);
+});
+
+test('editing a community map and draft note survives language changes within editor',async({page})=>{
+ const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ await page.locator('#languageSelect').selectOption('en');
+ await page.locator('#exp-editor-open').click();
+ const dialog=page.locator('#exp-dialog');
+ await expect(dialog).toBeVisible();
+ await expect(dialog.locator('.adv-dialog-head strong')).toHaveText('✦ Our adventure');
+ await expect(dialog.locator('input.exp-input')).toHaveAttribute('placeholder','Level name');
+ await dialog.locator('input.exp-input').fill('Our private map ✦');
+ await dialog.locator('#exp-map-code').fill('LL1.personal-map-draft');
+ await dialog.locator('[data-dialog-language]').selectOption('ru');
+ await expect(dialog.locator('input.exp-input')).toHaveValue('Our private map ✦');
+ await expect(dialog.locator('#exp-map-code')).toHaveValue('LL1.personal-map-draft');
+ await expect(dialog.locator('input.exp-input')).toHaveAttribute('placeholder','Название уровня');
+ await dialog.locator('[data-dialog-language]').selectOption('en');
+ await expect(dialog.locator('input.exp-input')).toHaveValue('Our private map ✦');
+ await dialog.locator('.adv-dialog-head button').click();
+
+ await page.locator('#exp-notes-open').click();
+ await expect(dialog).toBeVisible();
+ await dialog.locator('#exp-note-draft').fill('Do not lose this note');
+ await dialog.locator('[data-dialog-language]').selectOption('ru');
+ await expect(dialog.locator('#exp-note-draft')).toHaveValue('Do not lose this note');
+ await expect(dialog.locator('#exp-note-draft')).toHaveAttribute('placeholder','Напиши что-нибудь друг другу…');
+ await dialog.locator('[data-dialog-language]').selectOption('en');
+ await expect(dialog.locator('#exp-note-draft')).toHaveValue('Do not lose this note');
+ await expect(dialog.locator('#exp-note-draft')).toHaveAttribute('placeholder','Write a note to each other…');
+ await dialog.locator('.adv-dialog-head button').click();
+ expect(errors).toEqual([]);
+});
+
+test('v21 gallery controls and moderation labels translate without touching community map titles',async({page})=>{
+ const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ await page.locator('#languageSelect').selectOption('en');
+ await page.evaluate(()=>window.GameV21.open('community'));
+ const dialog=page.locator('.v21-dialog');
+ await expect(dialog).toBeVisible();
+ await expect(dialog.locator('.v21-top strong')).toHaveText('Toward Each Other');
+ await expect(dialog.locator('[data-gallery-tab="community"]')).toHaveText('Maps');
+ await expect(dialog.locator('.v21-body')).toContainText('Create a room in the new campaign');
+ await dialog.locator('[data-dialog-language]').selectOption('ru');
+ await expect(dialog.locator('.v21-top strong')).toHaveText('Навстречу друг другу');
+ await expect(dialog.locator('[data-gallery-tab="community"]')).toHaveText('Карты');
+ await expect(dialog.locator('.v21-body')).toContainText('Создайте комнату');
+ await dialog.locator('[data-dialog-language]').selectOption('en');
+ await expect(dialog.locator('.v21-top strong')).toHaveText('Toward Each Other');
+ expect(errors).toEqual([]);
+});
