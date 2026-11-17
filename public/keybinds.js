@@ -159,7 +159,7 @@
     });
     const done=document.createElement('button');done.type='button';
     done.textContent=ui('done');
-    footer.append(resetButton,done);dialog.append(footer);document.body.append(dialog);
+    footer.append(resetButton,done);dialog.append(footer);document.body.append(dialog);root.GameI18n?.mountDialogLanguage?.(dialog);
     const closeDialog=()=>{cancelCapture();if(dialog.open)dialog.close();};
     close.addEventListener('click',closeDialog);done.addEventListener('click',closeDialog);
     dialog.addEventListener('close',cancelCapture);
