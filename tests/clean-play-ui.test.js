@@ -10,8 +10,8 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 test('commercial clean-play UI has loadable JS/CSS and versioned references',()=>{
  const js=read('public/play-ui.js'),css=read('public/play-ui.css'),html=read('public/index.html');
  assert.doesNotThrow(()=>new vm.Script(js));
- assert.match(html,/\/play-ui\.js\?v=27\.8/);
- assert.match(html,/\/play-ui\.css\?v=27\.9/);
+ assert.match(html,/\/play-ui\.js\?v=27\.9/);
+ assert.match(html,/\/play-ui\.css\?v=28\.0/);
  assert.equal((css.match(/\{/g)||[]).length,(css.match(/\}/g)||[]).length);
 });
 test('first-run invitation and room UI are device-agnostic',()=>{
@@ -21,8 +21,8 @@ test('first-run invitation and room UI are device-agnostic',()=>{
  assert.match(client,/id='shareInviteBtn'/);
  assert.match(client,/typeof navigator\.share==='function'/);
  assert.match(client,/navigator\.clipboard\.writeText\(message/);
- assert.match(html,/\/client\.js\?v=26\.7/);
- assert.match(html,/\/play-ui\.css\?v=27\.9/);
+ assert.match(html,/\/client\.js\?v=26\.9/);
+ assert.match(html,/\/play-ui\.css\?v=28\.0/);
 });
 test('clean-play preserves original primary inputs and recovery controls',()=>{
  const html=read('public/index.html'),css=read('public/play-ui.css'),js=read('public/play-ui.js');
@@ -62,8 +62,8 @@ test('content-alpha hint resources are loaded and never hidden by clean mode',()
  const html=read('public/index.html'),client=read('public/client.js'),ui=read('public/play-ui.js'),css=read('public/play-ui.css');
  const hints=read('public/game-hints.js');
  assert.doesNotThrow(()=>new vm.Script(hints));
- assert.match(html,/\/game-hints\.js\?v=3/);
- assert.ok(html.indexOf('/game-hints.js?v=3')<html.indexOf(html.match(/\/client\.js\?v=[0-9.]+/)[0]));
+ assert.match(html,/\/game-hints\.js\?v=4/);
+ assert.ok(html.indexOf('/game-hints.js?v=4')<html.indexOf(html.match(/\/client\.js\?v=[0-9.]+/)[0]));
  assert.match(client,/GameHints\.init\(/);
  assert.match(client,/GameHints\.onSnapshot\(s\)/);
  assert.match(ui,/'#gameHintBtn'/);
@@ -99,10 +99,23 @@ test('gamepad binding module loads before quality and client and preserves touch
  assert.doesNotThrow(()=>new vm.Script(module));
  assert.match(html,/\/gamepad-bindings\.js\?v=1/);
  assert.ok(html.indexOf('/gamepad-bindings.js?v=1')<html.indexOf('/quality.js?v=15.2'));
- assert.ok(html.indexOf('/quality.js?v=15.2')<html.indexOf('/client.js?v=26.7'));
+ assert.ok(html.indexOf('/quality.js?v=15.2')<html.indexOf('/client.js?v=26.9'));
  assert.match(client,/GamePadBindings\.init\(\)/);
  assert.match(quality,/root\.GamePadBindings/);
  assert.match(ui,/'#gamepadOpen'/);
  assert.match(html,/data-input="ability"/);
  assert.match(read('public/play-ui.css'),/\.gamepad-dialog/);
+});
+
+test('RU/EN language pack has a stable preference, translates first-act status without affecting co-op transport',()=>{
+ const html=read('public/index.html'),client=read('public/client.js'),beta=read('public/beta.js'),locale=read('public/i18n.js');
+ assert.doesNotThrow(()=>new vm.Script(locale));
+ assert.match(html,/id="languageSelect"/);
+ assert.match(html,/\/i18n\.js\?v=1/);
+ assert.ok(html.indexOf('/i18n.js?v=1')<html.indexOf('/client.js?v=26.9'));
+ assert.match(client,/GameI18n\.init\(\)/);
+ assert.match(client,/GameI18n\.subscribe\(/);
+ assert.match(beta,/root\.GameI18n/);
+ assert.match(client,/GameI18n\.formatGoal\(/);
+ assert.match(read('public/play-ui.js'),/INTERTWINED WORLDS/);
 });
