@@ -1,7 +1,7 @@
 /* Linked by Light v22 — Public Beta: first-run guide and voluntary feedback.
    Does not transmit IP addresses, emails, room codes, player tokens or profile keys. */
 (function(root){'use strict';
-let dialog,feedbackDialog,notice,step=0,config=null,api={},status,noticeKind='init',noticeRole=-1;
+let dialog,feedbackDialog,notice,step=0,config=null,api={},status,noticeKind='init',noticeRole=-1,noticeHost=false,noticeSolo=false;
 const KEY='linked-light-v22-intro';
 const $=id=>document.getElementById(id);
 const add=(tag,cls,content)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(content!==undefined)e.textContent=root.GameI18n?.translateExact?.(content)??content;return e;};
@@ -16,17 +16,23 @@ function start(){
  render();
 }
 const chapters=[
- {title:'Добро пожаловать в Linked by Light',description:'Это кооперативная игра для двоих. Один создаёт комнату, второй подключается по приглашению. Регистрация не обязательна для игры.'},
- {title:'Сначала создайте комнату',description:'Выберите «Создать комнату» или «Новая глава v21». В комнате появится шестизначный код. Не публикуйте свой код или ссылку в открытом доступе.'},
- {title:'Пригласите второго игрока',description:'Нажмите «Скопировать приглашение» и отправьте ссылку другу. Он открывает её в Safari или браузере на компьютере. Не пересылайте ссылку незнакомым людям.'},
- {title:'Начните вдвоём',description:'Когда появятся оба игрока, ведущий нажимает «Начать вдвоём». Первый герой — Искра, второй — Эхо. Уровни нужно проходить совместно.'},
+ {title:'Добро пожаловать в Linked by Light',description:'Играйте вдвоём из разных городов или одному, переключая двух героев. Регистрация не обязательна.'},
+ {title:'Сначала создайте комнату',description:'Выберите Искру или Эхо на любом устройстве. Создайте обычную комнату или начните соло. Не публикуйте приглашение открыто.'},
+ {title:'Пригласите второго игрока',description:'Нажмите «Поделиться приглашением» на телефоне или скопируйте ссылку. Партнёр присоединится автоматически.'},
+ {title:'Начните вдвоём',description:'Ведущий запускает совместную игру после подключения партнёра. В соло можно начать сразу, а Tab переключает героев.'},
  {title:'Управление и сохранение',description:'Если связь прервётся, игра попробует вернуть вас в комнату. Сохраняйте профиль и ключ восстановления отдельно. После перезапуска бесплатного сервера комната может быть недоступна.'}
+];
+const onboardingEN=[
+ 'Play together from different cities, or solo by switching between both heroes. No account is required.',
+ 'Choose Spark or Echo on any device. Create a shared room or start solo. Keep your invite link private.',
+ 'Use Share invitation on your phone or copy the invite link. Your partner will join automatically.',
+ 'The host starts co-op when both players are present. In solo, start immediately and press Tab to switch heroes.'
 ];
 function render(){
  if(!dialog)return;
  const root=$('beta-intro-content');root.replaceChildren();
  const i18n=window.GameI18n,english=i18n?.isEnglish?.();
- const topic=english?{title:i18n.t('chapter'+step),description:i18n.t('chapter'+step+'Text')}:chapters[step];
+ const topic=english?{title:i18n.t('chapter'+step),description:onboardingEN[step]||i18n.t('chapter'+step+'Text')}:chapters[step];
  root.append(add('p','beta-progress',english?i18n.t('onboardingStep',{step:step+1,total:chapters.length}):'Шаг '+(step+1)+' / '+chapters.length));
  root.append(add('h2','beta-heading',topic.title));
  root.append(add('p','beta-text',topic.description));
@@ -111,12 +117,13 @@ function updateNotice(){
  if(!notice)return;
  const en=root.GameI18n?.isEnglish?.();
  if(noticeKind==='joined'){
-  notice.textContent=en?noticeRole===0?'You are Spark. Share the invite, then select “Start together”.'
-   :noticeRole===1?'You are Echo. Waiting for the host to start.'
-   :'You are watching. Hero controls are unavailable.':noticeRole===0
-   ?'Вы — Искра. Отправьте приглашение второму игроку, затем нажмите «Начать вдвоём».'
-   :noticeRole===1?'Вы — Эхо. Подождите, пока ведущий запустит совместное приключение.'
-   :'Вы наблюдатель. Управление персонажами недоступно.';
+  notice.textContent=noticeRole<0
+   ?(en?'You are spectating. Character controls are unavailable.':'Вы наблюдатель. Управление недоступно.')
+   :noticeSolo
+    ?(en?'Solo: press Tab or use the on-screen switch to control both heroes.':'Соло: переключайте Искру и Эхо клавишей Tab или экранной кнопкой.')
+    :noticeHost
+     ?(en?'You are the host. Share the link and start once your partner joins.':'Вы ведущий. Поделитесь ссылкой и начинайте, когда партнёр войдёт.')
+     :(en?'You joined as a partner. The host will start the game.':'Вы подключились по приглашению. Игру запустит ведущий.');
  }else if(noticeKind==='disconnected')notice.textContent=en?
   'Connection lost. Reconnecting automatically; keep this page open.':
   'Соединение прервано. Выполняется автоматическое переподключение; не закрывайте страницу.';
@@ -127,7 +134,7 @@ function updateNotice(){
   'Beta: rooms may reset when the server restarts.':
   'Бета: серверные комнаты могут сбрасываться после перезапуска.';
 }
-function onJoined(role){noticeRole=role;noticeKind='joined';updateNotice();}
+function onJoined(data){noticeRole=typeof data==='number'?data:data?.role??-1;noticeHost=noticeRole>=0&&(typeof data==='number'?noticeRole===0:noticeRole===(data?.hostRole===1?1:0));noticeSolo=data?.solo===true;noticeKind='joined';updateNotice();}
 function onDisconnected(){noticeKind='disconnected';updateNotice();}
 function onRecovered(){noticeKind='recovered';updateNotice();}
 function init(callbacks){
@@ -168,8 +175,8 @@ function refreshLanguage(){
  const card=$('betaQuickStart');
  if(card){
   const title=card.querySelector('.beta-quickstart-title'),copy=card.querySelector('.beta-quickstart-copy');
-  if(title)title.textContent=english?'Two players — one adventure':'Два игрока — одно приключение';
-  if(copy)copy.textContent=english?'Create a room and invite your partner with a link.':'Создайте комнату и пригласите второго игрока по ссылке.';
+  if(title)title.textContent=english?'Two heroes — one adventure':'Два героя — одно приключение';
+  if(copy)copy.textContent=english?'Create a room for two or try solo.':'Создайте комнату для двоих или попробуйте соло.';
   const open=card.querySelector('.beta-quickstart-open'),dismiss=card.querySelector('.beta-quickstart-dismiss');
   if(open)open.textContent=english?'How to play':'Как играть';
   if(dismiss)dismiss.textContent=english?'Got it':'Понятно';
