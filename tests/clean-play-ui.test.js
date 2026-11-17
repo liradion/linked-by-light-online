@@ -10,8 +10,8 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 test('commercial clean-play UI has loadable JS/CSS and versioned references',()=>{
  const js=read('public/play-ui.js'),css=read('public/play-ui.css'),html=read('public/index.html');
  assert.doesNotThrow(()=>new vm.Script(js));
- assert.match(html,/\/play-ui\.js\?v=27\.3/);
- assert.match(html,/\/play-ui\.css\?v=27\.3/);
+ assert.match(html,/\/play-ui\.js\?v=27\.4/);
+ assert.match(html,/\/play-ui\.css\?v=27\.4/);
  assert.equal((css.match(/\{/g)||[]).length,(css.match(/\}/g)||[]).length);
 });
 test('clean-play preserves original primary inputs and recovery controls',()=>{
