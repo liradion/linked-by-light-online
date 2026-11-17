@@ -29,7 +29,8 @@ The project owner reported that two human players completed the nine-stage demo.
 - Added [local role-specific remapping](M2_KEYBOARD_CONTROLS.md) for movement, jump and ability, with collision protection, persisted device-only settings and original defaults.
 - Keyboard hints and on-screen PC control labels now reflect custom bindings. The original touch and gamepad controls are unchanged.
 - Node and dual-browser regression tests specifically exercise remapping and gameplay input packets.
-- Gamepad remapping, actual disabled-user testing, full keyboard-layout coverage and RU/EN localization are **still outstanding**. The overall accessibility gate below remains open.
+- Added [gamepad button mapping](M2_GAMEPAD_CONTROLS.md) for standard controller buttons, with conflict avoidance, in-dialog capture isolation and browser tests on simulated Gamepad API. Physical Xbox/PlayStation acceptance remains open.
+- Actual disabled-user testing, multiple controller support, full keyboard-layout coverage and RU/EN localization are **still outstanding**. The overall accessibility gate below remains open.
 
 ## M2 acceptance gates — open
 
