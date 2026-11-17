@@ -31,7 +31,7 @@ function setError(message){$('networkError').textContent=message;}
 function wsSend(m){if(socket&&socket.readyState===WebSocket.OPEN)socket.send(JSON.stringify(m));}
 function updateStatus(){const online=socket?.readyState===WebSocket.OPEN;
   $('statusDot').className='status-dot '+(online?'online':'offline');
-  $('connectionStatus').textContent=online?'На связи':room?'Нет связи':'Подключение…';
+  $('connectionStatus').textContent=online?GameI18n.t('networkOnline'):room?GameI18n.t('networkOffline'):GameI18n.t('networkConnecting');
   $('ping').textContent=online&&latency?`${latency} мс`:'';
   const mobileStatus=$('mobileConnectionText'),mobileBox=$('mobileConnection');
   if(mobileStatus)mobileStatus.textContent=online?('Сервер на связи'+(latency?' · '+latency+' мс':'')):'Подключение к серверу…';
@@ -105,15 +105,15 @@ function updateTouchRole(){
 function showUI(){
   updateStatus();
   updateTouchRole();
-  $('slot0').textContent=connected[0]?'● В сети':'○ Нет подключения';
-  $('slot1').textContent=connected[1]?'● В сети':'○ Ожидаем игрока';
+  $('slot0').textContent=GameI18n.t(connected[0]?'online':'offline');
+  $('slot1').textContent=GameI18n.t(connected[1]?'online':'awaitPlayer');
   $('roomCode').textContent=room||'------';
   if(!room)refreshCampaignMenu();
    $('demoBtn').disabled=!!room;
   $('startBtn').disabled=!(role===0&&connected[0]&&connected[1]&&ready&&phase==='waiting');
   $('restartBtn').disabled=role!==0||!connected.every(Boolean);
   $('resetBtn').disabled=role!==0;
-  $('lobbyHint').textContent=demoMode?(role===0?'Демо: девять испытаний. Поделитесь приглашением и начните вместе.':'Демо: дождитесь начала совместного приключения.'):role===0?'Отправьте приглашение. Когда оба игрока подключатся, нажмите «Начать вдвоём».':'Вы подключены. Ждём, когда создатель комнаты запустит игру.';
+  $('lobbyHint').textContent=GameI18n.t(demoMode?(role===0?'demoHost':'demoGuest'):role===0?'lobbyHost':'lobbyGuest');
   if(!room)overlay.dataset.view='menu';
   else if(phase==='waiting')overlay.dataset.view='lobby';
   else if(phase==='win')overlay.dataset.view='win';
@@ -125,7 +125,25 @@ function showUI(){
     if(eyebrow)eyebrow.textContent=demoMode?'ДЕМО · ПЕРВАЯ ГЛАВА · 9 ИСПЫТАНИЙ':levelIndex>=122?'ФИЗИКА СВЕТА · 15 ИСПЫТАНИЙ':levelIndex>=112?'НАВСТРЕЧУ ДРУГ ДРУГУ · 10 ИСПЫТАНИЙ':levelIndex>=100?'ПЕРЕПЛЕТЕНИЕ МИРОВ · 12 УРОВНЕЙ':'ОСНОВНАЯ КАМПАНИЯ · 99 УРОВНЕЙ';
   }
   $('demoBackBtn').hidden=!(demoMode&&phase==='win');
-  $('restartBtn').textContent=demoMode?'Пройти демо снова ↻':'Сыграть сначала ↻';
+  $('restartBtn').textContent=GameI18n.t(demoMode?'replayDemo':'replay');
+  if(GameI18n.isEnglish()){
+    const me=$('myRole');
+    if(me&&role>=0)me.textContent=GameI18n.t(role===0?'youSpark':role===1?'youEcho':'youSpectator');
+    $('touchRoleName').textContent=role===1?'Echo':role===0?'Spark':'Spectator';
+    $('touchRoleHint').textContent=role===1?'jump and pulse':role===0?'jump and dash':'view only';
+    $('mobileConnectionText').textContent=ready?'Server connected':'Connecting to server…';
+    if(!room){
+      const progress=bestStage();
+      $('createBtn').textContent=progress>0?'Continue from level '+(progress+1)+' ✦':GameI18n.EN.create;
+      $('campaignProgress').textContent=progress>0?'Progress saved on this device: level '+(progress+1)+' of '+stageDefs.length+'.':GameI18n.EN.campaignInfo;
+    }
+    if(phase==='win'&&demoMode){
+      const win=$('winView');
+      win.querySelector('.hero-title').textContent=GameI18n.t('demoEndingTitle');
+      win.querySelector('.intro-copy').textContent=GameI18n.t('demoEndingText');
+      win.querySelector('.eyebrow').textContent=GameI18n.t('demoEndingTag');
+    }
+  }
   // Preserve the menu/lobby view selected above. Resetting dataset.view here
   // hid the entire landing menu in browsers whenever the game had no ending.
   overlay.classList.toggle('hidden',!!room&&phase==='playing');
@@ -137,7 +155,7 @@ function createRoom(newGame=false,stageOverride=null,blueprint=null,startDemo=fa
  if(!ready)openConnection();
  else{wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome(),unlockedV20:GameAdventure.data().v20?.unlockedStages||[],v20Home:GameAdventure.data().v20?.house||{},v20Choices:GameAdventure.data().v20?.choices||{},unlockedV21:GameAdventure.data().v21?.unlockedStages||[],v21Profile:{unlockedStages:GameAdventure.data().v21?.unlockedStages||[],completed:GameAdventure.data().v21?.completed||[],trophies:GameAdventure.data().v21?.trophies||[],aquarium:GameAdventure.data().v21?.aquarium||[]},unlockedV23:GameAdventure.data().v23?.unlockedStages||[],v24Profile:GameAdventure.data().v24||{},demo:pendingDemo});pendingCreate=false;pendingBlueprint=null;pendingDemo=false;}
 }
-function joinRoom(code){const value=(code||'').trim().toUpperCase();if(!/^[A-HJ-NP-Z2-9]{6}$/.test(value)){setError('Введите шестизначный код комнаты.');return;}
+function joinRoom(code){const value=(code||'').trim().toUpperCase();if(!/^[A-HJ-NP-Z2-9]{6}$/.test(value)){setError(GameI18n.t('roomInvalid'));return;}
   pendingRoom=value;pendingSpectate=false;setError('');if(ready)wsSend({t:'join',room:value,token:roomToken(value)});else openConnection();
 }
 $('createBtn').addEventListener('click',()=>createRoom(false));
@@ -151,8 +169,8 @@ $('resetBtn').addEventListener('click',()=>wsSend({t:'resetStage'}));
 $('restartBtn').addEventListener('click',()=>wsSend({t:'restart'}));
 $('copyBtn').addEventListener('click',async()=>{
   const url=new URL(location.pathname,location.href);url.searchParams.set('room',room);
-  const text=`Сыграем вместе в «Связанные светом»? Открой ссылку на компьютере или телефоне: ${url.href} (код ${room})`;
-  try{await navigator.clipboard.writeText(text);$('copyBtn').textContent='Скопировано ✓';setTimeout(()=>$('copyBtn').textContent='Скопировать приглашение',1500);}
+  const text=GameI18n.t('copyInviteMessage',{url:url.href,room});
+  try{await navigator.clipboard.writeText(text);$('copyBtn').textContent=GameI18n.isEnglish()?'Copied ✓':'Скопировано ✓';setTimeout(()=>$('copyBtn').textContent=GameI18n.isEnglish()?GameI18n.EN.copyInvite:GameI18n.t('copyInvite'),1500);}
   catch(_){setError('Не удалось скопировать автоматически. Код: '+room+' — '+url.href);}
 });
 // Native share on iPhone/Android, clipboard fallback for desktop and older browsers.
@@ -271,6 +289,24 @@ function updateHUD(){
     if(extra?.boss?.hp>0&&extra.boss.active)goal='БОСС '+extra.boss.name+' · '+extra.boss.hp+'/'+extra.boss.max+' HP · атакует '+(extra.boss.next?'Эхо':'Искра');
     else if(extra?.arcade?.started&&!extra.arcade.done)goal='МИНИ-ИГРА: '+({chase:'гонка до светового рубежа',flight:'оба пролетите через кольцо',rhythm:'активируйте два ритмических узла',sail:'держите вправо вдвоём у паруса'}[extra.arcade.kind]||'действуйте вместе');
   }
+  if(GameI18n.isEnglish()){
+    const pad2=n=>String(n).padStart(2,'0');
+    $('levelName').textContent=GameI18n.stageTitle(levelIndex,level.title);
+    $('levelLabel').textContent=demoMode?'DEMO · CHALLENGE '+GameDemo.progress(levelIndex)+' / '+GameDemo.stages.length
+      :levelIndex>=122?'PHYSICS OF LIGHT · '+(levelIndex-121)+'/15'
+      :levelIndex>=112?'TOWARD EACH OTHER · '+(levelIndex-111)+'/10'
+      :levelIndex>=100?'INTERTWINED WORLDS · '+(levelIndex-99)+'/12'
+      :levelIndex===99?'SECRET LEVEL 100'
+      :'LEVEL '+pad2(levelIndex+1)+' / 99 · ACT '+(Math.floor(levelIndex/9)+1)+'/11';
+    $('actProgress').textContent=demoMode?'DEMO '+pad2(GameDemo.progress(levelIndex))+'/'+pad2(GameDemo.stages.length)
+      :levelIndex>=122?'CHAPTER V23':levelIndex>=112?'CHAPTER V21'
+      :levelIndex>=100?'CHAPTER '+(Math.floor((levelIndex-100)/4)+1)+'/3'
+      :'ACT '+pad2(Math.floor(levelIndex/9)+1);
+    if(demoMode)$('worldTag').textContent='✦ Chapter One';
+    if(P[0]?.cool<=0)$('amberStatus').textContent=GameI18n.t('readyDash');
+    if(P[1]?.cool<=0)$('blueStatus').textContent=GameI18n.t('readyPulse');
+    goal=GameI18n.formatGoal(goal,levelIndex,GameControls.labelFor(0,'ability'),GameControls.labelFor(1,'ability'));
+  }
   $('objective').textContent=goal;
 }
 
@@ -335,9 +371,9 @@ function consumeSnapshot(s){
   }
   snapshots.push(latest);if(snapshots.length>12)snapshots.shift();
   GameHints.onSnapshot(s);
-  if(demoMode&&!previous&&phase==='playing')announce('✦ '+GameDemo.intro,4);
+  if(demoMode&&!previous&&phase==='playing')announce('✦ '+(GameI18n.isEnglish()?'Nine co-op challenges. Two heroes, two abilities, one path.':GameDemo.intro),4);
   if(phase==='playing')playingOnce=true;
-  if(phase==='win'&&previous?.phase!=='win'){announce(s.ending?.title||'Вы прошли игру вместе!',4);tone(740,.3,'sine',.06);}
+  if(phase==='win'&&previous?.phase!=='win'){announce(demoMode&&GameI18n.isEnglish()?GameI18n.t('demoEndingTitle'):s.ending?.title||'Вы прошли игру вместе!',4);tone(740,.3,'sine',.06);}
   showUI();
 }
 function renderPlayers(dt){
@@ -454,6 +490,12 @@ function refreshKeyboardGuides(){
   el.textContent=labels[0]+' / '+labels[1]+' — ходить · '+labels[2]+' — прыжок · '+labels[3]+' — способность · G — связь · T — эмоция';
  }
 }
+GameI18n.init();
+GameI18n.subscribe(()=>{
+  showUI();
+  if(latest?.world)updateHUD();
+  GamePublicBeta.refreshLanguage?.();
+});
 GameControls.init({onChange:()=>{resetKeys();refreshKeyboardGuides();}});
 GamePadBindings.init();
 GameQuality.init({getSession:()=>({phase,role,room}),onControls:(left,right)=>{if(left)keys.add('gamepad-left');else keys.delete('gamepad-left');if(right)keys.add('gamepad-right');else keys.delete('gamepad-right');updateInput();},onAction:activateKey});
