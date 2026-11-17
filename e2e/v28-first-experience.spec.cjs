@@ -10,8 +10,9 @@ test('v28 Web Share invitation auto-joins mobile guest, Echo can host and player
   const host=await hostContext.newPage(),guest=await guestContext.newPage();
   const errors=[];host.on('pageerror',e=>errors.push(e.message));guest.on('pageerror',e=>errors.push(e.message));
   await host.goto('/');
-  await expect(host.locator('#betaIntro')).toBeVisible({timeout:6000});
-  await host.locator('#betaIntro').getByRole('button',{name:/Пропустить/}).click();
+  // The integrated clean-play UI uses a nonblocking quick-start card, not an automatic modal.
+  await expect(host.locator('#betaQuickStart')).toBeVisible({timeout:6000});
+  await host.locator('#betaQuickStart .beta-quickstart-dismiss').click();
   await expect(host.locator('#v28RoleSelect')).toBeVisible();
   await host.locator('#v28RoleSelect').selectOption('1');
   await host.locator('#createBtn').click();
@@ -40,8 +41,8 @@ test('v28 solo creates one-seat authoritative game and Tab switches active chara
  try{
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/');
-  await expect(page.locator('#betaIntro')).toBeVisible({timeout:6000});
-  await page.locator('#betaIntro').getByRole('button',{name:/Пропустить/}).click();
+  await expect(page.locator('#betaQuickStart')).toBeVisible({timeout:6000});
+  await page.locator('#betaQuickStart .beta-quickstart-dismiss').click();
   await page.locator('#v28RoleSelect').selectOption('1');
   await page.locator('#v28SoloBtn').click();
   await expect(page.locator('#roomCode')).toHaveText(/^[A-HJ-NP-Z2-9]{6}$/,{timeout:16000});
