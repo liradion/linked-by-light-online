@@ -78,11 +78,72 @@
       cleanToggle.setAttribute('aria-label','Показать интерфейс игры');
       cleanToggle.title='Показать интерфейс';
       gameFrame.append(cleanToggle);
+      // Contextual mobile actions prevent clean mode from blocking later chapters.
+      // The original v20 buttons retain their own handlers; proxies only invoke them.
+      const contextToggle=document.createElement('button');
+      contextToggle.type='button';
+      contextToggle.id='cleanContextToggle';
+      contextToggle.className='clean-context-toggle';
+      contextToggle.textContent='⋯';
+      contextToggle.setAttribute('aria-expanded','false');
+      contextToggle.setAttribute('aria-label','Дополнительные игровые действия');
+      contextToggle.setAttribute('aria-controls','cleanContextActions');
+      const contextActions=document.createElement('div');
+      contextActions.id='cleanContextActions';
+      contextActions.className='clean-context-actions';
+      contextActions.hidden=true;
+      contextActions.setAttribute('aria-label','Дополнительные действия');
+      gameFrame.append(contextToggle,contextActions);
+      const touchControls=document.getElementById('touchControls');
+      const extraButtons=touchControls?.querySelector('.adv-extra-controls');
+      const getChapter=()=>{
+        const label=document.getElementById('levelLabel')?.textContent||'';
+        if(label.startsWith('ПЕРЕПЛЕТЕНИЕ МИРОВ'))return 'v20';
+        if(label.startsWith('НАВСТРЕЧУ ДРУГ ДРУГУ'))return 'v21';
+        if(label.startsWith('ФИЗИКА СВЕТА'))return 'v23';
+        return 'base';
+      };
+      const makeContextButton=(label,fn)=>{
+        const button=document.createElement('button');
+        button.type='button';
+        button.className='clean-context-action';
+        button.textContent=label;
+        button.addEventListener('click',()=>{fn();closeContext();});
+        contextActions.append(button);
+      };
+      const closeContext=()=>{
+        contextActions.hidden=true;
+        contextToggle.setAttribute('aria-expanded','false');
+        touchControls?.classList.remove('clean-show-extra');
+      };
+      const openContext=()=>{
+        contextActions.replaceChildren();
+        const chapter=getChapter();
+        if(extraButtons)touchControls.classList.add('clean-show-extra');
+        if(chapter==='v20'){
+          const originals=[...document.querySelectorAll('.v20-quick button')];
+          for(const [i,label] of ['⛓ Нить','◈ Мир','◷ Время'].entries()){
+            if(originals[i])makeContextButton(label,()=>originals[i].click());
+          }
+        }else if(chapter==='v21'){
+          makeContextButton('✧ Действия главы',()=>window.GameV21?.open('level'));
+        }else if(chapter==='v23'){
+          makeContextButton('✦ Физика света',()=>window.GameFuture?.open('physics'));
+        }
+        const hasSpecial=contextActions.childElementCount>0;
+        contextActions.hidden=!hasSpecial;
+        contextToggle.setAttribute('aria-expanded','true');
+      };
+      contextToggle.addEventListener('click',()=>{
+        if(contextToggle.getAttribute('aria-expanded')==='true')closeContext();
+        else openContext();
+      });
       const storageKey='linked-light-clean-ui';
       const applyCleanMode=(enabled,remember=true)=>{
         document.documentElement.classList.toggle('clean-play-mode',enabled);
         cleanEntry.setAttribute('aria-pressed',String(enabled));
         if(enabled)setOpen(false);
+        closeContext();
         if(remember){try{localStorage.setItem(storageKey,enabled?'1':'0');}catch(_){}}
       };
       const switchMode=()=>{
