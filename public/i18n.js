@@ -87,18 +87,8 @@
   copyInvite:'Скопировать приглашение',
   copyInviteMessage:'Сыграем вместе в «Связанные светом»? Открой ссылку на компьютере или телефоне: {url} (код {room})'
  };
- const titleEn=['First Contact','Bridge of Trust','One Rhythm','Bright Valley · Stronger Together','Bright Valley · Shared Signal','Bright Valley · Hold the Bridge','Bright Valley · Double Glow','Bright Valley · The Right Choice','Bright Valley · Final Connection'];
- const objectiveEn=[
-  'Spark stands on the orange plate; Echo on the blue. Hold them simultaneously.',
-  'Spark breaks the wall and holds a plate; Echo crosses the bridge and activates the crystal.',
-  'Break the wall, charge the crystal and stand together on the color-matched plates.',
-  'Spark breaks the barrier. Activate both plates.',
-  'Light the crystal and stand on both plates at the same time.',
-  'Spark holds the plate while Echo crosses the bridge and charges the crystal.',
-  'Echo activates both crystals. Cross the bridge together.',
-  'Break the wall, charge the crystal and activate both plates.',
-  'Activate all mechanisms together and enter the portal.'
- ];
+ const titleEn=stageLocale.FIRST_TITLES;
+ const objectiveEn=stageLocale.FIRST_OBJECTIVES;
  const BINDINGS=Object.freeze({
   '#menuView > .eyebrow':'online','#menuView > .intro-copy:first-of-type':'intro',
   '#menuView .demo-launch-tag':'demoTag','#menuView .demo-launch > strong':'demoTitle',
