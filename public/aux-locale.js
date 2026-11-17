@@ -70,7 +70,11 @@
   'gallery.publish':'Опубликовать мой уровень','gallery.refresh':'Обновить галерею',
   'gallery.loading':'Загрузка списка опубликованных уровней.','gallery.empty':'Пока нет опубликованных карт.',
   'gallery.platforms':'{count} платформ · {author}','gallery.play':'▶ Играть вдвоём',
-  'gallery.report':'Пожаловаться'
+  'gallery.report':'Пожаловаться',
+  'gallery.subtitle':'Linked by Light v21 · Навстречу друг другу',
+  'gallery.noRoom':'Создайте комнату в новой кампании и пригласите второго игрока.',
+  'gallery.startChapter':'✦ Начать новую главу',
+  'gallery.spectator':'Вы наблюдатель. Совместные действия доступны только игрокам.'
  });
  const EN=Object.freeze({
   'cloud.open':'☁ Cloud','cloud.title':'☁ Cloud saves',
@@ -135,7 +139,11 @@
   'gallery.publish':'Publish my level','gallery.refresh':'Refresh gallery',
   'gallery.loading':'Loading published levels.','gallery.empty':'No published maps yet.',
   'gallery.platforms':'{count} platforms · {author}','gallery.play':'▶ Play together',
-  'gallery.report':'Report'
+  'gallery.report':'Report',
+  'gallery.subtitle':'Linked by Light v21 · Toward Each Other',
+  'gallery.noRoom':'Create a room in the new campaign and invite your partner.',
+  'gallery.startChapter':'✦ Start a new chapter',
+  'gallery.spectator':'You are a spectator. Cooperative actions are only available to players.'
  });
  function text(key,lang='ru',vars){
   const source=lang==='en'?EN:RU;
