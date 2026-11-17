@@ -10,8 +10,8 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 test('commercial clean-play UI has loadable JS/CSS and versioned references',()=>{
  const js=read('public/play-ui.js'),css=read('public/play-ui.css'),html=read('public/index.html');
  assert.doesNotThrow(()=>new vm.Script(js));
- assert.match(html,/\/play-ui\.js\?v=27\.6/);
- assert.match(html,/\/play-ui\.css\?v=27\.7/);
+ assert.match(html,/\/play-ui\.js\?v=27\.7/);
+ assert.match(html,/\/play-ui\.css\?v=27\.8/);
  assert.equal((css.match(/\{/g)||[]).length,(css.match(/\}/g)||[]).length);
 });
 test('first-run invitation and room UI are device-agnostic',()=>{
@@ -21,8 +21,8 @@ test('first-run invitation and room UI are device-agnostic',()=>{
  assert.match(client,/id='shareInviteBtn'/);
  assert.match(client,/typeof navigator\.share==='function'/);
  assert.match(client,/navigator\.clipboard\.writeText\(message/);
- assert.match(html,/\/client\.js\?v=26\.4/);
- assert.match(html,/\/play-ui\.css\?v=27\.7/);
+ assert.match(html,/\/client\.js\?v=26\.5/);
+ assert.match(html,/\/play-ui\.css\?v=27\.8/);
 });
 test('clean-play preserves original primary inputs and recovery controls',()=>{
  const html=read('public/index.html'),css=read('public/play-ui.css'),js=read('public/play-ui.js');
@@ -77,4 +77,18 @@ test('header control selectors survive new settings and plugin buttons',()=>{
  assert.match(ui,/:scope > div:last-of-type/);
  assert.match(hint,/\.topline > div:last-of-type/);
  assert.match(beta,/\.topline > div:last-of-type/);
+});
+
+test('remappable keyboard controls initialize before client and retain native touch controls',()=>{
+ const html=read('public/index.html'),client=read('public/client.js'),menu=read('public/play-ui.js');
+ const kb=read('public/keybinds.js');
+ assert.doesNotThrow(()=>new vm.Script(kb));
+ assert.match(html,/\/keybinds\.js\?v=1/);
+ assert.ok(html.indexOf('/keybinds.js?v=1')<html.indexOf('/client.js?v=26.5'));
+ assert.match(html,/id="amberControlsGuide"/);
+ assert.match(html,/id="blueControlsGuide"/);
+ assert.match(client,/GameControls\.keyFor\(role,'right'\)/);
+ assert.match(client,/GameControls\.normalize\(e\.key\)/);
+ assert.match(client,/GameControls\.init\(\{onChange:/);
+ assert.match(menu,/'#controlsOpen'/);
 });
