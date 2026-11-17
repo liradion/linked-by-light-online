@@ -10,7 +10,7 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 test('commercial clean-play UI has loadable JS/CSS and versioned references',()=>{
  const js=read('public/play-ui.js'),css=read('public/play-ui.css'),html=read('public/index.html');
  assert.doesNotThrow(()=>new vm.Script(js));
- assert.match(html,/\/play-ui\.js\?v=27\.5/);
+ assert.match(html,/\/play-ui\.js\?v=27\.6/);
  assert.match(html,/\/play-ui\.css\?v=27\.7/);
  assert.equal((css.match(/\{/g)||[]).length,(css.match(/\}/g)||[]).length);
 });
@@ -62,11 +62,19 @@ test('content-alpha hint resources are loaded and never hidden by clean mode',()
  const html=read('public/index.html'),client=read('public/client.js'),ui=read('public/play-ui.js'),css=read('public/play-ui.css');
  const hints=read('public/game-hints.js');
  assert.doesNotThrow(()=>new vm.Script(hints));
- assert.match(html,/\/game-hints\.js\?v=1/);
- assert.ok(html.indexOf('/game-hints.js?v=1')<html.indexOf('/client.js?v=26.4'));
+ assert.match(html,/\/game-hints\.js\?v=2/);
+ assert.ok(html.indexOf('/game-hints.js?v=2')<html.indexOf('/client.js?v=26.4'));
  assert.match(client,/GameHints\.init\(/);
  assert.match(client,/GameHints\.onSnapshot\(s\)/);
  assert.match(ui,/'#gameHintBtn'/);
  assert.match(css,/#gameHintPanel\[hidden\]\{display:none!important\}/);
  assert.match(css,/html\.clean-play-mode #gameHintCleanBtn:not\(\[hidden\]\)/);
+});
+
+test('header control selectors survive new settings and plugin buttons',()=>{
+ const ui=read('public/play-ui.js'),hint=read('public/game-hints.js'),beta=read('public/beta.js');
+ for(const source of [ui,hint,beta])assert.doesNotMatch(source,/div:last-child/);
+ assert.match(ui,/:scope > div:last-of-type/);
+ assert.match(hint,/\.topline > div:last-of-type/);
+ assert.match(beta,/\.topline > div:last-of-type/);
 });
