@@ -552,8 +552,6 @@ const loop=setInterval(()=>{
   lastBroadcast++;
   for(const r of ROOMS.values()){
     r.game.solo=!!r.solo;
-    r.game.solo=!!r.solo;
-    if(r.game.phase==='playing'&&r.lastV28Stage!==r.game.stage){r.lastV28Stage=r.game.stage;telemetry.record('stageEntered',r.game.stage);sendIntel(r);}
     tick(r.game,countOnline(r));
     if(r.game.phase==='playing'&&r.lastV28Stage!==r.game.stage){
       r.lastV28Stage=r.game.stage;telemetry.record('stageEntered',r.game.stage);
@@ -573,7 +571,6 @@ const loop=setInterval(()=>{
         const seat=r.seats[i];if(seat?.online)seat.peer.send({t:'v21Private',data:social.privateState(r,i)});
       }
     }
-    if(r.game.lastResult?.completed){const key=[r.game.lastResult.level,r.game.lastResult.elapsed,r.game.lastResult.deaths].join(':');if(key!==r.lastV28ResultKey){r.lastV28ResultKey=key;telemetry.record('stageCompleted',r.game.lastResult.level);}}
     if(r.game.phase==='win'&&!r.ending)r.ending=r.game.demo===true?demo.ending:v23.hasStage(r.game.stage)?{kind:'v23',title:'Мастера физики света',text:'Все древние хранители побеждены вдвоём!'}:v21.hasStage(r.game.stage)?{kind:'v21',title:'Навстречу друг другу',text:'Ваши пути снова встретились! Новые воспоминания ждут дома.'}:v20.hasStage(r.game.stage)?v20.endingForStory(r.v20Story):r.customLevel?{kind:'creator',title:'Мастера света',text:'Ваш собственный уровень пройден вдвоём!',choices:0}:expansion.endingFor(r);
     if(r.ending?.kind==='v20-together'&&r.v20Home&&!r.v20Home.decor.includes('lampion')&&r.v20Home.decor.length<6)r.v20Home.decor.push('lampion');
      const previousV21=r.v21World?.lastResult;
