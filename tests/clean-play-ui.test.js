@@ -10,8 +10,8 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 test('commercial clean-play UI has loadable JS/CSS and versioned references',()=>{
  const js=read('public/play-ui.js'),css=read('public/play-ui.css'),html=read('public/index.html');
  assert.doesNotThrow(()=>new vm.Script(js));
- assert.match(html,/\/play-ui\.js\?v=27\.4/);
- assert.match(html,/\/play-ui\.css\?v=27\.6/);
+ assert.match(html,/\/play-ui\.js\?v=27\.5/);
+ assert.match(html,/\/play-ui\.css\?v=27\.7/);
  assert.equal((css.match(/\{/g)||[]).length,(css.match(/\}/g)||[]).length);
 });
 test('first-run invitation and room UI are device-agnostic',()=>{
@@ -21,8 +21,8 @@ test('first-run invitation and room UI are device-agnostic',()=>{
  assert.match(client,/id='shareInviteBtn'/);
  assert.match(client,/typeof navigator\.share==='function'/);
  assert.match(client,/navigator\.clipboard\.writeText\(message/);
- assert.match(html,/\/client\.js\?v=26\.3/);
- assert.match(html,/\/play-ui\.css\?v=27\.6/);
+ assert.match(html,/\/client\.js\?v=26\.4/);
+ assert.match(html,/\/play-ui\.css\?v=27\.7/);
 });
 test('clean-play preserves original primary inputs and recovery controls',()=>{
  const html=read('public/index.html'),css=read('public/play-ui.css'),js=read('public/play-ui.js');
@@ -56,4 +56,17 @@ test('demo has independent entry, server flag and isolated campaign awards',()=>
  assert.match(client,/demoMode=s\.demo===true/);
  assert.match(client,/!demoMode&&!s\.customLevel/);
  assert.match(adventure,/if\(s\.demo===true\)/);
+});
+
+test('content-alpha hint resources are loaded and never hidden by clean mode',()=>{
+ const html=read('public/index.html'),client=read('public/client.js'),ui=read('public/play-ui.js'),css=read('public/play-ui.css');
+ const hints=read('public/game-hints.js');
+ assert.doesNotThrow(()=>new vm.Script(hints));
+ assert.match(html,/\/game-hints\.js\?v=1/);
+ assert.ok(html.indexOf('/game-hints.js?v=1')<html.indexOf('/client.js?v=26.4'));
+ assert.match(client,/GameHints\.init\(/);
+ assert.match(client,/GameHints\.onSnapshot\(s\)/);
+ assert.match(ui,/'#gameHintBtn'/);
+ assert.match(css,/#gameHintPanel\[hidden\]\{display:none!important\}/);
+ assert.match(css,/html\.clean-play-mode #gameHintCleanBtn:not\(\[hidden\]\)/);
 });
