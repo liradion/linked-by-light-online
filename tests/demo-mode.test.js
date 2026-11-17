@@ -60,15 +60,15 @@ test('demo reset to start never clears demo flag and pause remains authoritative
  assert.equal(game.stage,0);
 });
 
-test('restarting or advancing clears stale lastResult instead of repeating an old victory',()=>{
+test('completed results remain visible across natural stage transitions',()=>{
  const game=createGame();game.demo=true;game.phase='playing';
  game.lastResult={level:0,completed:true,stars:3,elapsed:15};
  initStage(game,1);
- assert.equal(game.lastResult,null);
+ assert.equal(game.lastResult?.level,0,'result must remain visible for existing scoreboard');
  assert.equal(game.demo,true);
  game.lastResult={level:1,completed:true,stars:2,elapsed:25};
  game.transition=1/120;
  tick(game,connected);
  assert.equal(game.stage,2);
- assert.equal(game.lastResult,null);
+ assert.equal(game.lastResult?.level,1,'natural transition retains short-lived result');
 });
