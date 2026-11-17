@@ -270,7 +270,7 @@
  function subscribe(callback){if(typeof callback==='function')listeners.push(callback);}
  function mountDialogLanguage(dialog){
   if(typeof document==='undefined'||!dialog||dialog.querySelector('[data-dialog-language]'))return;
-  const header=dialog.querySelector('.quality-head,.controls-head,.gamepad-head,.adv-dialog-head,.v21-top')||dialog;
+  const header=dialog.querySelector('.quality-head,.controls-head,.gamepad-head,.adv-dialog-head,.v21-top,.v20-top')||dialog;
   const wrap=document.createElement('label');wrap.className='dialog-language-control';
   const sel=document.createElement('select');
   sel.dataset.dialogLanguage='';sel.setAttribute('aria-label','Язык / Language');
