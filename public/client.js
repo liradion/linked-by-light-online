@@ -241,7 +241,7 @@ function updateHUD(){
       ?'Искра держит плиту, пока Эхо заряжает кристалл за мостом.'
       :'Эхо: у кристалла нажмите способность (Enter на ПК или ✦ на телефоне).';
     else if(level.puzzle?.pads&&!level.padLatched)
-      goal=`Встаньте одновременно на плиты: ${level.pads.filter(p=>p.pressed).length}/${level.pads.length}`;
+      goal=levelIndex===0?`Плиты: Искра — оранжевая, Эхо — голубая. Вместе ${level.pads.filter(p=>p.pressed).length}/${level.pads.length}`:`Встаньте одновременно на плиты: ${level.pads.filter(p=>p.pressed).length}/${level.pads.length}`;
     else if(level.signature&&!level.signature.done){
       const sp=level.signature;
       const total=sp.pairs.length||sp.nodes.length||1;
