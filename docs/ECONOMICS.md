@@ -18,9 +18,9 @@
 ## Example 12-month scenarios
 | Scenario | Steam copies | Mobile installs | Mobile paid conversion | Total after assumed deductions | Project expense | Cash result before taxes |
 |---|---:|---:|---:|---:|---:|---:|
-| Weak | 200 | 5,000 | 1% | $848.47 | $5,000 | −$4,151.53 |
-| Base | 1,500 | 30,000 | 2% | $6,973.99 | $9,000 | −$2,026.01 |
-| Strong | 8,000 | 150,000 | 3% | $40,721.80 | $20,000 | +$20,721.80 |
+| Weak | 200 | 5,000 | 1% | ≈$848 | $5,000 | ≈−$4,152 |
+| Base | 1,500 | 30,000 | 2% | ≈$6,974 | $9,000 | ≈−$2,026 |
+| Strong | 8,000 | 150,000 | 3% | ≈$40,722 | $20,000 | ≈+$20,722 |
 
 At $9,000 fixed budget with only Steam sales: 9000 / 3.56405 ≈ **2,525.2**, thus 2,526 copies rounded up. Values exclude variable hosting that grows with use.
 
