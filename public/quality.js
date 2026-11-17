@@ -86,7 +86,7 @@ function init(api={}){onControls=api.onControls||onControls;onAction=api.onActio
  <label class="quality-check"><input id="qualitySound" type="checkbox"> Музыка и эффекты</label>
  <label class="quality-check"><input id="qualityReduced" type="checkbox"> Меньше анимаций</label>
  <label class="quality-check"><input id="qualityDiag" type="checkbox"> FPS и диагностика соединения</label></div>
- <p class="quality-note">🎮 Геймпад: левый стик — движение, A — прыжок, B — способность, X — связь, Y — эмоция. Настройки сохраняются только на этом устройстве.</p>
+ <p class="quality-note">🎮 Геймпад: левый стик/крестовина — движение. Кнопки A/B/X/Y можно изменить через «🎮 Геймпад» в меню. Схема сохраняется только на этом устройстве.</p>
  <div class="quality-actions"><button type="button" id="qualitySave">Применить</button></div>`;
  document.body.append(d);
  const bind=[['qualityGraphics','graphics','value'],['qualityButtons','buttons','number'],['qualityOpacity','opacity','percent'],['qualityLift','lift','number'],['qualityInset','inset','number'],['qualitySound','sound','checked'],['qualityReduced','reducedMotion','checked'],['qualityDiag','diagnostics','checked']];
