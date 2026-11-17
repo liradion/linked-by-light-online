@@ -4,7 +4,7 @@
 let dialog,feedbackDialog,notice,step=0,config=null,api={},status;
 const KEY='linked-light-v22-intro';
 const $=id=>document.getElementById(id);
-const add=(tag,cls,content)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(content!==undefined)e.textContent=content;return e;};
+const add=(tag,cls,content)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(content!==undefined)e.textContent=root.GameI18n?.translateExact?.(content)??content;return e;};
 const btn=(label,fn)=>{const b=add('button','beta-btn',label);b.type='button';b.addEventListener('click',fn);return b;};
 const saved=()=>{try{return localStorage.getItem(KEY)==='done';}catch(_){return false;}};
 const finish=()=>{try{localStorage.setItem(KEY,'done');}catch(_){}dialog?.close();document.getElementById('betaQuickStart')?.remove();};
@@ -25,16 +25,17 @@ const chapters=[
 function render(){
  if(!dialog)return;
  const root=$('beta-intro-content');root.replaceChildren();
- const topic=chapters[step];
- root.append(add('p','beta-progress','Шаг '+(step+1)+' / '+chapters.length));
+ const i18n=root.GameI18n,english=i18n?.isEnglish?.();
+ const topic=english?{title:i18n.t('chapter'+step),description:i18n.t('chapter'+step+'Text')}:chapters[step];
+ root.append(add('p','beta-progress',english?i18n.t('onboardingStep',{step:step+1,total:chapters.length}):'Шаг '+(step+1)+' / '+chapters.length));
  root.append(add('h2','beta-heading',topic.title));
  root.append(add('p','beta-text',topic.description));
  if(step===4){
-  const controls=isMobile()
+  const controls=english?i18n.t(isMobile()?'chapter4Mobile':'chapter4Desktop'):isMobile()
    ?'На телефоне: экранные стрелки, кнопка прыжка и действия персонажа. Поверните телефон горизонтально для удобства.'
    :'На компьютере: Искра — A/D, W, F; Эхо — стрелки, ↑ и Enter. V открывает меню новой главы.';
   root.append(add('p','beta-tip',controls));
-  root.append(add('p','beta-tip',config?.durableRooms?
+  root.append(add('p','beta-tip',english?i18n.t(config?.durableRooms?'serverDurable':'serverTemporary'):config?.durableRooms?
    'Серверное хранилище настроено. Не забудьте создать резервную копию прогресса.'
    :'Серверные комнаты хранятся временно. Используйте «☁ Облако» при доступности или экспортируйте профиль.'));
  }
@@ -151,5 +152,21 @@ function init(callbacks){
   menu?.insertBefore(card,menu.querySelector('.menu-actions'));
  }
 }
-root.GamePublicBeta={init,onJoined,onDisconnected,onRecovered,start,feedback};
+function refreshLanguage(){
+ const english=root.GameI18n?.isEnglish?.();
+ const card=$('betaQuickStart');
+ if(card){
+  const title=card.querySelector('.beta-quickstart-title'),copy=card.querySelector('.beta-quickstart-copy');
+  if(title)title.textContent=english?'Two players — one adventure':'Два игрока — одно приключение';
+  if(copy)copy.textContent=english?'Create a room and invite your partner with a link.':'Создайте комнату и пригласите второго игрока по ссылке.';
+  const open=card.querySelector('.beta-quickstart-open'),dismiss=card.querySelector('.beta-quickstart-dismiss');
+  if(open)open.textContent=english?'How to play':'Как играть';
+  if(dismiss)dismiss.textContent=english?'Got it':'Понятно';
+ }
+ const guide=$('betaHelpBtn'),report=$('betaReportBtn');
+ if(guide)guide.textContent=english?'ⓘ How to play':'ⓘ Как играть';
+ if(report)report.textContent=english?'✎ Feedback':'✎ Отзыв';
+ if(dialog?.open)render();
+}
+root.GamePublicBeta={init,onJoined,onDisconnected,onRecovered,start,feedback,refreshLanguage};
 })(typeof window!=='undefined'?window:globalThis);
