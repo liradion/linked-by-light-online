@@ -481,7 +481,7 @@ server.on('upgrade',(req,socket,head)=>{
        }else if(v20.hasStage(target)){if(room.seats.some(s=>s?.online&&s.protocol<2))return error('Оба игрока должны обновить игру до v20.');if(target>(room.v20Unlocked||100))return error('Уровень ещё не открыт.');}
        else if(target>room.unlockedMax&&(target!==99||msg.secrets!==11))return error('Уровень ещё не открыт.');
       if(target===99&&msg.secrets!==11)return error('Сначала найдите все 11 секретных рун.');
-      initStage(room.game,target);room.customLevel=null;room.ending=null;room.game.phase='playing';
+      initStage(room.game,target);room.game.lastResult=null;room.customLevel=null;room.ending=null;room.game.phase='playing';
       sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='input'&&room.game.phase==='playing'){
@@ -498,10 +498,10 @@ server.on('upgrade',(req,socket,head)=>{
       room.game.phase='playing';initStage(room.game,room.customLevel?0:room.game.stage);if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='restart'&&role===0&&room.seats.every(s=>s?.online)){
-      initStage(room.game,v23.hasStage(room.game.stage)?v23.FIRST:v21.hasStage(room.game.stage)?v21.FIRST:v20.hasStage(room.game.stage)?100:0);room.customLevel=null;room.ending=null;room.game.phase='playing';sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
+      initStage(room.game,v23.hasStage(room.game.stage)?v23.FIRST:v21.hasStage(room.game.stage)?v21.FIRST:v20.hasStage(room.game.stage)?100:0);room.game.lastResult=null;room.customLevel=null;room.ending=null;room.game.phase='playing';sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='resetStage'&&role===0&&room.game.phase==='playing'){
-      initStage(room.game,room.customLevel?0:room.game.stage);if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;broadcast(room,roomSnapshot(room));return;
+      initStage(room.game,room.customLevel?0:room.game.stage);room.game.lastResult=null;if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;broadcast(room,roomSnapshot(room));return;
     }
   },()=>{
     if(!room)return;
