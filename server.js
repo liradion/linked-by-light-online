@@ -287,8 +287,8 @@ server.on('upgrade',(req,socket,head)=>{
       const token=typeof msg.token==='string'?msg.token:'';
       let index=r.seats.findIndex(s=>s&&s.token===token);
       const recovered=index>=0;
-      if(index<0){index=r.seats.findIndex(s=>s===null);if(index<0)return error('В комнате уже два игрока.');r.seats[index]=newSeat();}
       if(r.solo&&!recovered)return error('Эта комната работает в одиночном режиме. Создайте совместную комнату.');
+      if(index<0){index=r.seats.findIndex(s=>s===null);if(index<0)return error('В комнате уже два игрока.');r.seats[index]=newSeat();}
       beta.record(recovered?'seatRecovered':'guestJoined');telemetry.record(recovered?'playerRecovered':'partnerJoined');
       attach(r,index);return;
     }
