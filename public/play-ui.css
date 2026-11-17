@@ -300,3 +300,43 @@ html:not(.clean-play-mode) .game-shell > .frame{
   .demo-launch p{font-size:10px;line-height:1.2}
   .demo-launch #demoBtn{min-height:36px;padding:7px 11px;font-size:12px}
 }
+
+
+/* M2 Content Alpha: non-blocking, contextual hint. Not a physics/room control. */
+#gameHintBtn[hidden],#gameHintCleanBtn[hidden],#gameHintPanel[hidden]{display:none!important}
+.game-hint-clean{display:none}
+.game-hint-panel{
+  position:absolute;top:clamp(70px,10vh,105px);right:max(12px,env(safe-area-inset-right));
+  z-index:7;box-sizing:border-box;width:min(425px,calc(100% - 24px));
+  padding:13px 15px 12px;border:1px solid #aaa1db9c;border-radius:16px;
+  color:#f6f5ff;background:#17223beb;box-shadow:0 12px 38px #020718b8;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+.game-hint-caption{display:block;color:#e3c5ff;font:800 12px/1.3 system-ui;letter-spacing:.025em}
+.game-hint-text{margin:9px 0 11px;color:#f4f6ff;font:500 14px/1.55 system-ui;overflow-wrap:anywhere}
+.game-hint-actions{display:flex;justify-content:flex-end;gap:9px}
+.game-hint-actions button{
+  min-height:37px;padding:7px 12px;border:1px solid #afb2d79b;border-radius:11px;
+  color:#f6f6ff;background:#2d3655;font:700 12px system-ui;cursor:pointer;touch-action:manipulation
+}
+.game-hint-panel button:focus-visible,.game-hint-clean:focus-visible{
+  outline:3px solid #ffe5a2;outline-offset:2px
+}
+html.clean-play-mode #gameHintCleanBtn:not([hidden]){
+  display:inline-flex;align-items:center;justify-content:center;
+  position:absolute;right:calc(max(12px,env(safe-area-inset-right)) + 48px);
+  bottom:calc(76px + env(safe-area-inset-bottom));z-index:4;
+  min-width:38px;min-height:38px;padding:0 8px;
+  border:1px solid #b6b8e38a;border-radius:12px;
+  color:#faf5ff;background:#1d2947dc;
+  box-shadow:0 5px 17px #0006;font:800 19px system-ui;cursor:pointer;touch-action:manipulation
+}
+html.clean-play-mode .game-hint-panel{top:auto;bottom:calc(126px + env(safe-area-inset-bottom));right:max(12px,env(safe-area-inset-right))}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:420px){
+  .game-hint-panel{top:44px;right:max(9px,env(safe-area-inset-right));padding:9px 11px;width:min(360px,calc(100% - 18px))}
+  .game-hint-text{font-size:12px;line-height:1.38;margin:5px 0 7px}
+  .game-hint-caption{font-size:11px}
+  .game-hint-actions button{min-height:32px;padding:5px 9px}
+  html.clean-play-mode #gameHintCleanBtn:not([hidden]){bottom:calc(63px + env(safe-area-inset-bottom))}
+  html.clean-play-mode .game-hint-panel{bottom:calc(109px + env(safe-area-inset-bottom))}
+}
