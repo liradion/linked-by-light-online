@@ -10,12 +10,17 @@ test('mobile clean mode keeps gameplay controls and can be restored',{timeout:60
   const host=await hostContext.newPage();
   const guest=await guestContext.newPage();
   await host.goto('/');
+  // New visitors can choose "Create room" without dismissing a blocking tutorial.
+  await expect(host.locator('#betaQuickStart')).toBeVisible();
+  await expect(host.locator('#betaIntro')).toHaveCount(0);
   await host.locator('#createBtn').click();
+  await expect(host.locator('#roomCode')).toHaveText(/^[A-HJ-NP-Z2-9]{6}$/,{timeout:15000});
   await expect(host.locator('#overlay')).toHaveAttribute('data-view','lobby');
   const code=(await host.locator('#roomCode').innerText()).trim();
   expect(code).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
   await guest.goto('/?room='+code);
-  await expect(host.locator('#startBtn')).toBeEnabled();
+  await expect(guest.locator('#betaQuickStart')).toHaveCount(0);
+  await expect(host.locator('#startBtn')).toBeEnabled({timeout:15000});
   await host.locator('#startBtn').click();
   await expect(host.locator('#overlay')).toHaveClass(/hidden/);
   await expect(host.locator('#cleanPlayEntry')).toBeVisible();
