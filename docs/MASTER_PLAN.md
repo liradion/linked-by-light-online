@@ -29,6 +29,9 @@ All statuses default to TODO until **evidence is linked**. A merged implementati
 - [ ] Record architecture risks, crash cases and rollback drill.
 
 ### M1 — 30-minute vertical slice (P0)
+
+**Engineering candidate implemented in PR #17:** opt-in demo room for stages 0–8, nine-step server-authoritative progression with a distinct finale, share flow, demo UI, reward isolation, and automated regression cases. **Not an approved G1 release**: the complete real-playthrough and ≥50 independent pairs are outstanding. See [DEMO_VERTICAL_SLICE.md](DEMO_VERTICAL_SLICE.md).
+
 - [ ] Choose 5–10 distinctive co-op stages and document a compelling 30-min loop.
 - [ ] First-use UX: device-neutral role choice, reliable invite URL/native share, start, replay and guided onboarding.
 - [ ] Contextual mobile controls, including v20/world abilities, without losing clean-mode simplicity.
