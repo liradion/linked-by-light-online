@@ -111,8 +111,8 @@ test('RU/EN language pack has a stable preference, translates first-act status w
  const html=read('public/index.html'),client=read('public/client.js'),beta=read('public/beta.js'),locale=read('public/i18n.js');
  assert.doesNotThrow(()=>new vm.Script(locale));
  assert.match(html,/id="languageSelect"/);
- assert.match(html,/\/i18n\.js\?v=5/);
- assert.ok(html.indexOf('/i18n.js?v=5')<html.indexOf('/client.js?v=26.13'));
+ assert.match(html,/\/i18n\.js\?v=6/);
+ assert.ok(html.indexOf('/i18n.js?v=6')<html.indexOf('/client.js?v=26.13'));
  assert.match(client,/GameI18n\.init\(\)/);
  assert.match(client,/GameI18n\.subscribe\(/);
  assert.match(beta,/root\.GameI18n/);
@@ -124,8 +124,8 @@ test('all 137 authored English stages load before locale and multiplayer client'
  const html=read('public/index.html'),catalog=read('public/stage-locale.js');
  assert.doesNotThrow(()=>new vm.Script(catalog));
  assert.match(html,/\/stage-locale\.js\?v=1/);
- assert.ok(html.indexOf('/stage-locale.js?v=1')<html.indexOf('/i18n.js?v=5'));
- assert.ok(html.indexOf('/i18n.js?v=5')<html.indexOf('/client.js?v=26.13'));
+ assert.ok(html.indexOf('/stage-locale.js?v=1')<html.indexOf('/i18n.js?v=6'));
+ assert.ok(html.indexOf('/i18n.js?v=6')<html.indexOf('/client.js?v=26.13'));
  assert.match(read('public/client.js'),/GameI18n\.stageWorld\(levelIndex\)/);
 });
 
@@ -142,8 +142,8 @@ test('network and settings locale loads before client; every settings dialog res
  const html=read('public/index.html'),loc=read('public/ui-locale.js');
  assert.doesNotThrow(()=>new vm.Script(loc));
  assert.match(html,/\/ui-locale\.js\?v=2/);
- assert.ok(html.indexOf('/ui-locale.js?v=2')<html.indexOf('/i18n.js?v=5'));
- assert.ok(html.indexOf('/i18n.js?v=5')<html.indexOf('/client.js?v=26.13'));
+ assert.ok(html.indexOf('/ui-locale.js?v=2')<html.indexOf('/i18n.js?v=6'));
+ assert.ok(html.indexOf('/i18n.js?v=6')<html.indexOf('/client.js?v=26.13'));
  for(const module of ['quality.js','keybinds.js','gamepad-bindings.js','game-hints.js']){
   assert.match(read('public/'+module),/GameI18n\?\.subscribe\?\.\(refreshLanguage\)/,
     module+' does not update already-created UI when locale changes');
@@ -151,4 +151,23 @@ test('network and settings locale loads before client; every settings dialog res
  const client=read('public/client.js');
  assert.match(client,/GameI18n\.networkError\(message\)/);
  assert.match(client,/setError\(lastErrorCode,lastErrorVars\)/);
+});
+
+test('secondary RU/EN dictionaries load before app client; cloud auth editor and gallery use them without modifying saves',()=>{
+ const html=read('public/index.html'),aux=read('public/aux-locale.js');
+ assert.doesNotThrow(()=>new vm.Script(aux));
+ assert.match(html,/\/aux-locale\.js\?v=1/);
+ assert.ok(html.indexOf('/aux-locale.js?v=1')<html.indexOf('/i18n.js?v=6'));
+ assert.ok(html.indexOf('/i18n.js?v=6')<html.indexOf('/client.js?v=26.13'));
+ for(const [file,needle] of [
+  ['public/cloud.js','GameI18n?.subscribe?.(renderLocale)'],
+  ['public/auth.js','GameI18n?.subscribe?.(renderLocale)'],
+  ['public/expansion-ui.js','GameI18n?.subscribe?.(()=>'],
+  ['public/v21.js','GameI18n?.subscribe?.(()=>']
+ ]){
+  assert.ok(read(file).includes(needle),file+' missing live language change subscription');
+ }
+ assert.match(read('public/expansion-ui.js'),/exp-map-code/);
+ assert.match(read('public/expansion-ui.js'),/exp-note-draft/);
+ assert.match(read('public/v21.js'),/gallery\.title|tr\('title'\)/);
 });
