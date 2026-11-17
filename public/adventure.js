@@ -100,6 +100,13 @@ function onJoined(room,role){if(role>=0){callbacks.send?.({t:'customize',...getP
 }
 function onSnapshot(s){
  if(!s?.world)return;
+ // A vertical-slice playtest must not silently unlock the paid/full campaign,
+ // daily rewards, pets, secrets or story achievements.
+ if(s.demo===true){
+  if(s.looks)receiveLooks(s.looks);
+  if(s.home&&JSON.stringify(s.home)!==JSON.stringify(ownHome()))receiveHome(s.home);
+  return;
+ }
  const day=new Date().toISOString().slice(0,10);
  if(data.daily?.day!==day)data.daily={day,completed:[]};
  const finish=id=>{if(!data.daily.completed.includes(id)){data.daily.completed.push(id);data.shards=Math.min(99999,(data.shards||0)+5);progressChanged();announce('Ежедневная цель: +5 ✦');}};
