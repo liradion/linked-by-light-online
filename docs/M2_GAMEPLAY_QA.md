@@ -37,7 +37,9 @@ The project owner reported that two human players completed the nine-stage demo.
 - Added [language choice and first-act RU/EN](M2_I18N_FIRST_ACT.md) for onboarding, invite room, demo stage names and primary goals, role-specific help and first-act ending.
 - Choice is device-local so Spark and Echo may use different languages in the same online room.
 - **Expanded:** [137-stage English catalog](M2_I18N_137_STAGES.md) now covers the official stage titles, authored main objectives and hints, runtime counters and major world mechanics; browser tests include a stage-42 mixed-language co-op start.
-- **Not full localization:** several secondary menus, chapter side systems, authored story flavor, server errors and legal content remain in Russian; the overall G2 language gate stays open.
+- **Expanded again:** [secondary UI package](M2_I18N_AUXILIARY_UI.md) translates cloud saving, Google account, map editor, notes, photo actions and the v21 public gallery, with a native RU/EN control inside seven modals.
+- Exact English translations now cover the server's 44 literal error callsites and the main recovery messages. Unrecognized user/server text is displayed unchanged.
+- **Not full localization:** many deeper v20/v21/v23 story and account flows, optional system prompts, external-provider errors and legal content remain in Russian; the overall G2 language gate stays open.
 
 ## M2 acceptance gates — open
 
@@ -45,7 +47,7 @@ The project owner reported that two human players completed the nine-stage demo.
 - [ ] Each stage scored for fairness, novelty, frustration, softlocks and useful second-player agency
 - [ ] Create keep / polish / redesign decisions, prioritize coherent 2–4-hour premium campaign
 - [ ] Measure and fix difficulty spikes and boss attack telegraphs
-- [ ] Complete RU/EN localization of side menus, server errors, story text, legal pages and accessibility labels (official 137-level objective catalog now translated)
+- [ ] Complete RU/EN localization of remaining chapter-specific UI, story, legal pages and accessibility labels (137 official stage objectives, 44 literal server errors and main auxiliary menus now translated)
 - [ ] Rebindable keyboard and gamepad settings, accessible contrast and reduced-motion review
 - [ ] Music, SFX and graphics licensing audit, original artwork and final presentation
 - [ ] Independent playtest cohort; evaluate actual completion time before any public duration claim
