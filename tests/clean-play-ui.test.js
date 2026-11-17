@@ -21,7 +21,7 @@ test('first-run invitation and room UI are device-agnostic',()=>{
  assert.match(client,/id='shareInviteBtn'/);
  assert.match(client,/typeof navigator\.share==='function'/);
  assert.match(client,/navigator\.clipboard\.writeText\(message/);
- assert.match(html,/\/client\.js\?v=26\.13/);
+ assert.match(html,/\/client\.js\?v=26\.14/);
  assert.match(html,/\/play-ui\.css\?v=28\.1/);
 });
 test('clean-play preserves original primary inputs and recovery controls',()=>{
@@ -87,7 +87,7 @@ test('remappable keyboard controls initialize before client and retain native to
  assert.ok(html.indexOf('/keybinds.js?v=3')<html.indexOf(html.match(/\/client\.js\?v=[0-9.]+/)[0]));
  assert.match(html,/id="amberControlsGuide"/);
  assert.match(html,/id="blueControlsGuide"/);
- assert.match(client,/GameControls\.keyFor\(role,'right'\)/);
+ assert.match(client,/GameControls\.keyFor\(controlledRole\(\),'right'\)/);
  assert.match(client,/GameControls\.normalize\(e\.key\)/);
  assert.match(client,/GameControls\.init\(\{onChange:/);
  assert.match(menu,/'#controlsOpen'/);
