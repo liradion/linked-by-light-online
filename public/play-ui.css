@@ -239,3 +239,8 @@ html.clean-play-mode #touchControls.clean-show-extra .adv-extra-controls .touch-
   html.clean-play-mode .clean-context-toggle{bottom:calc(63px + env(safe-area-inset-bottom))}
   html.clean-play-mode .clean-context-actions:not([hidden]){bottom:calc(63px + env(safe-area-inset-bottom))}
 }
+
+/* Modal safety: entry/restore stays reachable when saved clean mode opens at the title screen. */
+html.clean-play-mode .clean-play-toggle{z-index:12!important}
+html.clean-play-mode .clean-context-toggle,
+html.clean-play-mode .clean-context-actions:not([hidden]){z-index:3}
