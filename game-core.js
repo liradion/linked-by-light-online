@@ -7,11 +7,12 @@ const expansion=require('./expansion-core');
 const v20=require('./v20-core');
 const v21=require('./v21-core');
 const v23=require('./v23-core');
+const demo=require('./shared/demo-mode');
 const DT=1/60, WIDTH=1200, HEIGHT=650;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const overlaps=(a,b)=>a.x < b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
 const freshPlayer=(type,x)=>({type,x,y:GROUND-43,w:30,h:43,vx:0,vy:0,face:1,grounded:false,coyote:0,jumpBuffer:0,dash:0,cool:0,abilityFx:0});
-function createGame(){const g={stage:0,phase:'waiting',level:null,players:[],shards:[],tick:0,completion:0,transition:0,padTimer:0,stats:null,lastResult:null,input:[null,null]}; initStage(g,0);return g;}
+function createGame(){const g={demo:false,stage:0,phase:'waiting',level:null,players:[],shards:[],tick:0,completion:0,transition:0,padTimer:0,stats:null,lastResult:null,input:[null,null]}; initStage(g,0);return g;}
 function initStage(g,index){
   g.stage=index;g.level=structuredClone(v23.getStage(index)||v21.getStage(index)||v20.getStage(index)||(index===99?BONUS_STAGE:stages[index]));g.players=[freshPlayer(0,g.level.spawn[0]),freshPlayer(1,g.level.spawn[1])];
   g.level.gateOpen=false;g.level.bridgeLatched=false;g.level.padLatched=false;g.customChallenge=false;
@@ -145,7 +146,12 @@ function tick(g,connected){g.tick++;
   if(g.assistMode&&g.tick%2===1)return;
   if(g.phase!=='playing'||!connected[0]||!connected[1])return;
   if(g.transition>0){g.transition-=DT;if(g.transition<=0){
-    if(g.customChallenge||v23.hasStage(g.stage)&&g.stage>=v23.LAST||v21.hasStage(g.stage)&&g.stage>=v21.LAST||v20.hasStage(g.stage)&&g.stage>=v20.LAST||!v23.hasStage(g.stage)&&!v21.hasStage(g.stage)&&!v20.hasStage(g.stage)&&g.stage>=stages.length-1)g.phase='win';else initStage(g,g.stage+1);
+    // The demo shares the real simulation but has its own authoritative finale.
+    // Normal campaign progression (including stages 9..136) is unchanged.
+    if(g.demo===true){
+      const next=demo.next(g.stage);
+      if(next===null)g.phase='win';else initStage(g,next);
+    }else if(g.customChallenge||v23.hasStage(g.stage)&&g.stage>=v23.LAST||v21.hasStage(g.stage)&&g.stage>=v21.LAST||v20.hasStage(g.stage)&&g.stage>=v20.LAST||!v23.hasStage(g.stage)&&!v21.hasStage(g.stage)&&!v20.hasStage(g.stage)&&g.stage>=stages.length-1)g.phase='win';else initStage(g,g.stage+1);
   }return;}
   // Fixed timestep: world mechanics also run authoritatively on the server.
   worlds.advanceWorld(g,DT);reality.advance(g,DT);expansion.advance(g,DT);v20.beforeStep(g,DT);v21.beforeStep(g,DT);v23.beforeStep(g,DT);
