@@ -147,7 +147,7 @@
   defaults.addEventListener('click',()=>{reset();noticeText(ui('restored'));});
   const done=document.createElement('button');done.type='button';done.textContent=ui('done');
   footer.append(defaults,done);dialog.append(footer);
-  document.body.append(dialog);
+  document.body.append(dialog);root.GameI18n?.mountDialogLanguage?.(dialog);
   const closeDialog=()=>{
    cancelCapture();
    if(dialog.open)dialog.close();
