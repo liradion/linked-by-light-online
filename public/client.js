@@ -69,7 +69,7 @@ function openConnection(){
       history.replaceState({},'',location.pathname+'?room='+encodeURIComponent(room));
       connected=m.connected||[false,false];$('myRole').textContent=role<0?'Наблюдатель':(role===0?'Искра':'Эхо')+(isHost()?' (ведущий)':' (партнёр)');
       if(role>=0&&m.home)GameAdventure.receiveHome(m.home);GameAdventure.onJoined(room,role);GameExpansion.onJoined(m.notes||[]);GameV20.onJoined();GameV21.onJoined?.();
-      setError('');resetKeys();GamePublicBeta.onJoined(role);showUI();return;
+      setError('');resetKeys();GamePublicBeta.onJoined(m);showUI();return;
     }
     if(['v28Ping','v28Intel'].includes(m.t)){GameV28.message(m);return;}
     if(m.t==='home'){if(role>=0)GameAdventure.receiveHome(m.items);return;}
