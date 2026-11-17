@@ -192,3 +192,50 @@ html.clean-play-mode .clean-play-toggle{display:inline-flex}
 @media(pointer:coarse) and (orientation:landscape){
   .topline .clean-play-entry{min-width:31px;min-height:32px;padding:4px 7px;font-size:16px}
 }
+
+/* Commercial readiness: optional contextual chapter actions in the clean-play HUD. */
+.clean-context-toggle,.clean-context-actions{display:none}
+html.clean-play-mode .clean-context-toggle{
+  display:inline-flex;align-items:center;justify-content:center;
+  position:absolute;right:max(12px,env(safe-area-inset-right));bottom:calc(76px + env(safe-area-inset-bottom));
+  z-index:5;min-width:38px;min-height:38px;padding:0 9px;
+  border:1px solid #a8afe27e;border-radius:12px;
+  background:#182139cd;color:#faf6ff;cursor:pointer;
+  box-shadow:0 5px 17px #0006;touch-action:manipulation;font:800 21px system-ui;
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)
+}
+html.clean-play-mode .clean-context-toggle:focus-visible,
+html.clean-play-mode .clean-context-action:focus-visible{outline:3px solid #fff0ad;outline-offset:2px}
+html.clean-play-mode .clean-context-toggle[aria-expanded="true"]{background:#454168e6;border-color:#ddd1ff}
+.clean-context-actions[hidden]{display:none!important}
+html.clean-play-mode .clean-context-actions:not([hidden]){
+  display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px;
+  position:absolute;z-index:5;right:max(55px,calc(env(safe-area-inset-right) + 55px));
+  bottom:calc(77px + env(safe-area-inset-bottom));
+  max-width:min(75%,410px);padding:7px;border:1px solid #aab4dc66;border-radius:13px;
+  background:#111b35e8;box-shadow:0 8px 22px #0007;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)
+}
+html.clean-play-mode .clean-context-action{
+  min-height:38px;padding:7px 10px;border:1px solid #a5b7db7b;border-radius:10px;
+  background:#293857;color:#f2f7ff;touch-action:manipulation;cursor:pointer;
+  font:650 12px system-ui
+}
+/* The base bond/emote buttons remain the *original* pointer-driven controls. */
+html.clean-play-mode #touchControls.clean-show-extra .adv-extra-controls{
+  display:flex!important;flex-direction:column;gap:5px;
+}
+html.clean-play-mode #touchControls.clean-show-extra .adv-extra-controls .touch-button{
+  display:inline-flex!important;align-items:center;justify-content:center;
+  width:36px!important;min-width:36px!important;
+  height:36px!important;min-height:36px!important;
+  border-radius:11px!important;font-size:16px!important
+}
+@media(pointer:fine){
+  html.clean-play-mode .clean-context-toggle{display:none}
+  html.clean-play-mode .clean-context-actions{display:none!important}
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:420px){
+  html.clean-play-mode .clean-context-toggle{bottom:calc(63px + env(safe-area-inset-bottom))}
+  html.clean-play-mode .clean-context-actions:not([hidden]){bottom:calc(63px + env(safe-area-inset-bottom))}
+}
