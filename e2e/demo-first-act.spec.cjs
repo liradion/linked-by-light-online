@@ -47,3 +47,32 @@ test('main campaign is still a different launch path',async({page})=>{
  expect(debug.demoLaunch).toBe(true);
  expect(debug.lobbyText).not.toContain('Демо:');
 });
+
+test('phone can host a demo and a desktop can join as Echo',async({browser})=>{
+ const phoneContext=await browser.newContext({
+  viewport:{width:844,height:390},hasTouch:true,isMobile:true,serviceWorkers:'block'
+ });
+ const desktopContext=await browser.newContext({
+  viewport:{width:1280,height:800},serviceWorkers:'block'
+ });
+ try{
+  const phone=await phoneContext.newPage(),desktop=await desktopContext.newPage();
+  await phone.goto('/');
+  await expect(phone.locator('#demoBtn')).toBeVisible();
+  await phone.locator('#demoBtn').click();
+  await expect(phone.locator('#roomCode')).toHaveText(/^[A-HJ-NP-Z2-9]{6}$/,{timeout:15000});
+  await expect(phone.locator('#shareInviteBtn')).toBeVisible();
+  const room=(await phone.locator('#roomCode').textContent()).trim();
+  await desktop.goto('/?room='+room);
+  await expect(phone.locator('#startBtn')).toBeEnabled({timeout:15000});
+  await phone.locator('#startBtn').click();
+  await expect(phone.locator('#overlay')).toHaveClass(/hidden/);
+  await expect(desktop.locator('#overlay')).toHaveClass(/hidden/);
+  await expect(phone.locator('#myRole')).toContainText('Искра');
+  await expect(desktop.locator('#myRole')).toContainText('Эхо');
+  await expect(phone.locator('#levelLabel')).toHaveText('ДЕМО · ИСПЫТАНИЕ 1 / 9');
+  await expect(desktop.locator('#levelLabel')).toHaveText('ДЕМО · ИСПЫТАНИЕ 1 / 9');
+  for(const action of ['left','right','jump','ability'])
+   await expect(phone.locator('#touchControls [data-input="'+action+'"]')).toBeVisible();
+ }finally{await phoneContext.close();await desktopContext.close();}
+});
