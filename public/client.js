@@ -150,6 +150,27 @@ $('copyBtn').addEventListener('click',async()=>{
   try{await navigator.clipboard.writeText(text);$('copyBtn').textContent='Скопировано ✓';setTimeout(()=>$('copyBtn').textContent='Скопировать приглашение',1500);}
   catch(_){setError('Не удалось скопировать автоматически. Код: '+room+' — '+url.href);}
 });
+// Native share on iPhone/Android, clipboard fallback for desktop and older browsers.
+const shareInviteBtn=document.createElement('button');
+shareInviteBtn.type='button';shareInviteBtn.id='shareInviteBtn';
+shareInviteBtn.className='button-secondary';
+shareInviteBtn.textContent='Поделиться ↗';
+shareInviteBtn.setAttribute('aria-label','Отправить приглашение второму игроку');
+shareInviteBtn.addEventListener('click',async()=>{
+ if(!room){setError('Сначала создайте комнату.');return;}
+ const url=new URL(location.pathname,location.href);url.searchParams.set('room',room);
+ const message='Присоединяйся ко мне в «Связанные светом»! Вместе пройдём приключение.';
+ if(typeof navigator.share==='function'){
+  try{await navigator.share({title:'Связанные светом',text:message,url:url.href});return;}
+  catch(error){if(error?.name==='AbortError')return;/* unsupported/failed share → copy */}
+ }
+ try{
+  await navigator.clipboard.writeText(message+' '+url.href+' (код '+room+')');
+  shareInviteBtn.textContent='Ссылка скопирована ✓';
+  setTimeout(()=>shareInviteBtn.textContent='Поделиться ↗',1800);
+ }catch(_){setError('Скопируйте ссылку вручную: '+url.href);}
+});
+$('copyBtn').parentElement.insertBefore(shareInviteBtn,$('copyBtn'));
 const spectatorCopy=document.createElement('button');spectatorCopy.type='button';spectatorCopy.className='button-secondary';spectatorCopy.textContent='👀 Ссылка наблюдателю';
 spectatorCopy.onclick=async()=>{
  if(!room)return;
