@@ -267,3 +267,14 @@ html.clean-play-mode .clean-context-actions:not([hidden]){z-index:3}
   .beta-quickstart-title,.beta-quickstart-copy{font-size:10px}
   .beta-quickstart .beta-btn{min-height:31px}
 }
+
+/* G1 layering: the live Canvas must never intercept top-bar controls.
+   Keep top navigation on top in normal mode; the immersive frame still fills the screen. */
+html:not(.clean-play-mode) .game-shell > .topline{
+  position:relative;
+  z-index:8;
+}
+html:not(.clean-play-mode) .game-shell > .frame{
+  position:relative;
+  z-index:0;
+}
