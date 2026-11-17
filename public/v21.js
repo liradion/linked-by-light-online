@@ -218,9 +218,9 @@ function renderPhoto(){
 function render(){
  if(!dialog?.open)return;
  lastRender=performance.now();const photoCaption=body.querySelector('#v21-photo-caption')?.value||'';body.replaceChildren();
- body.append(node('p','v21-subtitle','Linked by Light v21 · Навстречу друг другу'));
- if(!api.inRoom?.()){para(body,'Создайте комнату в новой кампании и пригласите второго игрока.');body.append(btn('✦ Начать новую главу',()=>{dialog.close();api.create?.();}));return;}
- if(api.role?.()<0){para(body,'Вы наблюдатель. Совместные действия доступны только игрокам.');}
+ body.append(node('p','v21-subtitle',tr('subtitle')));
+ if(!api.inRoom?.()){para(body,tr('noRoom'));body.append(btn(tr('startChapter'),()=>{dialog.close();api.create?.();}));return;}
+ if(api.role?.()<0){para(body,tr('spectator'));}
  if(tab==='level')renderLevel();
  if(tab==='story')renderStory();
  if(tab==='home')renderHome();
