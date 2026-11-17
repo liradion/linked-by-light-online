@@ -52,13 +52,25 @@ function sample(dt){if(!Number.isFinite(dt)||dt<=0)return;frames++;fpsElapsed+=d
  if(fpsElapsed>=1){fps=Math.round(frames/fpsElapsed);frames=0;fpsElapsed=0;const next=adapt();if(next!==quality){quality=next;document.documentElement.dataset.gameGraphics=quality;}const d=$('qualityStats');if(d){const s=stats();d.textContent=`FPS ${s.fps} · RTT ${s.rtt} мс · Джиттер ${s.jitter} мс · Буфер ${s.buffer} мс · Снимки ${s.snapshotHz} Гц · ${s.quality}`;}}
  pollGamepad();
 }
-function pollGamepad(){if(typeof navigator.getGamepads!=='function')return;
- let pads;try{pads=navigator.getGamepads();}catch(_){return;}
- const pad=Array.from(pads||[]).find(p=>p&&p.connected);const playing=getSession().phase==='playing';
+function pollGamepad(){
+ let pads=[];try{if(typeof navigator.getGamepads==='function')pads=navigator.getGamepads()||[];}catch(_){pads=[];}
+ const pad=Array.from(pads).find(p=>p&&p.connected);
+ const bindings=root.GamePadBindings;
+ const capturing=bindings?.pollCapture(pad)===true;
+ // While a settings/modal dialog is open, release held movement and suppress
+ // all button actions. Remapping itself is handled by the binding capture UI.
+ const modalOpen=!!document.querySelector('dialog[open]');
+ const playing=getSession().phase==='playing'&&!capturing&&!modalOpen;
  const left=!!(pad&&playing&&(pad.axes?.[0]<-.34||pad.buttons?.[14]?.pressed));
  const right=!!(pad&&playing&&(pad.axes?.[0]>.34||pad.buttons?.[15]?.pressed));
  if(left!==oldLeft||right!==oldRight){oldLeft=left;oldRight=right;onControls(left,right);}
- const buttons=[0,1,2,3];buttons.forEach((n,i)=>{const down=!!(pad&&playing&&pad.buttons?.[n]?.pressed);if(down&&!gamepadButtons[i])onAction(['jump','ability','bond','emote'][i]);gamepadButtons[i]=down;});
+ const actions=['jump','ability','bond','emote'];
+ actions.forEach((action,i)=>{
+  const n=bindings?.buttonFor(action)??i;
+  const down=!!(pad&&playing&&(bindings?bindings.active(pad,action):pad.buttons?.[n]?.pressed));
+  if(down&&!gamepadButtons[i])onAction(action);
+  gamepadButtons[i]=down;
+ });
 }
 function init(api={}){onControls=api.onControls||onControls;onAction=api.onAction||onAction;getSession=api.getSession||getSession;
  const settings=document.createElement('button');settings.type='button';settings.className='mini-btn';settings.textContent='⚙ Настройки';settings.id='qualityOpen';
