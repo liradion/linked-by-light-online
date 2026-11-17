@@ -308,7 +308,8 @@ function updateHUD(){
       :levelIndex>=122?'CHAPTER V23':levelIndex>=112?'CHAPTER V21'
       :levelIndex>=100?'CHAPTER '+(Math.floor((levelIndex-100)/4)+1)+'/3'
       :'ACT '+pad2(Math.floor(levelIndex/9)+1);
-    if(demoMode)$('worldTag').textContent='✦ Chapter One';
+    if(worldTag)worldTag.textContent=demoMode?'✦ Chapter One'
+      :GameI18n.stageWorld(levelIndex)+(level.reality?' · '+GameI18n.realityLabel(level.reality.kind):'');
     if(P[0]?.cool<=0)$('amberStatus').textContent=GameI18n.t('readyDash');
     if(P[1]?.cool<=0)$('blueStatus').textContent=GameI18n.t('readyPulse');
     goal=GameI18n.formatGoal(goal,levelIndex,GameControls.labelFor(0,'ability'),GameControls.labelFor(1,'ability'));
@@ -324,7 +325,7 @@ function consumeSnapshot(s){
   if(s.result&&s.result.completed&&!s.customLevel&&!demoMode&&role>=0){const key=s.result.level+':'+s.result.elapsed+':'+s.result.deaths;
     if(lastResultId!==key){lastResultId=key;saveStageResult(s.result);announce('Уровень '+(s.result.level+1)+' — '+s.result.stars+' ★ · '+s.result.elapsed+' с · падений: '+s.result.deaths,3.6);GameQuality.effect('star');}}
   if(previous&&s.stage!==previous.stage){prediction=null;lastPredStage=-1;predictor.reset();snapshots=[];camera=0;particles=[];rings=[];GameJuice.clear();
-    const next=stageDefs[s.stage];GameQuality.ambient(Math.floor(Math.min(s.stage,98)/9));announce(demoMode?(GameI18n.isEnglish()?'✦ Demo '+GameDemo.progress(s.stage)+'/'+GameDemo.stages.length+' · '+GameI18n.stageTitle(s.stage,next.title):'✦ Демо '+GameDemo.progress(s.stage)+'/'+GameDemo.stages.length+' · '+(GameDemo.chapters[GameDemo.progress(s.stage)-1]?.subtitle||next.title)):next?.v23?'✦ Физика света · '+next.title:next?.v21?'✧ Навстречу друг другу · '+next.title:next?.v20?'✦ Переплетение миров · '+next.title:'✦ Уровень '+(s.stage+1)+' — '+(next.reality?{mirror:'Две реальности',chronicle:'Прошлое и будущее',gravity:'Антигравитация'}[next.reality.kind]:next.signature?.subtitle||next.title),2.8);tone(600,.16,'sine',.055);}
+    const next=stageDefs[s.stage];GameQuality.ambient(Math.floor(Math.min(s.stage,98)/9));announce(GameI18n.isEnglish()&&!demoMode?'✦ Level '+(s.stage+1)+' · '+GameI18n.stageTitle(s.stage,next.title):demoMode?(GameI18n.isEnglish()?'✦ Demo '+GameDemo.progress(s.stage)+'/'+GameDemo.stages.length+' · '+GameI18n.stageTitle(s.stage,next.title):'✦ Демо '+GameDemo.progress(s.stage)+'/'+GameDemo.stages.length+' · '+(GameDemo.chapters[GameDemo.progress(s.stage)-1]?.subtitle||next.title)):next?.v23?'✦ Физика света · '+next.title:next?.v21?'✧ Навстречу друг другу · '+next.title:next?.v20?'✦ Переплетение миров · '+next.title:'✦ Уровень '+(s.stage+1)+' — '+(next.reality?{mirror:'Две реальности',chronicle:'Прошлое и будущее',gravity:'Антигравитация'}[next.reality.kind]:next.signature?.subtitle||next.title),2.8);tone(600,.16,'sine',.055);}
 
   levelIndex=s.stage;phase=s.phase;connected=s.connected||connected;
   const receivedAt=performance.now();GameQuality.snapshotArrived(receivedAt);
@@ -367,13 +368,13 @@ function consumeSnapshot(s){
           tone(n.role===0?560:740,.12,'sine',.027);
         }
       });
-      if(!before.done&&now.done){announce(GameI18n.isEnglish()&&demoMode?'✦ World challenge complete!':'✦ Особенность мира пройдена!',1.65);tone(980,.2,'sine',.04);}
+      if(!before.done&&now.done){announce(GameI18n.isEnglish()?'✦ World challenge complete!':'✦ Особенность мира пройдена!',1.65);tone(980,.2,'sine',.04);}
     }
   }
   if(previous&&s.stage===previous.stage){
-    if(!previous.world.gateOpen&&s.world.gateOpen){announce(GameI18n.isEnglish()&&demoMode?'✦ Gate open! Both players to the portal.':'✦ Ворота открыты! Оба к порталу.',2);tone(550,.2,'sine',.05);screenShake=7;}
+    if(!previous.world.gateOpen&&s.world.gateOpen){announce(GameI18n.isEnglish()?'✦ Gate open! Both players to the portal.':'✦ Ворота открыты! Оба к порталу.',2);tone(550,.2,'sine',.05);screenShake=7;}
     for(let i=0;i<level.walls.length;i++)if(!previous.world.walls[i]&&s.world.walls[i]){const w=level.walls[i];burst(w.x,w.y+w.h/2,colors.amber,30,200);screenShake=11;tone(180,.2,'sawtooth',.05);}
-    for(let i=0;i<level.crystals.length;i++)if(!previous.world.crystals[i]&&s.world.crystals[i]){const c=level.crystals[i];burst(c.x,c.y,colors.blue,30,200);announce(GameI18n.isEnglish()&&demoMode?'Crystal activated ✦':'Кристалл активирован ✦',2);tone(740,.2,'sine',.04);}
+    for(let i=0;i<level.crystals.length;i++)if(!previous.world.crystals[i]&&s.world.crystals[i]){const c=level.crystals[i];burst(c.x,c.y,colors.blue,30,200);announce(GameI18n.isEnglish()?'Crystal activated ✦':'Кристалл активирован ✦',2);tone(740,.2,'sine',.04);}
   }
   snapshots.push(latest);if(snapshots.length>12)snapshots.shift();
   GameHints.onSnapshot(s);
