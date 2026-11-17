@@ -142,12 +142,11 @@
   if(m)return t('goalFirstPads',{on:m[1],total:m[2]});
   m=goal.match(/^Встаньте одновременно на плиты:\s*(\d+)\/(\d+)/);
   if(m)return t('goalPads',{on:m[1],total:m[2]});
-  if(index>=0&&index<9&&/[\u0400-\u04FF]/.test(goal))return objectiveEn[index];
   if(goal.startsWith('Испытание пройдено!'))return EN.goalBothPortal;
-  // First-act signature text contains authored flower instructions. Keep
-  // dynamic count feedback instead of replacing a partial objective with prose.
+  // Prioritize live flower counters over generic first-act descriptions.
   if(index>=0&&index<9&&/\(\d+\/\d+\)$/.test(goal))
    return objectiveEn[index]+' '+goal.match(/\(\d+\/\d+\)$/)[0];
+  if(index>=0&&index<9&&/[\u0400-\u04FF]/.test(goal))return objectiveEn[index];
   return goal;
  }
  function localizeHint(message,index,role,depth){
