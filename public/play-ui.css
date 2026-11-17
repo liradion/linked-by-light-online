@@ -278,3 +278,25 @@ html:not(.clean-play-mode) .game-shell > .frame{
   position:relative;
   z-index:0;
 }
+
+
+/* G1 vertical-slice entry — a single product decision, not another technical chapter button. */
+.demo-launch{
+  margin:15px auto 10px;padding:16px 18px;max-width:530px;
+  border:1px solid #e0c3f06e;border-radius:19px;
+  background:linear-gradient(125deg,#262644ed,#1d3850e5 55%,#1c243feb);
+  box-shadow:0 10px 34px #090d2252, inset 0 1px #e9d6ff18;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.demo-launch-tag{font:800 10px/1.3 system-ui;letter-spacing:.16em;color:#efc8fa}
+.demo-launch strong{font:800 clamp(15px,2.8vw,21px)/1.25 system-ui;color:#fff4db}
+.demo-launch p{font:12px/1.5 system-ui;color:#d7d9ed;max-width:390px;margin:0}
+.demo-launch #demoBtn{min-height:47px;min-width:min(100%,260px);padding:12px 18px}
+#demoBackBtn[hidden]{display:none!important}
+#demoBackBtn{margin:10px auto 0;min-height:42px}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:450px){
+  .demo-launch{margin:5px auto;padding:8px 10px;gap:4px;border-radius:12px}
+  .demo-launch strong{font-size:14px}
+  .demo-launch p{font-size:10px;line-height:1.2}
+  .demo-launch #demoBtn{min-height:36px;padding:7px 11px;font-size:12px}
+}
