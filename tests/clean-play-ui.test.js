@@ -63,7 +63,7 @@ test('content-alpha hint resources are loaded and never hidden by clean mode',()
  const hints=read('public/game-hints.js');
  assert.doesNotThrow(()=>new vm.Script(hints));
  assert.match(html,/\/game-hints\.js\?v=3/);
- assert.ok(html.indexOf('/game-hints.js?v=3')<html.indexOf('/client.js?v=26.4'));
+ assert.ok(html.indexOf('/game-hints.js?v=3')<html.indexOf(html.match(/\/client\.js\?v=[0-9.]+/)[0]));
  assert.match(client,/GameHints\.init\(/);
  assert.match(client,/GameHints\.onSnapshot\(s\)/);
  assert.match(ui,/'#gameHintBtn'/);
@@ -84,7 +84,7 @@ test('remappable keyboard controls initialize before client and retain native to
  const kb=read('public/keybinds.js');
  assert.doesNotThrow(()=>new vm.Script(kb));
  assert.match(html,/\/keybinds\.js\?v=1/);
- assert.ok(html.indexOf('/keybinds.js?v=1')<html.indexOf('/client.js?v=26.5'));
+ assert.ok(html.indexOf('/keybinds.js?v=1')<html.indexOf(html.match(/\/client\.js\?v=[0-9.]+/)[0]));
  assert.match(html,/id="amberControlsGuide"/);
  assert.match(html,/id="blueControlsGuide"/);
  assert.match(client,/GameControls\.keyFor\(role,'right'\)/);
