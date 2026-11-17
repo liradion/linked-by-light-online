@@ -166,7 +166,7 @@ function tick(g,connected){g.tick++;
   if(g.level.gateOpen&&both){g.completion+=DT;if(g.completion>.58){
     const st=g.stats||{elapsed:0,deaths:0,rescues:0,abilities:[0,0],hearts:0};
     const score=st.deaths===0&&st.elapsed<180&&st.abilities.every(n=>n>0)?3:st.deaths<=2?2:1;
-    g.lastResult={level:g.stage,elapsed:Math.round(st.elapsed*10)/10,deaths:st.deaths,rescues:st.rescues,stars:score,completed:true,assisted:!!g.assistMode};
+    g.lastResult={level:g.stage,elapsed:Math.round(st.elapsed*10)/10,deaths:st.deaths,rescues:st.rescues,stars:score,completed:true,assisted:!!g.assistMode||!!g.solo};
     g.transition=.85;
   }}else g.completion=0;
 }
