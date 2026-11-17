@@ -36,6 +36,9 @@ test('G2 English HUD handles dynamic gate, wall, crystal and exact co-op counts'
   assert.match(locale.formatGoal('Подойдите к цветам света (4/6)',2),/4\/6/);
   assert.equal(locale.formatGoal('Hello world',42),'Hello world');
   assert.match(locale.formatGoal('Испытание пройдено! Оба к порталу.',4),/portal/);
+  assert.match(locale.formatGoal('БОСС Страж · 2/4 HP · атакует Эхо',8),/BOSS · 2\/4 HP · Echo attacks/);
+  assert.match(locale.formatGoal('МИНИ-ИГРА: гонка до светового рубежа',8),/MINIGAME: Both race/);
+  assert.match(locale.formatGoal('МИНИ-ИГРА: активируйте два ритмических узла',8),/rhythm/);
  });
 });
 test('G2 English onboarding and demo ending language catalog is complete',()=>{
