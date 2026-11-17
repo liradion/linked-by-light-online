@@ -18,6 +18,13 @@ test('mobile clean mode keeps gameplay controls and can be restored',{timeout:60
   await expect(host.locator('#overlay')).toHaveAttribute('data-view','lobby');
   const code=(await host.locator('#roomCode').innerText()).trim();
   expect(code).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
+  // Native share should provide a valid invite URL without copying private tokens.
+  await expect(host.locator('#shareInviteBtn')).toBeVisible();
+  await host.evaluate(()=>{
+   Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{window.__testShareURL=data.url;}});
+  });
+  await host.locator('#shareInviteBtn').click();
+  await expect.poll(()=>host.evaluate(()=>window.__testShareURL)).toContain('room='+code);
   await guest.goto('/?room='+code);
   await expect(guest.locator('#betaQuickStart')).toHaveCount(0);
   await expect(host.locator('#startBtn')).toBeEnabled({timeout:15000});
