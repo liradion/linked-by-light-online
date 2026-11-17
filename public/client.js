@@ -146,7 +146,7 @@ $('resetBtn').addEventListener('click',()=>wsSend({t:'resetStage'}));
 $('restartBtn').addEventListener('click',()=>wsSend({t:'restart'}));
 $('copyBtn').addEventListener('click',async()=>{
   const url=new URL(location.pathname,location.href);url.searchParams.set('room',room);
-  const text=`Сыграем вместе в «Связанные светом»? Открой эту ссылку на iPhone: ${url.href} (код ${room})`;
+  const text=`Сыграем вместе в «Связанные светом»? Открой ссылку на компьютере или телефоне: ${url.href} (код ${room})`;
   try{await navigator.clipboard.writeText(text);$('copyBtn').textContent='Скопировано ✓';setTimeout(()=>$('copyBtn').textContent='Скопировать приглашение',1500);}
   catch(_){setError('Не удалось скопировать автоматически. Код: '+room+' — '+url.href);}
 });
