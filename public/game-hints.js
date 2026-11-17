@@ -62,19 +62,35 @@
     return stage.hint||stage.objective||'Помогайте друг другу, чтобы открыть выход.';
   }
 
-  let api={},dialog=null,headerButton=null,cleanButton=null,body=null,nextButton=null;
+  let api={},dialog=null,headerButton=null,cleanButton=null,body=null,nextButton=null,dismissButton=null;
   let lastStage=null,depth=0;
+  const ui=(key)=>root.GameI18n?.ui?.('hints.'+key)||key;
   function close(){if(dialog)dialog.hidden=true;}
-  function open(next=false){
+  function renderHint(){
     const state=api.getState?.();
     if(!state||state.phase!=='playing'||state.role<0)return;
-    if(!next&&dialog&&!dialog.hidden){close();return;}
-    depth=next?Math.min(2,depth+1):1;
     const result=hint(state.level,state.world,state.role,depth);
     body.textContent=state.customLevel?result:(root.GameI18n?.localizeHint?.(result,state.stageIndex,state.role,depth)??result);
     const en=root.GameI18n?.isEnglish?.()===true;
     dialog.querySelector('.game-hint-caption').textContent=(state.role===1?(en?'Echo':'Эхо'):(en?'Spark':'Искра'))+' · '+(state.customLevel?(state.level?.title||'Custom Level'):(root.GameI18n?.stageTitle?.(state.stageIndex,state.level?.title)||(state.level?.title||'Уровень')));
     nextButton.hidden=depth>=2;
+  }
+  function refreshLanguage(){
+    if(!dialog)return;
+    headerButton.textContent=ui('open');
+    headerButton.setAttribute('aria-label',ui('openLabel'));
+    cleanButton.setAttribute('aria-label',ui('cleanLabel'));
+    dialog.setAttribute('aria-label',ui('cleanLabel'));
+    nextButton.textContent=ui('more');
+    dismissButton.textContent=ui('close');
+    if(!dialog.hidden)renderHint();
+  }
+  function open(next=false){
+    const state=api.getState?.();
+    if(!state||state.phase!=='playing'||state.role<0)return;
+    if(!next&&dialog&&!dialog.hidden){close();return;}
+    depth=next?Math.min(2,depth+1):1;
+    renderHint();
     dialog.hidden=false;
   }
   function onSnapshot(s){
@@ -111,10 +127,12 @@
     const footer=document.createElement('div');footer.className='game-hint-actions';
     nextButton=document.createElement('button');nextButton.type='button';
     nextButton.textContent='Подробнее';nextButton.addEventListener('click',()=>open(true));
-    const dismiss=document.createElement('button');dismiss.type='button';
+    dismissButton=document.createElement('button');const dismiss=dismissButton;dismiss.type='button';
     dismiss.textContent='Закрыть';dismiss.addEventListener('click',close);
     footer.append(nextButton,dismiss);
     dialog.append(caption,body,footer);frame.append(dialog);
+    root.GameI18n?.subscribe?.(refreshLanguage);
+    refreshLanguage();
     document.addEventListener('keydown',event=>{
       const tag=event.target?.tagName;
       if(event.key==='Escape'&&!dialog.hidden){close();return;}
