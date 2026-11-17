@@ -17,7 +17,7 @@ function initStage(g,index){
   g.stage=index;g.level=structuredClone(v23.getStage(index)||v21.getStage(index)||v20.getStage(index)||(index===99?BONUS_STAGE:stages[index]));g.players=[freshPlayer(0,g.level.spawn[0]),freshPlayer(1,g.level.spawn[1])];
   g.level.gateOpen=false;g.level.bridgeLatched=false;g.level.padLatched=false;g.customChallenge=false;
   g.level.pads.forEach(p=>p.pressed=false);
-  g.shards=g.level.shards.map(x=>false);g.completion=0;g.transition=0;g.padTimer=0;g.lastResult=null;g.stats={level:index,elapsed:0,deaths:0,rescues:0,abilities:[0,0],hearts:0};
+  g.shards=g.level.shards.map(x=>false);g.completion=0;g.transition=0;g.padTimer=0;g.stats={level:index,elapsed:0,deaths:0,rescues:0,abilities:[0,0],hearts:0};
   // Последнее состояние ввода не переносится между главами.
   const previousInputs=g.input||[];
   g.input=[makeInput(),makeInput()];
