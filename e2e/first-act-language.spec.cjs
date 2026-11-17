@@ -56,13 +56,13 @@ test('G2 first-use help updates without reload when English is selected',async({
  await page.goto('/');
  await expect(page.locator('#betaQuickStart')).toBeVisible();
  await page.locator('#languageSelect').selectOption('en');
- await expect(page.locator('#betaQuickStart .beta-quickstart-title')).toContainText('Two players');
+ await expect(page.locator('#betaQuickStart .beta-quickstart-title')).toContainText('Two heroes');
  await expect(page.locator('#betaQuickStart .beta-quickstart-open')).toHaveText('How to play');
  await page.locator('#betaQuickStart .beta-quickstart-open').click();
  await expect(page.locator('#betaIntro')).toBeVisible();
  await expect(page.locator('#beta-intro-content')).toContainText('Welcome to Linked by Light');
  await page.locator('#betaIntro .beta-actions button').last().click();
- await expect(page.locator('#beta-intro-content')).toContainText('Create a room');
+ await expect(page.locator('#beta-intro-content')).toContainText('Choose Spark or Echo');
  await page.locator('#betaIntro .beta-close').click();
  await expect(page.locator('#betaIntro')).toBeHidden();
  await page.reload();
