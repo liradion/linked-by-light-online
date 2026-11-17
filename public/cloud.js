@@ -1,8 +1,24 @@
 /* Optional end-to-end encrypted cloud profiles. The recovery key is never saved on the server. */
 (function(root){'use strict';
 const KEY_STORAGE='linked-light-cloud-recovery-key-v1';
-let key='',revision=0,enabled=false,busy=false,timer=null,notice=()=>{};
+let key='',revision=0,enabled=false,busy=false,timer=null,notice=()=>{},statusKey='cloud.checking',lastNotice=null;
 const $=id=>document.getElementById(id);
+ const tr=(key,vars)=>root.GameI18n?.aux?.(key,vars)||key;
+ const setNotice=(code,vars)=>{lastNotice={code,vars};notice(tr(code,vars));};
+ function renderLocale(){
+  const d=$('cloudDialog');if(!d)return;
+  const label=(selector,code)=>{const el=d.querySelector(selector);if(el)el.textContent=tr(code);};
+  const rootButton=document.getElementById('cloudOpen');
+  if(rootButton)rootButton.textContent=tr('cloud.open');
+  label('.quality-head strong','cloud.title');
+  label('.quality-note:not([id])','cloud.warning');
+  const keyLabel=d.querySelector('label.cloud-entry');
+  if(keyLabel?.firstChild?.nodeType===3)keyLabel.firstChild.textContent=tr('cloud.keyLabel');
+  const input=$('cloudKey');if(input)input.placeholder=tr('cloud.keyPlaceholder');
+  for(const [id,code]of [['cloudNew','cloud.create'],['cloudUse','cloud.use'],['cloudSync','cloud.sync']])label('#'+id,code);
+  const state=$('cloudState');if(state)state.textContent=tr(statusKey);
+  if(lastNotice)notice(tr(lastNotice.code,lastNotice.vars));
+ }
 try{key=localStorage.getItem(KEY_STORAGE)||'';}catch(_){}
 function validateKey(v){return /^[a-f0-9]{48}$/i.test(v);}
 function generate(){const bytes=new Uint8Array(24);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}
@@ -112,16 +128,16 @@ async function sync(){if(!enabled||!key||busy)return false;busy=true;
   const combined=remote.payload?merge(local,remote.payload):local;
   if(remote.payload)GameAdventure.importProfile(combined);
   revision=remote.revision;
-  if(remote.payload&&JSON.stringify(remote.payload)===JSON.stringify(combined)){notice('Сохранение актуально');return true;}
+  if(remote.payload&&JSON.stringify(remote.payload)===JSON.stringify(combined)){setNotice('cloud.upToDate');return true;}
   let write;
   try{write=await api('write',{key,revision,payload:combined});}
   catch(e){if(e.status===409){const latest=await api('read',{key});const rerun=merge(GameAdventure.profilePayload(),latest.payload);write=await api('write',{key,revision:latest.revision,payload:rerun});}else throw e;}
   revision=write.revision||revision;
-  notice('Облачный прогресс синхронизирован');return true;
- }catch(e){notice('Облако: '+e.message);return false;}finally{busy=false;}
+  setNotice('cloud.synced');return true;
+ }catch(e){setNotice('cloud.failed',{message:e.message});return false;}finally{busy=false;}
 }
 function init(){const host=document.querySelector('.adv-nav')||document.querySelector('.topline');if(!host)return;
- const btn=document.createElement('button');btn.className='mini-btn';btn.textContent='☁ Облако';btn.type='button';host.append(btn);
+ const btn=document.createElement('button');btn.id='cloudOpen';btn.className='mini-btn';btn.textContent=tr('cloud.open');btn.type='button';host.append(btn);
  const dialog=document.createElement('dialog');dialog.className='quality-dialog';dialog.id='cloudDialog';dialog.innerHTML=`<div class="quality-head"><strong>☁ Облачные сохранения</strong><button id="cloudClose" type="button">✕</button></div>
  <p class="quality-note" id="cloudState">Проверка подключения...</p>
  <p class="quality-note">Один ключ для ваших двух устройств. Ключ открывает доступ к сохранению: не размещайте его публично. Скопируйте и храните отдельно.</p>
@@ -131,16 +147,17 @@ function init(){const host=document.querySelector('.adv-nav')||document.querySel
  document.body.append(dialog);
  const status=$('cloudState'),message=$('cloudMessage'),input=$('cloudKey');
  notice=s=>{if(message)message.textContent=s;};
+  root.GameI18n?.subscribe?.(renderLocale);renderLocale();
  $('cloudClose').onclick=()=>dialog.close();
  btn.onclick=()=>{input.value=key;if(!dialog.open)dialog.showModal();};
- $('cloudNew').onclick=()=>{input.value=setKey(generate());notice('Ключ создан. Сохраните его в надёжном месте и нажмите «Синхронизировать».');};
- $('cloudUse').onclick=()=>{try{setKey(input.value.trim());notice('Ключ подключён. Нажмите «Синхронизировать».');}catch(e){notice(e.message);}};
+ $('cloudNew').onclick=()=>{input.value=setKey(generate());setNotice('cloud.created');};
+ $('cloudUse').onclick=()=>{try{setKey(input.value.trim());setNotice('cloud.attached');}catch(e){setNotice('cloud.badKey');}};
  $('cloudSync').onclick=()=>sync();
  fetch('/api/cloud/status').then(r=>r.json()).then(data=>{
-  enabled=!!data.enabled;status.textContent=enabled?'Облачное хранилище подключено.':'Серверное облако ещё не настроено. Сохранения пока остаются локальными.';
+  enabled=!!data.enabled;statusKey=enabled?'cloud.connected':'cloud.disabled';status.textContent=tr(statusKey);
   $('cloudNew').disabled=!enabled;$('cloudUse').disabled=!enabled;$('cloudSync').disabled=!enabled;
   if(enabled&&key)sync();if(enabled)timer=setInterval(()=>{if(key&&document.visibilityState==='visible')sync();},45000);
- }).catch(()=>{status.textContent='Не удалось проверить хранилище.';});
+ }).catch(()=>{statusKey='cloud.checkFailed';status.textContent=tr(statusKey);});
 }
 root.GameCloud={init,sync,generate,merge,setKey,clearKey,validateKey};
 })(typeof window!=='undefined'?window:globalThis);
