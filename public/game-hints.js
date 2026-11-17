@@ -71,9 +71,9 @@
     if(!next&&dialog&&!dialog.hidden){close();return;}
     depth=next?Math.min(2,depth+1):1;
     const result=hint(state.level,state.world,state.role,depth);
-    body.textContent=root.GameI18n?.localizeHint?.(result,state.stageIndex,state.role,depth)??result;
+    body.textContent=state.customLevel?result:(root.GameI18n?.localizeHint?.(result,state.stageIndex,state.role,depth)??result);
     const en=root.GameI18n?.isEnglish?.()===true;
-    dialog.querySelector('.game-hint-caption').textContent=(state.role===1?(en?'Echo':'Эхо'):(en?'Spark':'Искра'))+' · '+(root.GameI18n?.stageTitle?.(state.stageIndex,state.level?.title)||(state.level?.title||'Уровень'));
+    dialog.querySelector('.game-hint-caption').textContent=(state.role===1?(en?'Echo':'Эхо'):(en?'Spark':'Искра'))+' · '+(state.customLevel?(state.level?.title||'Custom Level'):(root.GameI18n?.stageTitle?.(state.stageIndex,state.level?.title)||(state.level?.title||'Уровень')));
     nextButton.hidden=depth>=2;
     dialog.hidden=false;
   }
