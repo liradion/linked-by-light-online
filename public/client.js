@@ -32,9 +32,9 @@ function wsSend(m){if(socket&&socket.readyState===WebSocket.OPEN)socket.send(JSO
 function updateStatus(){const online=socket?.readyState===WebSocket.OPEN;
   $('statusDot').className='status-dot '+(online?'online':'offline');
   $('connectionStatus').textContent=online?GameI18n.t('networkOnline'):room?GameI18n.t('networkOffline'):GameI18n.t('networkConnecting');
-  $('ping').textContent=online&&latency?`${latency} мс`:'';
+  $('ping').textContent=online&&latency?`${latency} ${GameI18n.isEnglish()?'ms':'мс'}`:'';
   const mobileStatus=$('mobileConnectionText'),mobileBox=$('mobileConnection');
-  if(mobileStatus)mobileStatus.textContent=online?('Сервер на связи'+(latency?' · '+latency+' мс':'')):'Подключение к серверу…';
+  if(mobileStatus)mobileStatus.textContent=GameI18n.isEnglish()?(online?'Server connected'+(latency?' · '+latency+' ms':''):'Connecting to server…'):(online?'Сервер на связи'+(latency?' · '+latency+' мс':''):'Подключение к серверу…');
   if(mobileBox)mobileBox.dataset.status=online?'online':'offline';
 }
 function openConnection(){
