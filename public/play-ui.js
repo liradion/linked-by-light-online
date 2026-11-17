@@ -39,7 +39,7 @@
     for(const name of ['.v20-toggle','.v21-toggle','.v2346-toggle'])move(name,'.game-menu-worlds');
     move('.v20-quick','.game-menu-skills');
     move('.v21-quick','.game-menu-skills');
-    for(const name of ['#qualityOpen','#betaHelpBtn','#betaReportBtn','#installGameBtn','#resetBtn'])move(name,'.game-menu-tools');
+    for(const name of ['#qualityOpen','#gameHintBtn','#betaHelpBtn','#betaReportBtn','#installGameBtn','#resetBtn'])move(name,'.game-menu-tools');
     function setOpen(open){
       drawer.classList.toggle('is-open',open);
       shade.classList.toggle('is-open',open);
