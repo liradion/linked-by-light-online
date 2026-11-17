@@ -11,8 +11,18 @@ test('commercial clean-play UI has loadable JS/CSS and versioned references',()=
  const js=read('public/play-ui.js'),css=read('public/play-ui.css'),html=read('public/index.html');
  assert.doesNotThrow(()=>new vm.Script(js));
  assert.match(html,/\/play-ui\.js\?v=27\.4/);
- assert.match(html,/\/play-ui\.css\?v=27\.4/);
+ assert.match(html,/\/play-ui\.css\?v=27\.5/);
  assert.equal((css.match(/\{/g)||[]).length,(css.match(/\}/g)||[]).length);
+});
+test('first-run invitation and room UI are device-agnostic',()=>{
+ const beta=read('public/beta.js'),client=read('public/client.js'),html=read('public/index.html');
+ assert.doesNotMatch(beta,/setTimeout\(\(\)=>\{if\(!saved\(\)/);
+ assert.match(beta,/id='betaQuickStart'/);
+ assert.match(client,/id='shareInviteBtn'/);
+ assert.match(client,/typeof navigator\.share==='function'/);
+ assert.match(client,/navigator\.clipboard\.writeText\(message/);
+ assert.match(html,/\/client\.js\?v=26\.1/);
+ assert.match(html,/\/play-ui\.css\?v=27\.5/);
 });
 test('clean-play preserves original primary inputs and recovery controls',()=>{
  const html=read('public/index.html'),css=read('public/play-ui.css'),js=read('public/play-ui.js');
