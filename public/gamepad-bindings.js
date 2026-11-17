@@ -3,16 +3,18 @@
    D-pad movement cannot be assigned to hero actions. No server changes. */
 (function(root,factory){
  'use strict';
- const api=factory();
+ const api=factory(root);
  if(typeof module==='object'&&module.exports)module.exports=api;
  root.GamePadBindings=api;
-})(typeof window!=='undefined'?window:globalThis,function(){
+})(typeof window!=='undefined'?window:globalThis,function(root){
  'use strict';
  const KEY='linked-light-gamepad-v1';
  const ACTIONS=Object.freeze(['jump','ability','bond','emote']);
  const DEFAULT=Object.freeze({jump:0,ability:1,bond:2,emote:3});
  const ALLOWED=Object.freeze([0,1,2,3,4,5,6,7,10,11,12,13]);
  const LABELS=Object.freeze({jump:'Прыжок',ability:'Способность',bond:'Связь',emote:'Эмоция'});
+ const ui=(key,vars)=>root.GameI18n?.ui?.('pad.'+key,vars)||'';
+ const actionName=(key)=>ui(key)||LABELS[key];
  const RESERVED=new Set([8,9,14,15]);
  let mappings={...DEFAULT},storage=null,dialog=null,openButton=null,capture=null;
  let notice=null,usedButtons=new Set(),captureArmed=false;
@@ -71,7 +73,7 @@
   dialog.querySelectorAll('[data-pad-action]').forEach(el=>{
    const action=el.dataset.padAction;
    el.textContent=buttonName(buttonFor(action));
-   el.setAttribute('aria-label','Назначить '+LABELS[action]+': '+el.textContent);
+   el.setAttribute('aria-label',ui('assign',{action:actionName(action),key:el.textContent}));
   });
  }
  function cancelCapture(){
@@ -83,12 +85,12 @@
   // rebind must work on its next deliberate press, never during capture.
   for(const index of usedButtons)if(!pressed(pad,index))usedButtons.delete(index);
   if(!capture)return false;
-  if(!pad){noticeText('Подключите геймпад и нажмите любую назначаемую кнопку.');return true;}
+  if(!pad){noticeText(ui('missing'));return true;}
   const down=ALLOWED.filter(n=>pressed(pad,n));
   if(!captureArmed){
    if(down.length===0){
     captureArmed=true;
-    noticeText('Теперь нажмите кнопку на геймпаде. Кнопки меню и движения зарезервированы.');
+    noticeText(ui('ready'));
    }
    return true;
   }
@@ -98,8 +100,8 @@
   if(success){
    usedButtons.add(target);
    cancelCapture();
-   noticeText('Сохранено: '+LABELS[action]+' — '+buttonName(target)+'. Отпустите кнопку.');
-  }else noticeText('Кнопка занята другим действием. Отпустите её и выберите другую.');
+   noticeText(ui('saved',{action:actionName(action),key:buttonName(target)}));
+  }else noticeText(ui('invalid'));
   captureArmed=false;
   return true;
  }
@@ -111,27 +113,27 @@
   if(!parent)return;
   openButton=document.createElement('button');
   openButton.type='button';openButton.id='gamepadOpen';openButton.className='mini-btn';
-  openButton.textContent='🎮 Геймпад';openButton.setAttribute('aria-label','Настроить кнопки геймпада');
+  openButton.textContent=ui('open');openButton.setAttribute('aria-label',ui('openLabel'));
   parent.append(openButton);
   dialog=document.createElement('dialog');dialog.id='gamepadDialog';dialog.className='gamepad-dialog';
   const head=document.createElement('div');head.className='gamepad-head';
-  const heading=document.createElement('strong');heading.textContent='🎮 Настройка геймпада';
+  const heading=document.createElement('strong');heading.textContent=ui('title');
   const close=document.createElement('button');close.type='button';close.id='gamepadClose';
-  close.textContent='✕';close.setAttribute('aria-label','Закрыть настройки геймпада');
+  close.textContent='✕';close.setAttribute('aria-label',ui('close'));
   head.append(heading,close);dialog.append(head);
   const description=document.createElement('p');description.className='gamepad-note';
-  description.textContent='Подключите стандартный геймпад. Левый стик и крестовина — движение. Нажмите действие, отпустите все кнопки и нажмите новую. Старт, меню и ←/→ крестовины зарезервированы.';
+  description.textContent=ui('note');
   dialog.append(description);
   const rows=document.createElement('div');rows.className='gamepad-rows';
   for(const action of ACTIONS){
    const row=document.createElement('div');row.className='gamepad-row';
-   const text=document.createElement('span');text.textContent=LABELS[action];
+   const text=document.createElement('span');text.textContent=actionName(action);
    const button=document.createElement('button');button.type='button';
    button.dataset.padAction=action;
    button.addEventListener('click',()=>{
     cancelCapture();capture=action;captureArmed=false;
-    noticeText('Отпустите все кнопки геймпада перед назначением: '+LABELS[action]+'.');
-    button.textContent='Ждём кнопку…';
+    noticeText(ui('capture',{action:actionName(action)}));
+    button.textContent=ui('wait');
    });
    row.append(text,button);rows.append(row);
   }
@@ -141,9 +143,9 @@
   notice.hidden=true;dialog.append(notice);
   const footer=document.createElement('div');footer.className='gamepad-actions';
   const defaults=document.createElement('button');defaults.type='button';
-  defaults.id='gamepadDefault';defaults.textContent='По умолчанию';
-  defaults.addEventListener('click',()=>{reset();noticeText('Стандартная схема восстановлена.');});
-  const done=document.createElement('button');done.type='button';done.textContent='Готово';
+  defaults.id='gamepadDefault';defaults.textContent=ui('reset');
+  defaults.addEventListener('click',()=>{reset();noticeText(ui('restored'));});
+  const done=document.createElement('button');done.type='button';done.textContent=ui('done');
   footer.append(defaults,done);dialog.append(footer);
   document.body.append(dialog);
   const closeDialog=()=>{
@@ -154,7 +156,21 @@
   dialog.addEventListener('close',cancelCapture);
   dialog.addEventListener('click',event=>{if(event.target===dialog)closeDialog();});
   openButton.addEventListener('click',()=>{cancelCapture();noticeText('');render();if(!dialog.open)dialog.showModal();});
-  render();
+  function refreshLanguage(){
+   openButton.textContent=ui('open');
+   openButton.setAttribute('aria-label',ui('openLabel'));
+   heading.textContent=ui('title');
+   close.setAttribute('aria-label',ui('close'));
+   description.textContent=ui('note');
+   rows.querySelectorAll('.gamepad-row').forEach((row,i)=>{
+    row.querySelector('span').textContent=actionName(ACTIONS[i]);
+   });
+   defaults.textContent=ui('reset');
+   done.textContent=ui('done');
+   render();
+  }
+  root.GameI18n?.subscribe?.(refreshLanguage);
+  refreshLanguage();
  }
  return Object.freeze({KEY,ACTIONS,DEFAULT,ALLOWED,RESERVED,normalizeLayout,read,current,
   buttonFor,buttonName,pressed,active,set,reset,pollCapture,init});
