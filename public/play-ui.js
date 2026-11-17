@@ -6,7 +6,7 @@
     const shell=document.querySelector('.game-shell');
     const header=document.querySelector('.topline');
     if(!shell||!header)return;
-    const right=header.querySelector(':scope > div:last-child')||header;
+    const right=header.querySelector(':scope > div:last-of-type')||header;
     const trigger=document.createElement('button');
     trigger.type='button';
     trigger.className='mini-btn game-menu-trigger';
