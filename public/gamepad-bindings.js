@@ -79,6 +79,9 @@
   render();
  }
  function pollCapture(pad){
+  // Observe releases even while the settings dialog is open; a button used to
+  // rebind must work on its next deliberate press, never during capture.
+  for(const index of usedButtons)if(!pressed(pad,index))usedButtons.delete(index);
   if(!capture)return false;
   if(!pad){noticeText('Подключите геймпад и нажмите любую назначаемую кнопку.');return true;}
   const down=ALLOWED.filter(n=>pressed(pad,n));
