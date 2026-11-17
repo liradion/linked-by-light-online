@@ -22,6 +22,16 @@ test('two devices can opt into a separate nine-stage first-act demo',async({brow
   await expect(host.locator('#demoBackBtn')).toBeHidden();
   const saved=await host.evaluate(()=>localStorage.getItem('linked-light-checkpoint-v99'));
   expect(saved).toBeNull();
+  // Safari/Chrome mobile refresh: recover original seat and demo mode rather
+  // than treating the invited player as a spectator or normal-campaign host.
+  await guest.reload();
+  await expect(guest.locator('#overlay')).toHaveClass(/hidden/,{timeout:15000});
+  await expect(guest.locator('#levelLabel')).toHaveText('ДЕМО · ИСПЫТАНИЕ 1 / 9');
+  await expect(guest.locator('#actProgress')).toHaveText('ДЕМО 01/09');
+  await expect(guest.locator('#myRole')).toContainText('Эхо');
+  await expect(guest.locator('#touchControls [data-input="left"]')).toBeVisible();
+  await expect(host.locator('#waitingBanner')).toHaveClass(/hidden/,{timeout:15000});
+  expect(await guest.evaluate(()=>localStorage.getItem('linked-light-checkpoint-v99'))).toBeNull();
  }finally{await hostContext.close();await guestContext.close();}
 });
 
