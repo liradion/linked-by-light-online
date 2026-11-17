@@ -279,6 +279,12 @@ server.on('upgrade',(req,socket,head)=>{
     }
     if(!room||room.seats[role]?.peer!==peer)return;
     room.lastActivity=Date.now();
+    // Demo cannot be diverted into editor, later worlds or endless generation.
+    // Always check on the server; hiding a button on the client is insufficient.
+    if(room.game.demo===true&&[
+      'coopAction','sceneVote','homeAction','v21Action','v21Publish',
+      'v21GalleryPlay','v23Action','v24Action','v25Generate'
+    ].includes(msg.t))return error('Эта функция недоступна в демоверсии. Создайте обычную комнату.');
     if(msg.t==='customize'){
       room.seats[role].look=cleanLook(msg);broadcast(room,{t:'looks',looks:room.seats.map(s=>s?.look||null)});return;
     }
@@ -492,7 +498,7 @@ server.on('upgrade',(req,socket,head)=>{
       room.game.phase='playing';initStage(room.game,room.customLevel?0:room.game.stage);if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='restart'&&role===0&&room.seats.every(s=>s?.online)){
-      initStage(room.game,v23.hasStage(room.game.stage)?v23.FIRST:v21.hasStage(room.game.stage)?v21.FIRST:v20.hasStage(room.game.stage)?100:0);room.customLevel=null;room.ending=null;room.game.phase='playing';sendSeatRoom(room);broadcast(room,snapshot(room.game,countOnline(room)));return;
+      initStage(room.game,v23.hasStage(room.game.stage)?v23.FIRST:v21.hasStage(room.game.stage)?v21.FIRST:v20.hasStage(room.game.stage)?100:0);room.customLevel=null;room.ending=null;room.game.phase='playing';sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='resetStage'&&role===0&&room.game.phase==='playing'){
       initStage(room.game,room.customLevel?0:room.game.stage);if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;broadcast(room,roomSnapshot(room));return;
