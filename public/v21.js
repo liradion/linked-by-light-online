@@ -302,7 +302,7 @@ function init(callbacks){
  const tabs=node('nav','v21-tabs');
  const categories=[['level','tabLevel'],['story','tabStory'],['home','tabHome'],['events','tabEvents'],['community','tabCommunity'],['photo','tabPhoto']];
   for(const [key,label]of categories){const control=btn(tr(label),()=>open(key));control.dataset.galleryTab=key;tabs.append(control);}
- dialog.append(tabs);body=node('div','v21-body');dialog.append(body);document.body.append(dialog);
+ dialog.append(tabs);body=node('div','v21-body');dialog.append(body);document.body.append(dialog);root.GameI18n?.mountDialogLanguage?.(dialog);
   root.GameI18n?.subscribe?.(()=>{
     nav.textContent=tr('nav');
     quick.querySelector('button').textContent=tr('action');
