@@ -12,11 +12,11 @@ async function launch(cb){const port=await randomPort();const env={...process.en
 test('production routes expose account state, secure static script and no room counts',{timeout:5000},async()=>launch(async base=>{
  const me=await fetch(base+'/api/auth/me');assert.equal(me.status,200);assert.deepEqual(await me.json(),{enabled:false,authenticated:false,user:null});
  const health=await fetch(base+'/health');const h=await health.json();assert.deepEqual(h,{ok:true});
- const client=await fetch(base+'/auth.js?v=13');assert.equal(client.status,200);
+ const client=await fetch(base+'/auth.js?v=15');assert.equal(client.status,200);
  const page=await fetch(base+'/');assert.equal(page.status,200);
  assert.match(page.headers.get('content-security-policy'),/script-src 'self';/);
  assert.doesNotMatch(page.headers.get('content-security-policy'),/script-src 'self' 'unsafe-inline'/);
- assert.match(await page.text(),/auth\.js\?v=13/);
+ assert.match(await page.text(),/auth\.js\?v=15/);
  const code=await fetch(base+'/?code=stolen',{redirect:'manual'});assert.equal(code.status,303);
  assert.match(code.headers.get('location'),/login_error=expired/);
 }));
