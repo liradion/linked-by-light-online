@@ -241,10 +241,10 @@ function updateHUD(){
   if(!level.gateOpen){
     const wall=level.walls.find(w=>!w.broken);
     const crystal=level.crystals.find(c=>!c.on);
-    if(wall)goal='Искра: у светящейся стены нажмите способность (F на ПК или ✦ на телефоне).';
+    if(wall)goal='Искра: у светящейся стены нажмите способность ('+GameControls.labelFor(0,'ability')+' на ПК или ✦ на телефоне).';
     else if(crystal)goal=level.bridgeTrigger==='pad-crystal'
       ?'Искра держит плиту, пока Эхо заряжает кристалл за мостом.'
-      :'Эхо: у кристалла нажмите способность (Enter на ПК или ✦ на телефоне).';
+      :'Эхо: у кристалла нажмите способность ('+GameControls.labelFor(1,'ability')+' на ПК или ✦ на телефоне).';
     else if(level.puzzle?.pads&&!level.padLatched)
       goal=levelIndex===0?`Плиты: Искра — оранжевая, Эхо — голубая. Вместе ${level.pads.filter(p=>p.pressed).length}/${level.pads.length}`:`Встаньте одновременно на плиты: ${level.pads.filter(p=>p.pressed).length}/${level.pads.length}`;
     else if(level.signature&&!level.signature.done){
