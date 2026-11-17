@@ -3,6 +3,7 @@
 (function(root){'use strict';
 let api={},state=null,community=null,secret=[],leaderboard=null,dialog,body,quick,nav,tab='level',nonce='',serial=0,lastRender=0,paintColor=0;
 const $=id=>document.getElementById(id);
+ const tr=(key,vars)=>root.GameI18n?.aux?.('gallery.'+key,vars)||key;
 const levels=GameV21Stages.stages,GROUND=544;
 const labels={trails:'Мост из следов',transfer:'Почта между мирами',knowledge:'Два взгляда',
  lantern:'Живой фонарь',transform:'Превращения',weather:'Власть над погодой',
@@ -177,15 +178,15 @@ function renderEvents(){
  trophies.slice(-28).reverse().forEach(t=>museum.append(node('div','v21-trophy','🏆 '+t.replace(/^(trophy-|season-)/,''))));
 }
 function renderCommunity(){
- const section=group(body,'Обмен авторскими уровнями');
- para(section,'Карты состоят только из проверяемой геометрии. Публичные названия и содержимое требуют модерации; доступна отправка жалобы.');
- actions(section,[btn('Опубликовать мой уровень',()=>request('v21Publish',{blueprint:GameExpansion.currentBlueprint?.()}),api.role?.()!==0),btn('Обновить галерею',()=>api.send?.({t:'v21GalleryList'}))]);
- if(!galleryCacheReady())return para(section,'Загрузка списка опубликованных уровней.');
- if(!communityGallery.length)return para(section,'Пока нет опубликованных карт.');
+ const section=group(body,tr('title'));
+ para(section,tr('description'));
+ actions(section,[btn(tr('publish'),()=>request('v21Publish',{blueprint:GameExpansion.currentBlueprint?.()}),api.role?.()!==0),btn(tr('refresh'),()=>api.send?.({t:'v21GalleryList'}))]);
+ if(!galleryCacheReady())return para(section,tr('loading'));
+ if(!communityGallery.length)return para(section,tr('empty'));
  for(const item of communityGallery){
   const card=node('article','v21-gallery-card');
-  card.append(node('strong','',item.title),node('span','',item.platforms+' платформ · '+item.author));
-  actions(card,[btn('▶ Играть вдвоём',()=>request('v21GalleryPlay',{id:item.id}),api.role?.()!==0),btn('Пожаловаться',()=>request('v21Report',{id:item.id}))]);
+  card.append(node('strong','',item.title),node('span','',tr('platforms',{count:item.platforms,author:item.author})));
+  actions(card,[btn(tr('play'),()=>request('v21GalleryPlay',{id:item.id}),api.role?.()!==0),btn(tr('report'),()=>request('v21Report',{id:item.id}))]);
   section.append(card);
  }
 }
@@ -216,7 +217,7 @@ function renderPhoto(){
 }
 function render(){
  if(!dialog?.open)return;
- lastRender=performance.now();body.replaceChildren();
+ lastRender=performance.now();const photoCaption=body.querySelector('#v21-photo-caption')?.value||'';body.replaceChildren();
  body.append(node('p','v21-subtitle','Linked by Light v21 · Навстречу друг другу'));
  if(!api.inRoom?.()){para(body,'Создайте комнату в новой кампании и пригласите второго игрока.');body.append(btn('✦ Начать новую главу',()=>{dialog.close();api.create?.();}));return;}
  if(api.role?.()<0){para(body,'Вы наблюдатель. Совместные действия доступны только игрокам.');}
@@ -225,7 +226,7 @@ function render(){
  if(tab==='home')renderHome();
  if(tab==='events')renderEvents();
  if(tab==='community')renderCommunity();
- if(tab==='photo')renderPhoto();
+ if(tab==='photo'){renderPhoto();const input=$('v21-photo-caption');if(input)input.value=photoCaption;}
 }
 function onMessage(m){
  if(m.t==='v21State'){community=m.data;if(api.role?.()>=0)GameAdventure.syncV21(community);}
@@ -292,15 +293,27 @@ function init(callbacks){
   if(last>112)menu.append(btn('▶ Продолжить v21 · '+(last-111)+'/10',()=>api.resume?.(last)));
  }
  const host=document.querySelector('.frame')||document.body;
- nav=btn('✧ v21 · Наш мир',()=>open('level'));nav.classList.add('v21-toggle');host.append(nav);
+ nav=btn(tr('nav'),()=>open('level'));nav.classList.add('v21-toggle');host.append(nav);
  quick=node('div','v21-quick');
- quick.append(btn('✦ Действия',()=>open('level')));
+ quick.append(btn(tr('action'),()=>open('level')));
  host.append(quick);quick.style.display='none';
  dialog=node('dialog','v21-dialog');
- const top=node('header','v21-top');top.append(node('strong','', 'Навстречу друг другу'),btn('✕ Закрыть',()=>dialog.close()));dialog.append(top);
+ const top=node('header','v21-top');top.append(node('strong','',tr('chapter')),btn(tr('close'),()=>dialog.close()));dialog.append(top);
  const tabs=node('nav','v21-tabs');
- for(const [key,title] of [['level','Испытания'],['story','История'],['home','Дом'],['events','События'],['community','Карты'],['photo','Фото']])tabs.append(btn(title,()=>open(key)));
+ const categories=[['level','tabLevel'],['story','tabStory'],['home','tabHome'],['events','tabEvents'],['community','tabCommunity'],['photo','tabPhoto']];
+  for(const [key,label]of categories){const control=btn(tr(label),()=>open(key));control.dataset.galleryTab=key;tabs.append(control);}
  dialog.append(tabs);body=node('div','v21-body');dialog.append(body);document.body.append(dialog);
+  root.GameI18n?.subscribe?.(()=>{
+    nav.textContent=tr('nav');
+    quick.querySelector('button').textContent=tr('action');
+    top.querySelector('strong').textContent=tr('chapter');
+    top.querySelector('button').textContent=tr('close');
+    categories.forEach(([key,label])=>{
+     const item=tabs.querySelector('[data-gallery-tab="'+key+'"]');
+     if(item)item.textContent=tr(label);
+    });
+    if(dialog.open)render();
+  });
 }
 root.GameV21={init,onMessage,onSnapshot,draw:paint,open,act:draw};
 })(typeof window!=='undefined'?window:globalThis);
