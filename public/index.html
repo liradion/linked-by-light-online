@@ -236,6 +236,12 @@ canvas{position:relative;z-index:1}
 <div class="eyebrow">ОНЛАЙН-ПРИКЛЮЧЕНИЕ · 2 ИГРОКА</div>
 <h1 class="hero-title">ДВА ГЕРОЯ.<br/><em>ОДИН ПУТЬ.</em></h1>
 <p class="intro-copy">Один мир, два героя и одно совместное приключение. Подключайтесь с разных устройств, помогайте друг другу и преодолевайте испытания вместе.</p>
+<section class="demo-launch" aria-label="Демоверсия первого акта">
+  <span class="demo-launch-tag">✦ ДЕМО · ПЕРВАЯ ГЛАВА</span>
+  <strong>Начните ваше общее приключение</strong>
+  <p>Девять испытаний: две способности, совместные головоломки и финал первой главы.</p>
+  <button class="button-primary" id="demoBtn" type="button">Играть в демоверсию ✦</button>
+</section>
 <div class="menu-actions"><button class="button-primary" id="createBtn">Создать комнату ✦</button><button class="button-secondary" id="newCampaignBtn" style="display:none">Новая игра с 1 уровня</button></div>
 <p class="intro-copy" id="campaignProgress" style="font-size:12px;margin:9px auto 4px">Впереди 99 уровней в 11 мирах.</p>
 <div class="menu-actions"><input id="roomInput" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="6" placeholder="КОД КОМНАТЫ"/><button class="button-secondary" id="joinBtn">Подключиться →</button></div>
@@ -255,6 +261,7 @@ canvas{position:relative;z-index:1}
 <h1 class="hero-title">ВЫ СМОГЛИ.<br/><em>ВМЕСТЕ.</em></h1>
 <p class="intro-copy">99 уровней вместе. Через 11 миров, с одной целью. Можно начать приключение заново.</p>
 <button class="button-primary" id="restartBtn">Сыграть сначала ↻</button>
+<button class="button-secondary" id="demoBackBtn" hidden type="button">К выбору приключения</button>
 </div>
 <div id="networkError" role="alert" aria-live="polite"></div>
 </div></div>
@@ -265,5 +272,5 @@ canvas{position:relative;z-index:1}
 </div><div class="footer-note">Вы: <b id="myRole">не в комнате</b><div>На телефоне поверните экран горизонтально · <b>R</b> — перезапуск уровня (хост)</div></div></section>
 <div class="rotate-tip">↻ Для удобной игры на iPhone поверните экран горизонтально.</div>
 </div>
-<script src="/shared/stages.js?v=15"></script><script src="/shared/v20-stages.js?v=20"></script><script src="/shared/v21-stages.js?v=21"></script><script src="/shared/v23-stages.js?v=23"></script><script src="/biomes.js?v=6"></script><script src="/visuals.js?v=6"></script><script src="/juice.js?v=6"></script><script src="/adventure.js?v=19"></script><script src="/quality.js?v=15.1"></script><script src="/reconciliation.js?v=19"></script><script src="/cloud.js?v=12"></script><script src="/reality-visuals.js?v=15"></script><script src="/expansion-ui.js?v=19"></script><script src="/v20.js?v=20"></script><script src="/v21.js?v=21"></script><script src="/beta.js?v=22.1"></script><script src="/v23plus.js?v=26"></script><script src="/client.js?v=26.1"></script><script src="/auth.js?v=13"></script><script src="/pwa.js?v=14"></script><script src="/play-ui.js?v=27.4"></script>
+<script src="/shared/demo-mode.js?v=1"></script><script src="/shared/stages.js?v=15"></script><script src="/shared/v20-stages.js?v=20"></script><script src="/shared/v21-stages.js?v=21"></script><script src="/shared/v23-stages.js?v=23"></script><script src="/biomes.js?v=6"></script><script src="/visuals.js?v=6"></script><script src="/juice.js?v=6"></script><script src="/adventure.js?v=19"></script><script src="/quality.js?v=15.1"></script><script src="/reconciliation.js?v=19"></script><script src="/cloud.js?v=12"></script><script src="/reality-visuals.js?v=15"></script><script src="/expansion-ui.js?v=19"></script><script src="/v20.js?v=20"></script><script src="/v21.js?v=21"></script><script src="/beta.js?v=22.1"></script><script src="/v23plus.js?v=26"></script><script src="/client.js?v=26.2"></script><script src="/auth.js?v=13"></script><script src="/pwa.js?v=14"></script><script src="/play-ui.js?v=27.4"></script>
 </body></html>
