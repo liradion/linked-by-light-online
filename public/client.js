@@ -132,6 +132,8 @@ function showUI(){
     $('touchRoleName').textContent=role===1?'Echo':role===0?'Spark':'Spectator';
     $('touchRoleHint').textContent=role===1?'jump and pulse':role===0?'jump and dash':'view only';
     $('mobileConnectionText').textContent=ready?'Server connected':'Connecting to server…';
+    shareInviteBtn.textContent='Share ↗';
+    shareInviteBtn.setAttribute('aria-label','Send a co-op invitation to your partner');
     if(!room){
       const progress=bestStage();
       $('createBtn').textContent=progress>0?'Continue from level '+(progress+1)+' ✦':GameI18n.EN.create;
@@ -148,6 +150,10 @@ function showUI(){
   // hid the entire landing menu in browsers whenever the game had no ending.
   overlay.classList.toggle('hidden',!!room&&phase==='playing');
   $('waitingBanner').classList.toggle('hidden',!room||phase!=='playing'||connected.every(Boolean));
+  if(!GameI18n.isEnglish()){
+    shareInviteBtn.textContent='Поделиться ↗';
+    shareInviteBtn.setAttribute('aria-label','Отправить приглашение второму игроку');
+  }
   $('touchControls').style.visibility=!!room&&role>=0&&phase==='playing'?'visible':'hidden';
 }
 function createRoom(newGame=false,stageOverride=null,blueprint=null,startDemo=false){
@@ -182,15 +188,15 @@ shareInviteBtn.setAttribute('aria-label','Отправить приглашен�
 shareInviteBtn.addEventListener('click',async()=>{
  if(!room){setError('Сначала создайте комнату.');return;}
  const url=new URL(location.pathname,location.href);url.searchParams.set('room',room);
- const message='Присоединяйся ко мне в «Связанные светом»! Вместе пройдём приключение.';
+ const message=GameI18n.isEnglish()?'Join me in Linked by Light! Let’s solve co-op puzzles together.':'Присоединяйся ко мне в «Связанные светом»! Вместе пройдём приключение.';
  if(typeof navigator.share==='function'){
   try{await navigator.share({title:'Связанные светом',text:message,url:url.href});return;}
   catch(error){if(error?.name==='AbortError')return;/* unsupported/failed share → copy */}
  }
  try{
   await navigator.clipboard.writeText(message+' '+url.href+' (код '+room+')');
-  shareInviteBtn.textContent='Ссылка скопирована ✓';
-  setTimeout(()=>shareInviteBtn.textContent='Поделиться ↗',1800);
+  shareInviteBtn.textContent=GameI18n.isEnglish()?'Link copied ✓':'Ссылка скопирована ✓';
+  setTimeout(()=>shareInviteBtn.textContent=GameI18n.isEnglish()?'Share ↗':'Поделиться ↗',1800);
  }catch(_){setError('Скопируйте ссылку вручную: '+url.href);}
 });
 $('copyBtn').parentElement.insertBefore(shareInviteBtn,$('copyBtn'));
