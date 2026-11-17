@@ -2,7 +2,7 @@
 
 ## Commercial Readiness — план подготовки к рынку (не релиз)
 
-В ветке `feat/commercial-readiness-foundation` находится подготовительный пакет: [мастер-план](docs/MASTER_PLAN.md), [продуктовая концепция](docs/PRODUCT_VISION.md), [геймдизайн](docs/GAME_DESIGN.md), [демоверсия первой главы](docs/DEMO_VERTICAL_SLICE.md), [каталог 137 этапов](docs/STAGE_AUDIT.md), [архитектура](docs/ARCHITECTURE.md), [матрица QA](docs/QA_MATRIX.md), [чек-лист релиза](docs/RELEASE_CHECKLIST.md), [финансовая модель](docs/ECONOMICS.md), [безопасность и privacy](docs/PRIVACY_AND_SECURITY.md) и [интеграция v28](docs/V28_INTEGRATION_NOTES.md).
+В ветке `feat/commercial-readiness-foundation` находится подготовительный пакет: [мастер-план](docs/MASTER_PLAN.md), [продуктовая концепция](docs/PRODUCT_VISION.md), [геймдизайн](docs/GAME_DESIGN.md), [демоверсия первой главы](docs/DEMO_VERTICAL_SLICE.md), [настройка геймпада](docs/M2_GAMEPAD_CONTROLS.md), [каталог 137 этапов](docs/STAGE_AUDIT.md), [архитектура](docs/ARCHITECTURE.md), [матрица QA](docs/QA_MATRIX.md), [чек-лист релиза](docs/RELEASE_CHECKLIST.md), [финансовая модель](docs/ECONOMICS.md), [безопасность и privacy](docs/PRIVACY_AND_SECURITY.md) и [интеграция v28](docs/V28_INTEGRATION_NOTES.md).
 
 Это **не означает**, что Steam/Google Play/App Store сборки существуют, тесты на реальных устройствах пройдены или открытый PR #8 объединён. Коммерческий релиз требует отдельного выполнения всех проверок и явного разрешения. Бэклог: GitHub Issues #9–#16.
 
