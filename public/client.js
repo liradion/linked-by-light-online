@@ -29,6 +29,7 @@ function refreshCampaignMenu(){
 }
 let lastErrorCode='',lastErrorVars=null;
 function setError(message='',vars=null){
+ if(typeof message!=='string')message='';
  lastErrorCode=message;lastErrorVars=vars;
  $('networkError').textContent=message.startsWith('network.')
   ?GameI18n.ui(message,vars)
@@ -498,7 +499,7 @@ function refreshKeyboardGuides(){
  for(const [who,id] of [[0,'amberControlsGuide'],[1,'blueControlsGuide']]){
   const el=$(id);if(!el)continue;
   const labels=['left','right','jump','ability'].map(key=>GameControls.labelFor(who,key));
-  el.textContent=labels[0]+' / '+labels[1]+' — ходить · '+labels[2]+' — прыжок · '+labels[3]+' — способность · G — связь · T — эмоция';
+  el.textContent=labels[0]+' / '+labels[1]+(GameI18n.isEnglish()?' — move · ':' — ходить · ')+labels[2]+(GameI18n.isEnglish()?' — jump · ':' — прыжок · ')+labels[3]+(GameI18n.isEnglish()?' — ability · G — bond · T — emote':' — способность · G — связь · T — эмоция');
  }
 }
 GameI18n.init();
