@@ -62,8 +62,8 @@ test('content-alpha hint resources are loaded and never hidden by clean mode',()
  const html=read('public/index.html'),client=read('public/client.js'),ui=read('public/play-ui.js'),css=read('public/play-ui.css');
  const hints=read('public/game-hints.js');
  assert.doesNotThrow(()=>new vm.Script(hints));
- assert.match(html,/\/game-hints\.js\?v=4/);
- assert.ok(html.indexOf('/game-hints.js?v=4')<html.indexOf(html.match(/\/client\.js\?v=[0-9.]+/)[0]));
+ assert.match(html,/\/game-hints\.js\?v=5/);
+ assert.ok(html.indexOf('/game-hints.js?v=5')<html.indexOf(html.match(/\/client\.js\?v=[0-9.]+/)[0]));
  assert.match(client,/GameHints\.init\(/);
  assert.match(client,/GameHints\.onSnapshot\(s\)/);
  assert.match(ui,/'#gameHintBtn'/);
