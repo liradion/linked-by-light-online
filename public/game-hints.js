@@ -2,20 +2,23 @@
    No game-state mutations, telemetry, saved personal data or paid unlocks. */
 (function(root,factory){
   'use strict';
-  const api=factory();
+  const api=factory(root);
   if(typeof module==='object'&&module.exports)module.exports=api;
   root.GameHints=api;
-})(typeof window!=='undefined'?window:globalThis,function(){
+})(typeof window!=='undefined'?window:globalThis,function(root){
   'use strict';
   function hint(stage,world,role,depth=1){
     if(!stage)return 'Создайте комнату и начните игру вдвоём.';
     const isEcho=role===1;
-    if(depth<=1)return stage.objective||stage.hint||'Действуйте вместе, чтобы открыть путь.';
+    const sparkAbility=root.GameControls?.labelFor(0,'ability')||'F';
+    const echoAbility=root.GameControls?.labelFor(1,'ability')||'Enter';
+    const currentObjective=stage.objective||stage.hint||'Действуйте вместе, чтобы открыть путь.';
+    if(depth<=1)return currentObjective.replace(/\bF\b/g,sparkAbility).replace(/\bEnter\b/g,echoAbility);
     if(world?.gateOpen||stage.gateOpen)return 'Ворота открыты. Искра и Эхо должны вместе подойти к световому порталу.';
     const boss=world?.adventure?.boss;
     if(boss?.active&&boss.hp>0){
       return boss.next===role
-        ?'Сейчас ваша очередь атаковать босса. Подойдите ближе и нажмите способность ('+(isEcho?'Enter / ✦':'F / ✦')+').'
+        ?'Сейчас ваша очередь атаковать босса. Подойдите ближе и нажмите способность ('+(isEcho?echoAbility:sparkAbility)+' / ✦'+').'
         :'Сейчас атакует '+(boss.next===1?'Эхо':'Искра')+'. Помогите партнёру подойти к боссу и следите за предупреждением об атаке.';
     }
     const arcade=world?.adventure?.arcade;
@@ -24,14 +27,14 @@
         chase:'Оба бегите вправо, пересеките световую границу и избегайте преследователя.',
         flight:'Оба прыгните в воздушное кольцо. Высота и одновременность важнее скорости.',
         rhythm:'Оба подойдите к своим точкам ритма и нажмите способности в течение короткого общего окна.',
-        sail:isEcho?'Подойдите к парусу и зарядите его импульсом (Enter / ✦); Искра должна держать направление вправо.':'Встаньте вдвоём на парусную платформу и удерживайте движение вправо; Эхо заряжает парус импульсом.'
+        sail:isEcho?'Подойдите к парусу и зарядите его импульсом ('+echoAbility+' / ✦); Искра должна держать направление вправо.':'Встаньте вдвоём на парусную платформу и удерживайте движение вправо; Эхо заряжает парус импульсом.'
       };
       return names[arcade.kind]||'Скоординируйте действия обоих игроков для завершения мини-игры.';
     }
     const wall=stage.walls?.find((w,i)=>!(world?.walls?.[i]??w.broken));
-    if(wall)return isEcho?'Искра должна разрушить преграду рывком. Оставайтесь рядом и помогите пройти дальше.':'Подойдите к светящейся стене слева, повернитесь к ней и нажмите F на ПК или ✦ на телефоне.';
+    if(wall)return isEcho?'Искра должна разрушить преграду рывком. Оставайтесь рядом и помогите пройти дальше.':'Подойдите к светящейся стене слева, повернитесь к ней и нажмите '+sparkAbility+' на ПК или ✦ на телефоне.';
     const crystal=stage.crystals?.find((c,i)=>!(world?.crystals?.[i]??c.on));
-    if(crystal)return isEcho?'Подойдите к неактивному кристаллу и нажмите Enter на ПК или ✦ на телефоне.':'Эхо должен зарядить кристалл импульсом. Если он за мостом, удерживайте плиту, пока Эхо проходит.';
+    if(crystal)return isEcho?'Подойдите к неактивному кристаллу и нажмите '+echoAbility+' на ПК или ✦ на телефоне.':'Эхо должен зарядить кристалл импульсом. Если он за мостом, удерживайте плиту, пока Эхо проходит.';
     if(stage.puzzle?.pads&&!(world?.padLatched??stage.padLatched)){
       return isEcho?'Найдите голубую плиту и встаньте на неё, пока Искра держит оранжевую.':'Найдите оранжевую плиту и встаньте на неё одновременно с Эхом на голубой.';
     }
