@@ -1,9 +1,10 @@
 /* Linked by Light v28 — First Experience UI. All gameplay decisions stay server-side. */
 (function(root){'use strict';
 const $=id=>document.getElementById(id);
-const create=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
+const loc=text=>root.GameV28Locale?.text(text,root.GameI18n?.getLanguage?.())??text;
+const create=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=loc(text);return e;};
 let api={},roleSelect=null,soloButton=null,shareButton=null,readyStatus=null,hint=null,pingToggle=null,pingWheel=null;
-let solo=false,activeRole=0,hostRole=0,pings=[],intel=[],intelStage=-1,currentStage=-1,connected=false,lastOffline=performance.now(),tipDismissed=false,pingKind='';
+let solo=false,activeRole=0,hostRole=0,pings=[],intel=[],intelStage=-1,currentStage=-1,connected=false,lastOffline=performance.now(),tipDismissed=false,pingKind='',latestState=null;
 const types={here:['📍','Иди сюда'],wait:['✋','Подожди'],help:['❗','Помоги'],danger:['⚠️','Опасность'],go:['➡️','Вперёд'],look:['👀','Посмотри']};
 const tips=[
  'Освойте движение и прыжок. Двигайтесь к порталу вдвоём.',
@@ -17,7 +18,7 @@ const tips=[
  'Сначала активируйте механизм, затем откройте ворота.',
  'Используйте движение, способности и помощь в финале обучения.'
 ];
-function notify(text){api.announce?.(text,3);}
+function notify(text){api.announce?.(loc(text),3);}
 function selectedHostRole(){return roleSelect?.value==='1'?1:0;}
 const controlRole=()=>solo?activeRole:api.role?.()??-1;
 function message(m){
@@ -36,7 +37,7 @@ function onJoined(m){
  updatePingLabel();
 }
 function onSnapshot(s){
- if(!s)return;
+ if(!s)return;latestState=s;
  solo=s.solo===true;hostRole=s.hostRole===1?1:0;
  if(solo)activeRole=s.soloActiveRole===1?1:0;
  if(s.stage!==currentStage){currentStage=s.stage;pings=[];if(intelStage!==s.stage)intel=[];tipDismissed=false;}
@@ -46,7 +47,7 @@ function onSnapshot(s){
   hint.hidden=!show;
   if(show){
    const secs=Number(s.stats?.elapsed)||0;
-   hint.querySelector('.v28-tip-title').textContent=(solo?'Соло · ':'Обучение · ')+'Уровень '+(s.stage+1)+'/10';
+   hint.querySelector('.v28-tip-title').textContent=loc(solo?'Соло · ':'Обучение · ')+loc('Уровень ')+(s.stage+1)+'/10';
    const level=api.level?.(),p=s.players?.[controlRole()];
    let context=tips[s.stage];
    if(p&&level){
@@ -55,7 +56,7 @@ function onSnapshot(s){
     if(nearbyWall)context=controlRole()===0?'Преграда впереди: попробуйте рывок F (или кнопку способности).':'Преграду может разрушить Искра. Попросите её применить рывок.';
     else if(nearbyCrystal)context=controlRole()===1?'Кристалл рядом: нажмите Enter (или кнопку способности).':'Попросите Эхо активировать кристалл своим импульсом.';
    }
-   hint.querySelector('.v28-tip-text').textContent=(secs>40?'Подсказка: ':'')+context+(solo?' Нажмите Tab для смены героя.':'');
+   hint.querySelector('.v28-tip-text').textContent=(secs>40?loc('Подсказка: '):'')+loc(context)+(solo?loc(' Нажмите Tab для смены героя.'):'');
   }
  }
 }
@@ -69,14 +70,14 @@ function updateWake(){
  readyStatus.hidden=!waiting;
  if(waiting){
   const long=performance.now()-lastOffline>16000;
-  readyStatus.querySelector('.v28-wake-text').textContent=long
+  readyStatus.querySelector('.v28-wake-text').textContent=loc(long
    ?'Связь ещё устанавливается. Проверяем сервер и повторяем подключение.'
-   :'Сервер пробуждается… Подключение повторится автоматически.';
+   :'Сервер пробуждается… Подключение повторится автоматически.');
  }
 }
 function startPing(kind){
  if(!api.inRoom?.()||api.phase?.()!=='playing')return notify('Метки доступны во время игры');
- pingKind=kind;pingWheel.hidden=true;notify('Нажмите на точку игрового поля для метки: '+types[kind][1]);
+ pingKind=kind;pingWheel.hidden=true;notify(loc('Нажмите на точку игрового поля для метки: ')+loc(types[kind][1]));
 }
 function pingAt(ev){
  if(!pingKind||api.phase?.()!=='playing')return;
@@ -90,7 +91,7 @@ function pingAt(ev){
 }
 function togglePing(){if(!pingWheel||!api.inRoom?.())return notify('Сначала присоединитесь к комнате');pingWheel.hidden=!pingWheel.hidden;}
 function updatePingLabel(){
- if(pingToggle)pingToggle.textContent=solo?'🔁 '+(activeRole===0?'Искра':'Эхо')+' · Tab':'📍 Метка · T';
+ if(pingToggle)pingToggle.textContent=solo?'🔁 '+loc(activeRole===0?'Искра':'Эхо')+' · Tab':loc('📍 Метка · T');
 }
 function draw(ctx){
  const now=performance.now();
@@ -107,14 +108,14 @@ function draw(ctx){
   ctx.fillStyle='#111d3cdd';ctx.strokeStyle='#b7dcfb';ctx.lineWidth=1.5;
   const w=Math.min(265,Math.max(95,ctx.measureText(c.text).width+20));
   ctx.beginPath();ctx.roundRect(c.x-w/2,c.y-35,w,30,6);ctx.fill();ctx.stroke();
-  ctx.font='12px system-ui';ctx.fillStyle='#fff';ctx.fillText(c.text.slice(0,48),c.x,c.y-16);
+  ctx.font='12px system-ui';ctx.fillStyle='#fff';ctx.fillText(loc(c.text).slice(0,48),c.x,c.y-16);
  }
  ctx.restore();
 }
 async function shareInvite(){
  const room=api.room?.();if(!room)return notify('Сначала создайте комнату');
  const url=new URL(location.pathname,location.href);url.searchParams.set('room',room);
- const data={title:'Связанные светом',text:'Сыграем вместе в Linked by Light?',url:url.href};
+ const data={title:loc('Связанные светом'),text:loc('Сыграем вместе в Linked by Light?'),url:url.href};
  try{
   if(typeof navigator.share==='function'){await navigator.share(data);}
   else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(data.text+' '+data.url);notify('Ссылка скопирована');}
@@ -122,7 +123,7 @@ async function shareInvite(){
   api.send?.({t:'v28InviteShared'});
  }catch(e){
   if(e?.name==='AbortError')return;
-  notify('Ссылка: '+url.href);
+  notify(loc('Ссылка: ')+url.href);
  }
 }
 function init(callbacks){
@@ -151,7 +152,7 @@ function init(callbacks){
   pingToggle.onclick=()=>{if(solo)api.switchSolo?.();else togglePing();};frame.append(pingToggle);
   pingWheel=create('div','v28-ping-wheel');pingWheel.id='v28PingWheel';pingWheel.hidden=true;
   for(const [kind,[emoji,label]]of Object.entries(types)){
-   const btn=create('button','v28-ping-option',emoji+' '+label);btn.type='button';
+   const btn=create('button','v28-ping-option',emoji+' '+loc(label));btn.type='button';btn.dataset.pingKind=kind;
    btn.addEventListener('click',()=>startPing(kind));pingWheel.append(btn);
   }
   frame.append(pingWheel);
@@ -162,7 +163,20 @@ function init(callbacks){
  const retry=create('button','v28-wake-retry','Повторить сейчас');retry.onclick=()=>api.reconnect?.();
  readyStatus.append(retry);document.querySelector('.statusbar')?.append(readyStatus);
  connection(api.connected?.()||false);
+ root.GameI18n?.subscribe?.(refreshLanguage);
+ refreshLanguage();
  setInterval(updateWake,1300);
 }
-root.GameV28={init,message,onJoined,onSnapshot,connection,selectedHostRole,controlRole,togglePing,draw,shareInvite};
+function refreshLanguage(){
+ if(roleSelect)for(const opt of roleSelect.options)opt.textContent=loc(opt.value==='1'?'◈ Эхо':'✦ Искра');
+ const roleLabel=roleSelect?.closest('label');
+ if(roleLabel&&roleLabel.firstChild?.nodeType===3)roleLabel.firstChild.textContent=loc('Выберите своего героя (устройство не имеет значения)');
+ if(soloButton)soloButton.textContent=loc('Играть одному · переключать героев');
+ if(shareButton)shareButton.textContent=loc('Поделиться приглашением');
+ if(pingWheel)for(const btn of pingWheel.querySelectorAll('[data-ping-kind]')){const [icon,label]=types[btn.dataset.pingKind];btn.textContent=icon+' '+loc(label);}
+ if(hint){hint.querySelector('.v28-tip-close')?.setAttribute('aria-label',loc('Скрыть подсказку'));if(latestState)onSnapshot(latestState);}
+ if(readyStatus){const retry=readyStatus.querySelector('.v28-wake-retry');if(retry)retry.textContent=loc('Повторить сейчас');updateWake();}
+ updatePingLabel();
+}
+root.GameV28={init,message,onJoined,onSnapshot,connection,selectedHostRole,controlRole,togglePing,draw,shareInvite,localize:loc};
 })(typeof window!=='undefined'?window:globalThis);
