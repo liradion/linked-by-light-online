@@ -1,9 +1,11 @@
 /* Linked by Light v21: 25 interactive additions for desktop and iPhone.
    Only server snapshots mutate shared progression; browser controls are inputs. */
 (function(root){'use strict';
-let api={},state=null,community=null,secret=[],leaderboard=null,dialog,body,quick,nav,tab='level',nonce='',serial=0,lastRender=0,paintColor=0;
+let api={},state=null,community=null,secret=[],leaderboard=null,dialog,body,quick,nav,chapterEntry,chapterContinue,tab='level',nonce='',serial=0,lastRender=0,paintColor=0;
+const drafts={letter:'',photo:''};
 const $=id=>document.getElementById(id);
  const tr=(key,vars)=>root.GameI18n?.aux?.('gallery.'+key,vars)||key;
+ const loc=source=>root.GameV21Locale?.text(source,root.GameI18n?.getLanguage?.())??source;
 const levels=GameV21Stages.stages,GROUND=544;
 const labels={trails:'Мост из следов',transfer:'Почта между мирами',knowledge:'Два взгляда',
  lantern:'Живой фонарь',transform:'Превращения',weather:'Власть над погодой',
@@ -11,27 +13,30 @@ const labels={trails:'Мост из следов',transfer:'Почта межд�
 const notes=['До встречи Искра бродила по бесконечным огненным тропам.','Эхо отвечало звёздам в одиноком лесу.','Две дороги однажды слились в один свет.'];
 const palettes=['#b5a9d5','#ffb77f','#7ce5ef','#a8db98','#f8e0a4','#ed95c1'];
 const draw=(kind,params={})=>{
- if(!api.inRoom?.()||api.role?.()<0){api.announce?.('Сначала подключитесь вдвоём');return;}
+ if(!api.inRoom?.()||api.role?.()<0){api.announce?.(loc('Сначала подключитесь вдвоём'));return;}
  api.send?.({t:'v21Action',kind,...params,actionId:nonce+'-'+(++serial)});
 };
 const request=(type,params={})=>api.send?.({t:type,...params,actionId:nonce+'-'+(++serial)});
 const node=(tag,cls,content)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(content!==undefined)el.textContent=content;return el;};
-const btn=(text,cb,disabled=false)=>{const b=node('button','v21-btn',text);b.type='button';b.disabled=!!disabled;b.addEventListener('click',cb);return b;};
-function heading(parent,name){parent.append(node('h3','v21-heading',name));}
-function para(parent,text){parent.append(node('p','v21-paragraph',text));}
+const btn=(text,cb,disabled=false)=>{const b=node('button','v21-btn',loc(text));b.type='button';b.disabled=!!disabled;b.addEventListener('click',cb);return b;};
+function heading(parent,name){parent.append(node('h3','v21-heading',loc(name)));}
+function para(parent,text){parent.append(node('p','v21-paragraph',loc(text)));}
+function paraRaw(parent,text){parent.append(node('p','v21-paragraph',text));}
 function group(parent,title){const x=node('section','v21-section');heading(x,title);parent.append(x);return x;}
 function actions(parent,buttons){const g=node('div','v21-actions');for(const b of buttons)g.append(b);parent.append(g);}
-function selectInfo(parent,label,value){const r=node('div','v21-row');r.append(node('span',null,label),node('strong',null,String(value)));parent.append(r);}
-function announce(text){api.announce?.(text,2.8);}
+function selectInfo(parent,label,value){const r=node('div','v21-row');
+ const display=['Сфера','Мост','Общий выбор','Тональность'].includes(label)?loc(String(value)):String(value);
+ r.append(node('span',null,loc(label)),node('strong',null,display));parent.append(r);}
+function announce(text){api.announce?.(loc(text),2.8);}
 function palette(parent){const g=node('div','v21-palette');palettes.forEach((c,i)=>{
- const b=btn('●',()=>{paintColor=i;render();});b.style.background=c;b.style.color='#111b35';b.style.outline=i===paintColor?'3px solid white':'none';b.setAttribute('aria-label','Цвет '+(i+1));g.append(b);
+ const b=btn('●',()=>{paintColor=i;render();});b.style.background=c;b.style.color='#111b35';b.style.outline=i===paintColor?'3px solid white':'none';b.setAttribute('aria-label',loc('Цвет')+' '+(i+1));g.append(b);
 });parent.append(g);}
 function renderLevel(){
  const role=api.role?.()??-1,stage=state?.stage??api.stage?.()??0,core=state?.world?.v21;
  const section=group(body,'Новые кооперативные испытания');
  if(core){
-  para(section,(stage-111)+'/10 · '+labels[core.kind]+(core.completed?' — решено':''));
-  para(section,levels[stage-112]?.objective||'Исследуйте новую главу вдвоём.');
+  para(section,(stage-111)+'/10 · '+loc(labels[core.kind]||'')+(core.completed?loc(' — решено'):''));
+  para(section,root.GameI18n?.stageObjective?.(stage,levels[stage-112]?.objective||'Исследуйте новую главу вдвоём.')||loc('Исследуйте новую главу вдвоём.'));
   if(core.kind==='knowledge'){
    if(role===0)para(section,'Ваша карта: ✧ → ☀ → ☾. Передайте порядок второму игроку.');
    else para(section,'Ваши знаки: 0 = ☀, 1 = ☾, 2 = ✧. Попросите Искру назвать порядок.');
@@ -71,14 +76,14 @@ function renderLevel(){
  const select=group(body,'Глава v21 · 10 испытаний');
  if(role===0){
   const g=node('div','v21-levels');const unlocked=state?.v21Unlocked??112;
-  levels.forEach((level,i)=>g.append(btn(String(i+1)+' · '+level.title,()=>api.send?.({t:'selectStage',stage:112+i}),112+i>unlocked)));
+  levels.forEach((level,i)=>g.append(btn(String(i+1)+' · '+(root.GameI18n?.stageTitle?.(112+i,level.title)||level.title),()=>api.send?.({t:'selectStage',stage:112+i}),112+i>unlocked)));
   select.append(g);
  }else para(select,role<0?'Зритель может наблюдать за игрой':'Попросите Искру выбрать новый уровень.');
 }
 function renderStory(){
  const m=community||{},role=api.role?.()??-1;
  const s=group(body,'Моменты тишины');
- para(s,'Необязательные совместные сцены под звёздами между испытаниями. Оба участника должны согласиться. '+(m.mode==='romance'?'«Мы смотрим на одно небо, даже когда далеко друг от друга».':'«Расстояние не помешает нашей дружбе и общим приключениям».'));
+ para(s,loc('Необязательные совместные сцены под звёздами между испытаниями. Оба участника должны согласиться.')+' '+loc(m.mode==='romance'?'«Мы смотрим на одно небо, даже когда далеко друг от друга».':'«Расстояние не помешает нашей дружбе и общим приключениям».'));
  actions(s,[btn('✦ Посидеть под звёздами',()=>draw('rest'))]);
  const prequel=group(body,'До первой встречи · личные предыстории');
  para(prequel,notes[Math.min(2,m.prequel?.[role]||0)]);
@@ -95,12 +100,12 @@ function renderStory(){
  const diary=group(body,'Книга нашей истории');
  const entries=(m.diary||[]).slice(-20).reverse();
  if(!entries.length)para(diary,'Первая страница появится после совместного события.');
- for(const item of entries)para(diary,(item.day||'')+' · '+item.title);
+ for(const item of entries)paraRaw(diary,(item.day||'')+' · '+item.title);
  const letters=group(body,'Запечатанные послания');
  para(letters,'Короткое сообщение откроется вам обоим после перехода на следующий уровень. Оно видно только участникам комнаты, не зрителям.');
- for(const item of secret){const r=node('div','v21-letter');r.append(node('span',null,(item.from===0?'Искра':'Эхо')+': '+item.body));if(item.from===role)r.append(btn('Удалить',()=>draw('letter_delete',{value:item.id})));letters.append(r);}
- const editor=node('textarea','v21-textarea');editor.maxLength=120;editor.rows=2;editor.placeholder='Короткое послание для партнёра';letters.append(editor);
- letters.append(btn('✉ Запечатать до следующего уровня',()=>{draw('letter_send',{value:editor.value});editor.value='';}));
+ for(const item of secret){const r=node('div','v21-letter');r.append(node('span',null,loc(item.from===0?'Искра':'Эхо')+': '+item.body));if(item.from===role)r.append(btn('Удалить',()=>draw('letter_delete',{value:item.id})));letters.append(r);}
+ const editor=node('textarea','v21-textarea');editor.id='v21-letter-draft';editor.maxLength=120;editor.rows=2;editor.placeholder=loc('Короткое послание для партнёра');editor.value=drafts.letter;letters.append(editor);
+ letters.append(btn('✉ Запечатать до следующего уровня',()=>{draw('letter_send',{value:editor.value});editor.value='';drafts.letter='';}));
 }
 function musicPlayback(notes){
  if(!notes?.length)return;
@@ -125,7 +130,7 @@ function renderHome(){
  const mailbox=group(body,'Почтовый ящик наших воспоминаний');
  para(mailbox,'Запечатанные послания показываются здесь только после разблокировки следующего уровня.');
  if(!secret.length)para(mailbox,'Пока ни одного открытого послания.');
- for(const item of secret)mailbox.append(node('div','v21-letter',(item.from===0?'✦ Искра: ':'◈ Эхо: ')+item.body));
+ for(const item of secret)mailbox.append(node('div','v21-letter',loc(item.from===0?'✦ Искра: ':'◈ Эхо: ')+item.body));
  const aquarium=group(body,'Аквариум светлячков');
  para(aquarium,'Существа коллекционируются за первые прохождения новых эпизодов.');
  const icons={ember:'✨',moon:'🌙',pearl:'🫧',mist:'🦋',nebula:'⭐'};
@@ -135,7 +140,7 @@ function renderHome(){
  para(music,'Создайте свою мелодию из 16 нот. Искра и Эхо нажимают клавиши по очереди.');
  selectInfo(music,'Мелодия',(m.melody||[]).length+'/16');
  const keys=node('div','v21-piano');
- for(let i=0;i<8;i++)keys.append(btn('♪ '+['До','Ре','Ми','Фа','Соль','Ля','Си','До↑'][i],()=>draw('music_note',{value:i}),(m.melody||[]).length%2!==role||(m.melody||[]).length>=16));
+ for(let i=0;i<8;i++)keys.append(btn('♪ '+loc(['До','Ре','Ми','Фа','Соль','Ля','Си','До↑'][i]),()=>draw('music_note',{value:i}),(m.melody||[]).length%2!==role||(m.melody||[]).length>=16));
  music.append(keys);actions(music,[btn('▶ Сыграть',()=>musicPlayback(m.melody)),btn('↺ Новая мелодия',()=>draw('music_reset'),role!==0)]);
  const painting=group(body,'Наша совместная картина');
  para(painting,'Каждый рисует свою половину 8×8: Искра — левую, Эхо — правую. Картина синхронизируется между устройствами.');
@@ -143,7 +148,7 @@ function renderHome(){
  const canvas=node('div','v21-paint-grid');
  for(let y=0;y<8;y++)for(let x=0;x<8;x++){
   const v=m.painting?.[y*8+x]??-1,cell=btn(' ',()=>draw('paint_cell',{x,y,value:paintColor}),role===0?x>=4:x<4);
-  cell.className='v21-paint-cell';cell.style.background=v<0?'#303a5d':palettes[v];cell.title='Строка '+(y+1)+', колонка '+(x+1);
+  cell.className='v21-paint-cell';cell.style.background=v<0?'#303a5d':palettes[v];cell.title=loc('Строка')+' '+(y+1)+', '+loc('колонка')+' '+(x+1);
   canvas.append(cell);
  }
  painting.append(canvas);
@@ -153,14 +158,14 @@ function renderEvents(){
  const week=group(body,'Еженедельное испытание');
  para(week,'Каждую неделю выбран один эпизод v21. Лидерборд показывает лучшее подтверждённое сервером время команд. Имена анонимизированы.');
  if(leaderboard){selectInfo(week,'Неделя',leaderboard.week);selectInfo(week,'Испытание',String(leaderboard.target-111)+'/10');
-  const results=node('ol','v21-scores');(leaderboard.items||[]).forEach(x=>results.append(node('li','',x.label+' — '+Number(x.time).toFixed(1)+' с')));week.append(results);
+  const results=node('ol','v21-scores');(leaderboard.items||[]).forEach(x=>results.append(node('li','',x.label+' — '+Number(x.time).toFixed(1)+loc(' с'))));week.append(results);
   if(!(leaderboard.items||[]).length)para(week,'Пока ни одной завершившей команды.');
  }
  actions(week,[btn('Обновить таблицу',()=>api.send?.({t:'v21Weekly'})),btn('Перейти в еженедельный уровень',()=>api.send?.({t:'selectStage',stage:leaderboard?.target}),api.role?.()!==0||!leaderboard)]);
  const season=group(body,'Сезонные главы');
  const month=new Date().getUTCMonth(),seasons=['Зимняя ночь','Весенний сад','Летние светлячки','Осенний фестиваль'];
  const idx=month===11||month<=1?0:month<=4?1:month<=7?2:3;
- para(season,seasons[idx]+': проходите совместные испытания и сохраняйте памятный сезонный трофей.');
+ para(season,loc(seasons[idx])+loc(': проходите совместные испытания и сохраняйте памятный сезонный трофей.'));
  const stories=[
   ['Ледяной фонарь мерцает под снегом.','Искра согревает маленькую звезду.','Эхо открывает северные ворота.','Оба возвращают свет зимнему небу.'],
   ['Первые ростки пробуждаются от сна.','Искра рисует круг в земле.','Эхо переносит солнечную росу.','Оба встречают цветение сада.'],
@@ -168,7 +173,7 @@ function renderEvents(){
   ['Листья поют тихую мелодию.','Искра находит золотую ветку.','Эхо завершает узор на дереве.','Оба зажигают праздничный фонарь.']
  ];
  const step=Math.min(4,m.seasonProgress?.step||0);
- para(season,step<4?stories[idx][step]:'Сезонный сюжет завершён!');
+ para(season,loc(step<4?stories[idx][step]:'Сезонный сюжет завершён!'));
  selectInfo(season,'Сцен',step+'/4');
  actions(season,[btn('✦ Продолжить сезонную историю',()=>draw('season_step'),api.role?.()!==step%2||step>=4)]);
  const museum=group(body,'Музей совместных побед');
@@ -197,7 +202,7 @@ async function takePhoto(){
  const canvas=document.createElement('canvas');canvas.width=source.width;canvas.height=source.height;
  const c=canvas.getContext('2d');c.drawImage(source,0,0);c.fillStyle='#081126b8';c.fillRect(0,canvas.height-65,canvas.width,65);
  c.font='bold 21px system-ui';c.fillStyle='#f6eaff';
- const caption=$('v21-photo-caption')?.value?.trim()?.slice(0,64)||'Наш общий путь';
+ const caption=$('v21-photo-caption')?.value?.trim()?.slice(0,64)||loc('Наш общий путь');
  c.fillText('✦ Linked by Light · '+caption,28,canvas.height-24);
  canvas.toBlob(async blob=>{
   if(!blob){announce('Кадр не удалось создать');return;}
@@ -212,12 +217,18 @@ async function takePhoto(){
 function renderPhoto(){
  const section=group(body,'Фоторежим · делитесь совместными моментами');
  para(section,'Сохраните изображение игрового поля с подписью. Кадр остаётся на вашем устройстве, сервер его не получает.');
- const input=node('input','v21-photo-input');input.id='v21-photo-caption';input.maxLength=64;input.placeholder='Наш общий путь';section.append(input);
+ const input=node('input','v21-photo-input');input.id='v21-photo-caption';input.maxLength=64;input.placeholder=loc('Наш общий путь');section.append(input);
  section.append(btn('📷 Создать памятное фото',takePhoto));
 }
 function render(){
  if(!dialog?.open)return;
- lastRender=performance.now();const photoCaption=body.querySelector('#v21-photo-caption')?.value||'';body.replaceChildren();
+ lastRender=performance.now();
+ const currentLetter=body.querySelector('#v21-letter-draft');const currentPhoto=body.querySelector('#v21-photo-caption');
+ if(currentLetter)drafts.letter=currentLetter.value;
+ if(currentPhoto)drafts.photo=currentPhoto.value;
+ const focusedId=document.activeElement?.id;
+ const selection=focusedId==='v21-letter-draft'&&currentLetter?[currentLetter.selectionStart,currentLetter.selectionEnd]:null;
+ body.replaceChildren();
  body.append(node('p','v21-subtitle',tr('subtitle')));
  if(!api.inRoom?.()){para(body,tr('noRoom'));body.append(btn(tr('startChapter'),()=>{dialog.close();api.create?.();}));return;}
  if(api.role?.()<0){para(body,tr('spectator'));}
@@ -226,7 +237,11 @@ function render(){
  if(tab==='home')renderHome();
  if(tab==='events')renderEvents();
  if(tab==='community')renderCommunity();
- if(tab==='photo'){renderPhoto();const input=$('v21-photo-caption');if(input)input.value=photoCaption;}
+ if(tab==='photo'){renderPhoto();const input=body.querySelector('#v21-photo-caption');if(input)input.value=drafts.photo;}
+ if(focusedId==='v21-letter-draft'&&tab==='story'){
+  const input=body.querySelector('#v21-letter-draft');if(input){input.focus({preventScroll:true});if(selection)input.setSelectionRange(...selection);}
+ }
+ if(focusedId==='v21-photo-caption'&&tab==='photo'){body.querySelector('#v21-photo-caption')?.focus({preventScroll:true});}
 }
 function onMessage(m){
  if(m.t==='v21State'){community=m.data;if(api.role?.()>=0)GameAdventure.syncV21(community);}
@@ -253,7 +268,7 @@ function paint(ctx,level,players,world,clock,role){
  if(!world||!level?.v21)return;
  const c=level.v21;ctx.save();ctx.font='bold 15px system-ui';ctx.textAlign='center';
  const marker=(x,label,active)=>{ctx.strokeStyle=active?'#bffaff':'#ffd2a6';ctx.fillStyle='#f2ebff';ctx.shadowColor='#ae99ed';ctx.shadowBlur=active?18:7;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,GROUND-30,24,0,Math.PI*2);ctx.stroke();ctx.fillText(label,x,GROUND-65);ctx.shadowBlur=0;};
- marker(c.anchor,labels[world.kind],world.completed);marker(c.goal,'◈ Второй путь',world.completed);
+ marker(c.anchor,loc(labels[world.kind]),world.completed);marker(c.goal,loc('◈ Второй путь'),world.completed);
  if(world.kind==='trails'){
   if(role===0||role===-1){ctx.fillStyle='#8da8fa66';ctx.fillRect(c.anchor+105,509,735,14);}
   if(role===1||role===-1)for(const s of world.trail){ctx.fillStyle='#efc8ffb8';ctx.fillRect(s.x,s.y,95,12);}
@@ -287,10 +302,10 @@ function init(callbacks){
  api=callbacks;
  const bytes=new Uint32Array(2);crypto.getRandomValues(bytes);nonce='v21'+Array.from(bytes,v=>v.toString(36)).join('');
  const menu=$('createBtn')?.parentElement;
- if(menu){menu.append(btn('✨ Новая глава v21',()=>api.create?.()));
+ if(menu){chapterEntry=btn('✨ Новая глава v21',()=>api.create?.());menu.append(chapterEntry);
   const saved=GameAdventure.data()?.v21?.unlockedStages||[];
   let last=112;for(let i=112;i<=121;i++){if(!saved.includes('v21-'+String(i-111).padStart(2,'0')))break;last=i;}
-  if(last>112)menu.append(btn('▶ Продолжить v21 · '+(last-111)+'/10',()=>api.resume?.(last)));
+  if(last>112){chapterContinue=btn(loc('▶ Продолжить v21')+' · '+(last-111)+'/10',()=>api.resume?.(last));chapterContinue.dataset.progress=(last-111)+'/10';menu.append(chapterContinue);}
  }
  const host=document.querySelector('.frame')||document.body;
  nav=btn(tr('nav'),()=>open('level'));nav.classList.add('v21-toggle');host.append(nav);
@@ -304,6 +319,8 @@ function init(callbacks){
   for(const [key,label]of categories){const control=btn(tr(label),()=>open(key));control.dataset.galleryTab=key;tabs.append(control);}
  dialog.append(tabs);body=node('div','v21-body');dialog.append(body);document.body.append(dialog);root.GameI18n?.mountDialogLanguage?.(dialog);
   root.GameI18n?.subscribe?.(()=>{
+    if(chapterEntry)chapterEntry.textContent=loc('✨ Новая глава v21');
+    if(chapterContinue)chapterContinue.textContent=loc('▶ Продолжить v21')+' · '+chapterContinue.dataset.progress;
     nav.textContent=tr('nav');
     quick.querySelector('button').textContent=tr('action');
     top.querySelector('strong').textContent=tr('chapter');
@@ -315,5 +332,5 @@ function init(callbacks){
     if(dialog.open)render();
   });
 }
-root.GameV21={init,onMessage,onSnapshot,draw:paint,open,act:draw};
+root.GameV21={init,onMessage,onSnapshot,draw:paint,open,act:draw,localize:loc};
 })(typeof window!=='undefined'?window:globalThis);
