@@ -268,6 +268,21 @@
   return true;
  }
  function subscribe(callback){if(typeof callback==='function')listeners.push(callback);}
+ function mountDialogLanguage(dialog){
+  if(typeof document==='undefined'||!dialog||dialog.querySelector('[data-dialog-language]'))return;
+  const header=dialog.querySelector('.quality-head,.controls-head,.gamepad-head,.adv-dialog-head,.v21-top')||dialog;
+  const wrap=document.createElement('label');wrap.className='dialog-language-control';
+  const sel=document.createElement('select');
+  sel.dataset.dialogLanguage='';sel.setAttribute('aria-label','Язык / Language');
+  for(const value of ['ru','en']){
+   const option=document.createElement('option');option.value=value;
+   option.textContent=value.toUpperCase();sel.append(option);
+  }
+  sel.value=lang;
+  sel.addEventListener('change',()=>setLanguage(sel.value));
+  wrap.append(sel);header.append(wrap);
+  subscribe(()=>{if(sel.value!==lang)sel.value=lang;});
+ }
  function init(){
   try{store=root.localStorage;const saved=store?.getItem(KEY);lang=saved==='en'?'en':'ru';}
   catch(_){lang='ru';}
@@ -276,5 +291,5 @@
   applyStatic();
   return lang;
  }
- return Object.freeze({KEY,EN,getLanguage,isEnglish,t,ui,aux,networkError,translateExact,formatGoal,localizeHint,stageTitle,stageObjective,stageHint,stageWorld,signatureTip,realityTip,realityLabel,applyStatic,setLanguage,subscribe,init});
+ return Object.freeze({KEY,EN,getLanguage,isEnglish,t,ui,aux,networkError,translateExact,formatGoal,localizeHint,stageTitle,stageObjective,stageHint,stageWorld,signatureTip,realityTip,realityLabel,applyStatic,setLanguage,subscribe,mountDialogLanguage,init});
 });
