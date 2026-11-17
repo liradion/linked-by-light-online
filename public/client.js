@@ -215,10 +215,10 @@ function updateHUD(){
   if(!level.gateOpen){
     const wall=level.walls.find(w=>!w.broken);
     const crystal=level.crystals.find(c=>!c.on);
-    if(wall)goal='Искра: разрушьте светящуюся стену рывком (F).';
+    if(wall)goal='Искра: у светящейся стены нажмите способность (F на ПК или ✦ на телефоне).';
     else if(crystal)goal=level.bridgeTrigger==='pad-crystal'
       ?'Искра держит плиту, пока Эхо заряжает кристалл за мостом.'
-      :'Эхо: активируйте кристалл импульсом.';
+      :'Эхо: у кристалла нажмите способность (Enter на ПК или ✦ на телефоне).';
     else if(level.puzzle?.pads&&!level.padLatched)
       goal=`Встаньте одновременно на плиты: ${level.pads.filter(p=>p.pressed).length}/${level.pads.length}`;
     else if(level.signature&&!level.signature.done){
