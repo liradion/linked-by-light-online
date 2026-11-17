@@ -2,10 +2,10 @@
    Pure mappings are shared with Node tests; no server protocol or save-schema changes. */
 (function(root,factory){
   'use strict';
-  const api=factory();
+  const api=factory(root);
   if(typeof module==='object'&&module.exports)module.exports=api;
   root.GameControls=api;
-})(typeof window!=='undefined'?window:globalThis,function(){
+})(typeof window!=='undefined'?window:globalThis,function(root){
   'use strict';
   const KEY='linked-light-keybindings-v1';
   const ACTIONS=Object.freeze(['left','right','jump','ability']);
@@ -16,6 +16,8 @@
   // Fixed global shortcuts must not become movement keys (restart/skills/menu/bond).
   const RESERVED=new Set(['r','g','t','v','q','e','z','h','escape','tab','backspace','delete','?','/']);
   const names={left:'Влево',right:'Вправо',jump:'Прыжок',ability:'Способность'};
+  const ui=(key,vars)=>root.GameI18n?.ui?.('controls.'+key,vars)||'';
+  const actionName=(action)=>ui(action)||names[action];
   const clone=()=>DEFAULT.map(x=>({...x}));
   let mappings=clone(),storage=null,changed=()=>{},dialog=null,capture=null,openButton=null,notice=null;
   function normalize(value){
@@ -61,7 +63,7 @@
     return mappings[role===1?1:0]?.[action]||DEFAULT[role===1?1:0]?.[action]||'';
   }
   function label(key){
-    return {arrowleft:'←',arrowright:'→',arrowup:'↑',arrowdown:'↓',enter:'Enter',space:'Пробел'}[normalize(key)]||String(key||'').toUpperCase();
+    return {arrowleft:'←',arrowright:'→',arrowup:'↑',arrowdown:'↓',enter:'Enter',space:(ui('space')||'Пробел')}[normalize(key)]||String(key||'').toUpperCase();
   }
   function labelFor(role,action){return label(keyFor(role,action));}
   function isBound(key){key=normalize(key);return mappings.some(role=>ACTIONS.some(action=>role[action]===key));}
@@ -83,7 +85,7 @@
     if(!dialog)return;
     dialog.querySelectorAll('[data-role][data-action]').forEach(button=>{
       button.textContent=labelFor(Number(button.dataset.role),button.dataset.action);
-      button.setAttribute('aria-label','Назначить '+names[button.dataset.action]+' для '+(button.dataset.role==='0'?'Искры':'Эха')+': '+button.textContent);
+      button.setAttribute('aria-label',ui('assign',{action:actionName(button.dataset.action),hero:ui(button.dataset.role==='0'?'spark':'echo'),key:button.textContent}));
     });
   }
   function cancelCapture(){
@@ -94,19 +96,19 @@
   }
   function startCapture(role,action,button){
     cancelCapture();
-    showMessage('Нажмите новую клавишу. Esc — отменить. Системные сочетания и клавиши других действий недоступны.');
-    button.textContent='Нажмите клавишу…';
+    showMessage(ui('capture'));
+    button.textContent=ui('wait');
     const listener=event=>{
       event.preventDefault();
       event.stopImmediatePropagation();
-      if(event.key==='Escape'){cancelCapture();showMessage('Изменение отменено.');return;}
+      if(event.key==='Escape'){cancelCapture();showMessage(ui('cancelled'));return;}
       if(event.ctrlKey||event.metaKey||event.altKey||event.repeat)return;
       const key=normalize(event.key);
       if(!set(role,action,key)){
-        showMessage('Нельзя назначить '+label(key)+': клавиша недоступна или уже занята действием этого героя.');
+        showMessage(ui('invalid',{key:label(key)}));
         return;
       }
-      cancelCapture();showMessage('Сохранено на этом устройстве.');
+      cancelCapture();showMessage(ui('saved'));
     };
     capture={listener};
     window.addEventListener('keydown',listener,true);
@@ -120,25 +122,25 @@
     if(!header)return;
     openButton=document.createElement('button');
     openButton.type='button';openButton.id='controlsOpen';
-    openButton.className='mini-btn';openButton.textContent='⌨ Клавиши';
-    openButton.setAttribute('aria-label','Изменить управление клавиатурой');
+    openButton.className='mini-btn';openButton.textContent=ui('open');
+    openButton.setAttribute('aria-label',ui('openLabel'));
     header.append(openButton);
     dialog=document.createElement('dialog');dialog.id='controlsDialog';dialog.className='controls-dialog';
     const heading=document.createElement('div');heading.className='controls-head';
-    const title=document.createElement('strong');title.textContent='⌨ Управление клавиатурой';
+    const title=document.createElement('strong');title.textContent=ui('title');
     const close=document.createElement('button');close.type='button';close.id='controlsClose';
-    close.setAttribute('aria-label','Закрыть настройки клавиш');close.textContent='✕';
+    close.setAttribute('aria-label',ui('close'));close.textContent='✕';
     heading.append(title,close);dialog.append(heading);
     const description=document.createElement('p');description.className='controls-note';
-    description.textContent='Настройки действуют на этом устройстве. У каждого героя свои клавиши. Сенсорное управление и геймпад остаются прежними.';
+    description.textContent=ui('note');
     dialog.append(description);
     const grid=document.createElement('div');grid.className='controls-grid';
     for(let role=0;role<2;role++){
       const group=document.createElement('section');group.className='controls-role';
-      const header=document.createElement('strong');header.textContent=role===0?'✦ Искра':'◈ Эхо';group.append(header);
+      const header=document.createElement('strong');header.textContent=ui(role===0?'spark':'echo');group.append(header);
       for(const action of ACTIONS){
         const row=document.createElement('div');row.className='controls-row';
-        const caption=document.createElement('span');caption.textContent=names[action];
+        const caption=document.createElement('span');caption.textContent=actionName(action);
         const button=document.createElement('button');button.type='button';
         button.dataset.role=String(role);button.dataset.action=action;
         button.addEventListener('click',()=>startCapture(role,action,button));
@@ -152,11 +154,11 @@
     notice.hidden=true;dialog.append(notice);
     const footer=document.createElement('div');footer.className='controls-actions';
     const resetButton=document.createElement('button');resetButton.type='button';
-    resetButton.textContent='По умолчанию';resetButton.addEventListener('click',()=>{
-      cancelCapture();reset();updateLabels();showMessage('Стандартное управление восстановлено.');
+    resetButton.textContent=ui('reset');resetButton.addEventListener('click',()=>{
+      cancelCapture();reset();updateLabels();showMessage(ui('restored'));
     });
     const done=document.createElement('button');done.type='button';
-    done.textContent='Готово';
+    done.textContent=ui('done');
     footer.append(resetButton,done);dialog.append(footer);document.body.append(dialog);
     const closeDialog=()=>{cancelCapture();if(dialog.open)dialog.close();};
     close.addEventListener('click',closeDialog);done.addEventListener('click',closeDialog);
@@ -166,7 +168,24 @@
       cancelCapture();showMessage('');updateLabels();
       if(!dialog.open)dialog.showModal();
     });
-    updateLabels();changed(current());
+    function refreshLanguage(){
+      openButton.textContent=ui('open');
+      openButton.setAttribute('aria-label',ui('openLabel'));
+      title.textContent=ui('title');
+      close.setAttribute('aria-label',ui('close'));
+      description.textContent=ui('note');
+      grid.querySelectorAll('.controls-role').forEach((group,role)=>{
+        group.querySelector('strong').textContent=ui(role===0?'spark':'echo');
+        group.querySelectorAll('.controls-row').forEach((row,i)=>{
+          row.querySelector('span').textContent=actionName(ACTIONS[i]);
+        });
+      });
+      resetButton.textContent=ui('reset');
+      done.textContent=ui('done');
+      updateLabels();
+    }
+    root.GameI18n?.subscribe?.(refreshLanguage);
+    refreshLanguage();changed(current());
   }
   return Object.freeze({KEY,ACTIONS,DEFAULT,RESERVED,normalize,normalizeLayout,valid,read,current,keyFor,label,labelFor,isBound,set,reset,init});
 });
