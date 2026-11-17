@@ -14,9 +14,12 @@ test('role-aware hint stays usable on desktop and phone, including immersive mod
    hasFrame:!!document.getElementById('frame'),
    hasHeader:!!document.querySelector('.topline > div:last-child'),
    hintButton:document.getElementById('gameHintBtn')?.outerHTML||null,
-   hintUrl:(await fetch('/game-hints.js?v=1')).status
+   hintUrl:(await fetch('/game-hints.js?v=2')).status
   }));
-  console.log('G2_HINT_DIAG',JSON.stringify({diagnostics,errors}));
+  expect(diagnostics.hintUrl,JSON.stringify({diagnostics,errors})).toBe(200);
+  expect(diagnostics.hintsType,JSON.stringify({diagnostics,errors})).toBe('object');
+  expect(diagnostics.hintButton,JSON.stringify({diagnostics,errors})).toContain('gameHintBtn');
+  expect(errors,JSON.stringify({diagnostics,errors})).toEqual([]);
   await host.locator('#createBtn').click();
   await expect(host.locator('#roomCode')).toHaveText(/^[A-HJ-NP-Z2-9]{6}$/,{timeout:15000});
   const room=(await host.locator('#roomCode').textContent()).trim();
