@@ -30,13 +30,14 @@ The project owner reported that two human players completed the nine-stage demo.
 - Keyboard hints and on-screen PC control labels now reflect custom bindings. The original touch and gamepad controls are unchanged.
 - Node and dual-browser regression tests specifically exercise remapping and gameplay input packets.
 - Added [gamepad button mapping](M2_GAMEPAD_CONTROLS.md) for standard controller buttons, with conflict avoidance, in-dialog capture isolation and browser tests on simulated Gamepad API. Physical Xbox/PlayStation acceptance remains open.
-- Actual disabled-user testing, multiple controller support, full keyboard-layout coverage and RU/EN localization are **still outstanding**. The overall accessibility gate below remains open.
+- Actual disabled-user testing, multiple controller support, full keyboard-layout coverage and **full-game** RU/EN UI localization are **still outstanding**. The overall accessibility gate below remains open.
 
-### RU/EN first-act localization (partial)
+### RU/EN localization of all official stages (partial overall)
 
 - Added [language choice and first-act RU/EN](M2_I18N_FIRST_ACT.md) for onboarding, invite room, demo stage names and primary goals, role-specific help and first-act ending.
 - Choice is device-local so Spark and Echo may use different languages in the same online room.
-- **Not full localization:** chapters 9–136 and numerous optional windows and network error messages remain in Russian; the overall language gate stays open.
+- **Expanded:** [137-stage English catalog](M2_I18N_137_STAGES.md) now covers the official stage titles, authored main objectives and hints, runtime counters and major world mechanics; browser tests include a stage-42 mixed-language co-op start.
+- **Not full localization:** several secondary menus, chapter side systems, authored story flavor, server errors and legal content remain in Russian; the overall G2 language gate stays open.
 
 ## M2 acceptance gates — open
 
@@ -44,7 +45,7 @@ The project owner reported that two human players completed the nine-stage demo.
 - [ ] Each stage scored for fairness, novelty, frustration, softlocks and useful second-player agency
 - [ ] Create keep / polish / redesign decisions, prioritize coherent 2–4-hour premium campaign
 - [ ] Measure and fix difficulty spikes and boss attack telegraphs
-- [ ] RU/EN text localization (current in-game hint UI is Russian)
+- [ ] Complete RU/EN localization of side menus, server errors, story text, legal pages and accessibility labels (official 137-level objective catalog now translated)
 - [ ] Rebindable keyboard and gamepad settings, accessible contrast and reduced-motion review
 - [ ] Music, SFX and graphics licensing audit, original artwork and final presentation
 - [ ] Independent playtest cohort; evaluate actual completion time before any public duration claim
