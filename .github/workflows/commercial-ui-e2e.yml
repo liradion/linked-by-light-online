@@ -1,0 +1,37 @@
+name: Commercial UI E2E
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'public/**'
+      - 'e2e/**'
+      - 'playwright.config.cjs'
+      - '.github/workflows/commercial-ui-e2e.yml'
+  workflow_dispatch:
+
+jobs:
+  cross-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install ephemeral browser test dependencies
+        run: npm install --no-save --ignore-scripts @playwright/test@1.56.1
+      - name: Install Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Node tests
+        run: npm test
+      - name: Local-only browser E2E
+        run: npx playwright test e2e/clean-play-ui.spec.cjs --config=playwright.config.cjs
+      - name: Test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: commercial-ui-e2e
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
