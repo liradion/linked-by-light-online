@@ -1,0 +1,174 @@
+/* Linked by Light — bilingual first-experience layer, deliberately not a full
+   137-level translation. Pure formatting functions also run in Node tests. */
+(function(root,factory){
+ 'use strict';
+ const api=factory(root);
+ if(typeof module==='object'&&module.exports)module.exports=api;
+ root.GameI18n=api;
+})(typeof window!=='undefined'?window:globalThis,function(root){
+ 'use strict';
+ const KEY='linked-light-language-v1';
+ const EN={
+  brand:'LINKED BY LIGHT',online:'ONLINE ADVENTURE · 2 PLAYERS',
+  titleA:'TWO HEROES.',titleB:'ONE PATH.',
+  intro:'One world, two heroes, one shared journey. Connect from different devices, help one another and solve puzzles together.',
+  demoTag:'✦ DEMO · CHAPTER ONE',demoTitle:'Begin your journey together',
+  demoIntro:'Nine challenges: two abilities, co-op puzzles and the first chapter finale.',
+  demoPlay:'Play the demo ✦',create:'Create room ✦',newCampaign:'New game from level 1',
+  campaignInfo:'99 levels across 11 worlds await.',join:'Join →',
+  roomPlaceholder:'ROOM CODE',roomInfo:'The creator plays Spark; the guest plays Echo. Send your friend a link or six-character room code.',
+  lobbyTag:'ROOM CREATED · A SHARED ADVENTURE',lobbyTitleA:'ALMOST',lobbyTitleB:'TOGETHER.',
+  inviteCode:'Invitation code:',sparkCreator:'✦ Spark · host',echoGuest:'◈ Echo · guest',
+  copyInvite:'Copy invitation',start:'Start together ✦',demoExit:'Choose adventure',
+  replayDemo:'Play demo again ↻',replay:'Play again ↻',
+  waiting:'Waiting…',online:'● Online',offline:'○ Disconnected',awaitPlayer:'○ Waiting for player',
+  lobbyHost:'Send your invitation. When both players join, select “Start together”.',
+  lobbyGuest:'You are connected. Waiting for the host to start.',
+  demoHost:'Demo: nine challenges. Share the invitation, then start together.',
+  demoGuest:'Demo: wait for the host to start your co-op journey.',
+  youSpark:'Spark (host)',youEcho:'Echo (guest)',youSpectator:'Spectator',
+  winTitle:'YOU DID IT.',winTogether:'TOGETHER.',
+  demoEndingTitle:'Our first journey together',
+  demoEndingText:'You completed the demo as a team. Thanks for playing! The adventure continues in the full campaign.',
+  demoEndingTag:'DEMO · CHAPTER ONE · 9 CHALLENGES',
+  readyDash:'· Dash ready',readyPulse:'· Pulse ready',
+  inviteCopied:'Copied ✓',networkOnline:'Connected',networkOffline:'Disconnected',networkConnecting:'Connecting…',
+  connectionLost:'Partner disconnected. Game paused. Rejoining with the same link preserves their role.',
+  demoTitlePrefix:'DEMO · CHALLENGE',demoProgressPrefix:'DEMO',
+  roomInvalid:'Enter a valid six-character room code.',
+  act:'ACT',level:'LEVEL',chapter:'CHAPTER',
+  goalGate:'The gate is open! Both players must reach the portal.',
+  goalWall:'Spark: approach the glowing wall and use your ability ({key} on PC or ✦ on mobile).',
+  goalCrystal:'Echo: approach the crystal and use your ability ({key} on PC or ✦ on mobile).',
+  goalBridge:'Spark holds the plate while Echo crosses the bridge to charge the crystal.',
+  goalPads:'Stand on both plates at once: {on}/{total}',
+  goalFirstPads:'Plates: Spark — orange, Echo — blue. Together: {on}/{total}',
+  goalBothPortal:'Challenge complete! Both players to the portal.',
+  gameHelp:'? Hint',language:'Language',menu:'☰ Menu',
+  helpIntro:'How to play',feedback:'Feedback',
+  firstGuideTitle:'Two players — one adventure',
+  firstGuideDescription:'Create a room and invite your partner with a link.',
+  firstGuideDismiss:'Got it',firstGuideButton:'How to play',
+  onboardingStep:'Step {step} / {total}',onboardingNext:'Next',onboardingStart:'Start playing',onboardingBack:'Back',onboardingSkip:'✕ Skip',
+  chapter0:'Welcome to Linked by Light',
+  chapter0Text:'A two-player co-op game. One player creates the room; the other joins through an invitation. No account is needed to play.',
+  chapter1:'Create a room',
+  chapter1Text:'Choose “Create room”. The lobby shows a six-character code. Do not post the code or invitation link publicly.',
+  chapter2:'Invite your partner',
+  chapter2Text:'Use “Copy invitation” and share the link with a friend. It works in a phone browser or on a computer.',
+  chapter3:'Start together',
+  chapter3Text:'Once both players connect, the host selects “Start together”. Spark and Echo must solve puzzles as a team.',
+  chapter4:'Controls and recovery',
+  chapter4Text:'On a phone, use the on-screen arrows, jump and ability controls. On PC, open “Keyboard” in the menu to view or customize bindings. Reconnecting with the same link retains your role.',
+  chapter4Mobile:'On phones: touch arrows, jump and ability controls. Landscape orientation is recommended.',
+  chapter4Desktop:'On desktop: Spark uses A/D, W, F; Echo uses arrows, Up and Enter by default. Configure keys in the menu.',
+  serverTemporary:'Rooms on this server may reset after a restart. Export your progress if needed.',
+  serverDurable:'Persistent storage is configured. Keep a backup of your progress.',
+  copyInviteMessage:'Play Linked by Light with me! Open the link on your phone or computer: {url} (room {room})'
+ };
+ const RU={};
+ const titleEn=['First Contact','Bridge of Trust','One Rhythm','Bright Valley · Stronger Together','Bright Valley · Shared Signal','Bright Valley · Hold the Bridge','Bright Valley · Double Glow','Bright Valley · The Right Choice','Bright Valley · Final Connection'];
+ const objectiveEn=[
+  'Spark stands on the orange plate; Echo on the blue. Hold them simultaneously.',
+  'Spark breaks the wall and holds a plate; Echo crosses the bridge and activates the crystal.',
+  'Break the wall, charge the crystal and stand together on the color-matched plates.',
+  'Spark breaks the barrier. Activate both plates.',
+  'Light the crystal and stand on both plates at the same time.',
+  'Spark holds the plate while Echo crosses the bridge and charges the crystal.',
+  'Echo activates both crystals. Cross the bridge together.',
+  'Break the wall, charge the crystal and activate both plates.',
+  'Activate all mechanisms together and enter the portal.'
+ ];
+ const BINDINGS=Object.freeze({
+  '#menuView > .eyebrow':'online','#menuView > .intro-copy:first-of-type':'intro',
+  '#menuView .demo-launch-tag':'demoTag','#menuView .demo-launch > strong':'demoTitle',
+  '#menuView .demo-launch > p':'demoIntro','#demoBtn':'demoPlay',
+  '#createBtn':'create','#newCampaignBtn':'newCampaign','#roomInput':'roomPlaceholder',
+  '#joinBtn':'join','#menuView > .intro-copy:last-of-type':'roomInfo',
+  '#lobbyView > .eyebrow':'lobbyTag','#lobbyView > .intro-copy:first-of-type':'inviteCode',
+  '#lobbyView .lobby-slot:first-child > b':'sparkCreator',
+  '#lobbyView .lobby-slot:last-child > b':'echoGuest','#copyBtn':'copyInvite',
+  '#startBtn':'start','#demoBackBtn':'demoExit'
+ });
+ let lang='ru',store=null,listeners=[];
+ function getLanguage(){return lang;}
+ function isEnglish(){return lang==='en';}
+ function t(key,vars){
+  let value=isEnglish()?EN[key]:RU[key];
+  if(value===undefined)return key;
+  if(vars)for(const [name,v] of Object.entries(vars))value=value.replaceAll('{'+name+'}',String(v));
+  return value;
+ }
+ function translateExact(value){
+  if(!isEnglish())return value;
+  if(typeof value!=='string')return value;
+  return ({'Подключение…':EN.networkConnecting,
+   'На связи':EN.networkOnline,'Нет связи':EN.networkOffline,
+   'Подключение к серверу…':EN.networkConnecting,
+   'Два игрока — одно приключение':EN.firstGuideTitle,
+   'Создайте комнату и пригласите второго игрока по ссылке.':EN.firstGuideDescription,
+   'Как играть':EN.firstGuideButton,'Понятно':EN.firstGuideDismiss,
+   'Далее':EN.onboardingNext,'Назад':EN.onboardingBack,
+   'Начать играть':EN.onboardingStart,'✕ Пропустить':EN.onboardingSkip,
+   'ⓘ Как играть':'ⓘ How to play','✎ Отзыв':'✎ Feedback'
+  })[value]||value;
+ }
+ function formatGoal(goal,index,abilitySpark='F',abilityEcho='Enter'){
+  if(!isEnglish()||typeof goal!=='string')return goal;
+  if(goal.includes('Ворота открыты!'))return EN.goalGate;
+  if(goal.startsWith('Искра: у светящейся стены'))return t('goalWall',{key:abilitySpark});
+  if(goal.startsWith('Эхо: у кристалла'))return t('goalCrystal',{key:abilityEcho});
+  if(goal.startsWith('Искра держит плиту'))return EN.goalBridge;
+  let m=goal.match(/^Плиты:.*?(\d+)\/(\d+)/);
+  if(m)return t('goalFirstPads',{on:m[1],total:m[2]});
+  m=goal.match(/^Встаньте одновременно на плиты:\s*(\d+)\/(\d+)/);
+  if(m)return t('goalPads',{on:m[1],total:m[2]});
+  if(index>=0&&index<9&&/[\u0400-\u04FF]/.test(goal))return objectiveEn[index];
+  if(goal.startsWith('Испытание пройдено!'))return EN.goalBothPortal;
+  return goal;
+ }
+ function stageTitle(index,fallback){return isEnglish()&&index>=0&&index<9?titleEn[index]:fallback;}
+ function stageObjective(index,fallback){return isEnglish()&&index>=0&&index<9?objectiveEn[index]:fallback;}
+ function applyStatic(){
+  if(typeof document==='undefined')return;
+  document.documentElement.lang=lang;
+  for(const [selector,key] of Object.entries(BINDINGS)){
+   const el=document.querySelector(selector);
+   if(!el)continue;
+   // Preserve the initial Russian source for reverse switching.
+   if(el.dataset.i18nRu===undefined)el.dataset.i18nRu=(key==='roomPlaceholder'?el.getAttribute('placeholder'):el.textContent)||'';
+   const value=isEnglish()?EN[key]:el.dataset.i18nRu;
+   if(key==='roomPlaceholder')el.setAttribute('placeholder',value);
+   else el.textContent=value;
+  }
+  const headline=document.querySelector('#menuView > .hero-title');
+  if(headline){
+   const em=headline.querySelector('em');
+   if(headline.firstChild?.nodeType===3)headline.firstChild.textContent=isEnglish()?EN.titleA:'ДВА ГЕРОЯ.';
+   if(em)em.textContent=isEnglish()?EN.titleB:'ОДИН ПУТЬ.';
+  }
+  const lobby=document.querySelector('#lobbyView > .hero-title');
+  if(lobby){const em=lobby.querySelector('em');if(lobby.firstChild?.nodeType===3)lobby.firstChild.textContent=isEnglish()?EN.lobbyTitleA:'ВЫ ';
+   if(em)em.textContent=isEnglish()?EN.lobbyTitleB:'ПОЧТИ ВМЕСТЕ.';}
+  const sel=document.getElementById('languageSelect');
+  if(sel&&sel.value!==lang)sel.value=lang;
+ }
+ function setLanguage(next){
+  if(next!=='ru'&&next!=='en')return false;
+  const previous=lang;lang=next;
+  try{store?.setItem(KEY,next);}catch(_){}
+  applyStatic();
+  if(previous!==lang)listeners.forEach(fn=>{try{fn(lang);}catch(_){}});
+  return true;
+ }
+ function subscribe(callback){if(typeof callback==='function')listeners.push(callback);}
+ function init(){
+  try{store=root.localStorage;const saved=store?.getItem(KEY);lang=saved==='en'?'en':'ru';}
+  catch(_){lang='ru';}
+  const selector=typeof document!=='undefined'?document.getElementById('languageSelect'):null;
+  selector?.addEventListener('change',()=>setLanguage(selector.value));
+  applyStatic();
+  return lang;
+ }
+ return Object.freeze({KEY,EN,getLanguage,isEnglish,t,translateExact,formatGoal,stageTitle,stageObjective,applyStatic,setLanguage,subscribe,init});
+});
