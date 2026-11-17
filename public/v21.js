@@ -123,6 +123,7 @@ function musicPlayback(notes){
 }
 function renderHome(){
  const m=community||{},role=api.role?.()??-1;
+ const host=root.GameRoomAuthority?.isHost(api,role)??(role===0);
  const garden=group(body,'Живой сад');
  para(garden,'Выращивайте растения по очереди. Каждый второй совместный уход раскрывает новый цветок.');
  selectInfo(garden,'Рост сада',(m.garden?.growth||0)+'/12');
@@ -142,7 +143,7 @@ function renderHome(){
  selectInfo(music,'Мелодия',(m.melody||[]).length+'/16');
  const keys=node('div','v21-piano');
  for(let i=0;i<8;i++)keys.append(btn('♪ '+loc(['До','Ре','Ми','Фа','Соль','Ля','Си','До↑'][i]),()=>draw('music_note',{value:i}),(m.melody||[]).length%2!==role||(m.melody||[]).length>=16));
- music.append(keys);actions(music,[btn('▶ Сыграть',()=>musicPlayback(m.melody)),btn('↺ Новая мелодия',()=>draw('music_reset'),role!==0)]);
+ music.append(keys);actions(music,[btn('▶ Сыграть',()=>musicPlayback(m.melody)),btn('↺ Новая мелодия',()=>draw('music_reset'),!host)]);
  const painting=group(body,'Наша совместная картина');
  para(painting,'Каждый рисует свою половину 8×8: Искра — левую, Эхо — правую. Картина синхронизируется между устройствами.');
  palette(painting);
