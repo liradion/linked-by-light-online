@@ -150,6 +150,23 @@
    return objectiveEn[index]+' '+goal.match(/\(\d+\/\d+\)$/)[0];
   return goal;
  }
+ function localizeHint(message,index,role,depth){
+  if(!isEnglish()||index<0||index>8||typeof message!=='string')return message;
+  if(depth<=1)return objectiveEn[index];
+  if(/Ворота открыты|портал/.test(message))return EN.goalGate;
+  if(/оранжевую плиту|голубую плиту|плиты|цветные/.test(message))
+   return role===1?'Find the blue plate and stand on it while Spark holds the orange one.'
+     :'Find the orange plate and stand on it while Echo holds the blue one.';
+  if(/стен|преград|рывком/.test(message))
+   return role===0?'Spark: approach the glowing wall and press your dash ability.'
+     :'Echo: help Spark reach the glowing wall; Spark must break it using a dash.';
+  if(/кристалл|импульс/.test(message))
+   return role===1?'Echo: approach the unlit crystal and use your pulse ability.'
+     :'Spark: help Echo reach the crystal and keep the bridge open.';
+  if(/цвет|особенност|поток|узор/.test(message))
+   return 'Work together to activate the glowing mechanisms using each hero’s abilities.';
+  return objectiveEn[index];
+ }
  function stageTitle(index,fallback){return isEnglish()&&index>=0&&index<9?titleEn[index]:fallback;}
  function stageObjective(index,fallback){return isEnglish()&&index>=0&&index<9?objectiveEn[index]:fallback;}
  function applyStatic(){
@@ -200,5 +217,5 @@
   applyStatic();
   return lang;
  }
- return Object.freeze({KEY,EN,getLanguage,isEnglish,t,translateExact,formatGoal,stageTitle,stageObjective,applyStatic,setLanguage,subscribe,init});
+ return Object.freeze({KEY,EN,getLanguage,isEnglish,t,translateExact,formatGoal,localizeHint,stageTitle,stageObjective,applyStatic,setLanguage,subscribe,init});
 });
