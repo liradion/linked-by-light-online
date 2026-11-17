@@ -334,6 +334,7 @@ function consumeSnapshot(s){
     for(let i=0;i<level.crystals.length;i++)if(!previous.world.crystals[i]&&s.world.crystals[i]){const c=level.crystals[i];burst(c.x,c.y,colors.blue,30,200);announce('Кристалл активирован ✦',2);tone(740,.2,'sine',.04);}
   }
   snapshots.push(latest);if(snapshots.length>12)snapshots.shift();
+  GameHints.onSnapshot(s);
   if(demoMode&&!previous&&phase==='playing')announce('✦ '+GameDemo.intro,4);
   if(phase==='playing')playingOnce=true;
   if(phase==='win'&&previous?.phase!=='win'){announce(s.ending?.title||'Вы прошли игру вместе!',4);tone(740,.3,'sine',.06);}
@@ -449,5 +450,6 @@ function saveStageResult(result){try{const all=JSON.parse(localStorage.getItem(R
 GameQuality.init({getSession:()=>({phase,role,room}),onControls:(left,right)=>{if(left)keys.add('gamepad-left');else keys.delete('gamepad-left');if(right)keys.add('gamepad-right');else keys.delete('gamepad-right');updateInput();},onAction:activateKey});
 GameQuality.ambient(0);
 GameAdventure.init({send:wsSend,currentStage:()=>levelIndex,bestStage,inRoom:()=>!!room,startStage:(n)=>{if(room){if(role===0)wsSend({t:'selectStage',stage:n,secrets:GameAdventure.data().secrets.length});else announce('Уровни выбирает создатель комнаты.');}else createRoom(false,n);}});
+GameHints.init({getState:()=>({level,world:latest?.world,role,phase,stageIndex:levelIndex})});
 GameCloud.init();GameFuture.init({send:wsSend,role:()=>role,room:()=>room,stage:()=>levelIndex,inRoom:()=>!!room,create:stage=>createRoom(true,stage),announce,canvas:()=>canvas});GamePublicBeta.init({stage:()=>levelIndex,role:()=>role,inRoom:()=>!!room});GameV21.init({send:wsSend,role:()=>role,stage:()=>levelIndex,inRoom:()=>!!room,create:()=>createRoom(true,112),resume:id=>createRoom(false,id),announce,canvas:()=>canvas});GameV20.init({send:wsSend,role:()=>role,stage:()=>levelIndex,inRoom:()=>!!room,create:()=>createRoom(true,100),resume:id=>createRoom(false,id),announce,reconnects:()=>totalReconnects});GameExpansion.init({send:wsSend,inRoom:()=>!!room&&role>=0,createCustom:b=>createRoom(false,0,b),announce,saveMemory:GameAdventure.addMemory,getMemories:()=>GameAdventure.data().memories||[]});openConnection();showUI();requestAnimationFrame(animate);
 })();
