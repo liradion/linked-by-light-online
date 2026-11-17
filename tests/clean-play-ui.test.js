@@ -21,7 +21,7 @@ test('first-run invitation and room UI are device-agnostic',()=>{
  assert.match(client,/id='shareInviteBtn'/);
  assert.match(client,/typeof navigator\.share==='function'/);
  assert.match(client,/navigator\.clipboard\.writeText\(message/);
- assert.match(html,/\/client\.js\?v=26\.10/);
+ assert.match(html,/\/client\.js\?v=26\.11/);
  assert.match(html,/\/play-ui\.css\?v=28\.0/);
 });
 test('clean-play preserves original primary inputs and recovery controls',()=>{
@@ -99,7 +99,7 @@ test('gamepad binding module loads before quality and client and preserves touch
  assert.doesNotThrow(()=>new vm.Script(module));
  assert.match(html,/\/gamepad-bindings\.js\?v=1/);
  assert.ok(html.indexOf('/gamepad-bindings.js?v=1')<html.indexOf('/quality.js?v=15.2'));
- assert.ok(html.indexOf('/quality.js?v=15.2')<html.indexOf('/client.js?v=26.10'));
+ assert.ok(html.indexOf('/quality.js?v=15.2')<html.indexOf('/client.js?v=26.11'));
  assert.match(client,/GamePadBindings\.init\(\)/);
  assert.match(quality,/root\.GamePadBindings/);
  assert.match(ui,/'#gamepadOpen'/);
@@ -111,11 +111,20 @@ test('RU/EN language pack has a stable preference, translates first-act status w
  const html=read('public/index.html'),client=read('public/client.js'),beta=read('public/beta.js'),locale=read('public/i18n.js');
  assert.doesNotThrow(()=>new vm.Script(locale));
  assert.match(html,/id="languageSelect"/);
- assert.match(html,/\/i18n\.js\?v=2/);
- assert.ok(html.indexOf('/i18n.js?v=2')<html.indexOf('/client.js?v=26.10'));
+ assert.match(html,/\/i18n\.js\?v=3/);
+ assert.ok(html.indexOf('/i18n.js?v=3')<html.indexOf('/client.js?v=26.11'));
  assert.match(client,/GameI18n\.init\(\)/);
  assert.match(client,/GameI18n\.subscribe\(/);
  assert.match(beta,/root\.GameI18n/);
  assert.match(client,/GameI18n\.formatGoal\(/);
  assert.match(read('public/play-ui.js'),/INTERTWINED WORLDS/);
+});
+
+test('all 137 authored English stages load before locale and multiplayer client',()=>{
+ const html=read('public/index.html'),catalog=read('public/stage-locale.js');
+ assert.doesNotThrow(()=>new vm.Script(catalog));
+ assert.match(html,/\/stage-locale\.js\?v=1/);
+ assert.ok(html.indexOf('/stage-locale.js?v=1')<html.indexOf('/i18n.js?v=3'));
+ assert.ok(html.indexOf('/i18n.js?v=3')<html.indexOf('/client.js?v=26.11'));
+ assert.match(read('public/client.js'),/GameI18n\.stageWorld\(levelIndex\)/);
 });
