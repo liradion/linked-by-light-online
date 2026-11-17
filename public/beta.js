@@ -25,7 +25,7 @@ const chapters=[
 function render(){
  if(!dialog)return;
  const root=$('beta-intro-content');root.replaceChildren();
- const i18n=root.GameI18n,english=i18n?.isEnglish?.();
+ const i18n=window.GameI18n,english=i18n?.isEnglish?.();
  const topic=english?{title:i18n.t('chapter'+step),description:i18n.t('chapter'+step+'Text')}:chapters[step];
  root.append(add('p','beta-progress',english?i18n.t('onboardingStep',{step:step+1,total:chapters.length}):'Шаг '+(step+1)+' / '+chapters.length));
  root.append(add('h2','beta-heading',topic.title));
