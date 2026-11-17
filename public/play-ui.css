@@ -340,3 +340,40 @@ html.clean-play-mode .game-hint-panel{top:auto;bottom:calc(126px + env(safe-area
   html.clean-play-mode #gameHintCleanBtn:not([hidden]){bottom:calc(63px + env(safe-area-inset-bottom))}
   html.clean-play-mode .game-hint-panel{bottom:calc(109px + env(safe-area-inset-bottom))}
 }
+
+
+/* M2 control accessibility: local keyboard remapping, dialog remains visible in clean mode. */
+.controls-dialog{
+  box-sizing:border-box;width:min(520px,calc(100vw - 24px));max-height:min(88dvh,700px);
+  overflow-y:auto;border-radius:20px;border:1px solid #aaa8dc8f;padding:18px 20px;
+  color:#f8f5ff;background:linear-gradient(145deg,#222742,#111a32);
+  box-shadow:0 18px 65px #030614cb;font:14px/1.45 system-ui;
+}
+.controls-dialog::backdrop{background:#050915be;backdrop-filter:blur(5px)}
+.controls-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px}
+.controls-head strong{font-size:17px}
+.controls-head>button,.controls-actions button{
+  min-height:39px;border-radius:11px;padding:7px 12px;
+  background:#2e3b61;color:#fff;border:1px solid #a8add475;cursor:pointer
+}
+.controls-note{color:#cbd1ea;line-height:1.5;font-size:12px;margin:9px 0 13px}
+.controls-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.controls-role{padding:12px;border:1px solid #aaa8da52;border-radius:14px;background:#111a32a8}
+.controls-role>strong{display:block;font-size:14px;color:#f4e5bf;margin-bottom:10px}
+.controls-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(80px,110px);gap:6px;align-items:center;min-height:41px}
+.controls-row>span{font-size:12px}
+.controls-row>button{min-height:36px;min-width:0;border:1px solid #acb7e485;border-radius:10px;background:#29365a;color:#fff;font:700 12px system-ui;cursor:pointer;overflow-wrap:anywhere}
+.controls-row>button:focus-visible,.controls-actions button:focus-visible,.controls-head button:focus-visible{
+  outline:3px solid #f8e29d;outline-offset:2px
+}
+.controls-row>button:hover{background:#3b4b76}
+.controls-actions{display:flex;justify-content:space-between;gap:12px;margin-top:14px}
+#controlsNotice[hidden]{display:none}
+#controlsNotice{color:#f2d89b}
+@media(max-width:430px){.controls-dialog{padding:13px}.controls-grid{grid-template-columns:1fr;gap:9px}.controls-role{padding:9px}.controls-note{font-size:11px}}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:440px){
+ .controls-dialog{max-height:94dvh;padding:10px 12px}
+ .controls-grid{gap:8px}.controls-role{padding:8px}
+ .controls-row{min-height:34px}.controls-row>button{min-height:32px}
+ .controls-note{margin:5px 0;font-size:11px}
+}
