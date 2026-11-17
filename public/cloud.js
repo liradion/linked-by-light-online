@@ -144,7 +144,7 @@ function init(){const host=document.querySelector('.adv-nav')||document.querySel
  <label class="cloud-entry">Ключ восстановления<input id="cloudKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="48 символов" maxlength="48" /></label>
  <div class="quality-actions"><button type="button" id="cloudNew">Создать ключ</button><button type="button" id="cloudUse">Подключить ключ</button><button type="button" id="cloudSync">Синхронизировать</button></div>
  <p class="quality-note" id="cloudMessage" role="status"></p>`;
- document.body.append(dialog);
+ document.body.append(dialog);root.GameI18n?.mountDialogLanguage?.(dialog);
  const status=$('cloudState'),message=$('cloudMessage'),input=$('cloudKey');
  notice=s=>{if(message)message.textContent=s;};
   root.GameI18n?.subscribe?.(renderLocale);renderLocale();
