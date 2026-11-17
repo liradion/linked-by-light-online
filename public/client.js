@@ -282,7 +282,7 @@ function consumeSnapshot(s){
   if(s.result&&s.result.completed&&!s.customLevel&&!demoMode&&role>=0){const key=s.result.level+':'+s.result.elapsed+':'+s.result.deaths;
     if(lastResultId!==key){lastResultId=key;saveStageResult(s.result);announce('Уровень '+(s.result.level+1)+' — '+s.result.stars+' ★ · '+s.result.elapsed+' с · падений: '+s.result.deaths,3.6);GameQuality.effect('star');}}
   if(previous&&s.stage!==previous.stage){prediction=null;lastPredStage=-1;predictor.reset();snapshots=[];camera=0;particles=[];rings=[];GameJuice.clear();
-    const next=stageDefs[s.stage];GameQuality.ambient(Math.floor(Math.min(s.stage,98)/9));announce(demoMode?'✦ Демо '+GameDemo.progress(s.stage)+'/'+GameDemo.stages.length+' · '+next.title:next?.v23?'✦ Физика света · '+next.title:next?.v21?'✧ Навстречу друг другу · '+next.title:next?.v20?'✦ Переплетение миров · '+next.title:'✦ Уровень '+(s.stage+1)+' — '+(next.reality?{mirror:'Две реальности',chronicle:'Прошлое и будущее',gravity:'Антигравитация'}[next.reality.kind]:next.signature?.subtitle||next.title),2.8);tone(600,.16,'sine',.055);}
+    const next=stageDefs[s.stage];GameQuality.ambient(Math.floor(Math.min(s.stage,98)/9));announce(demoMode?'✦ Демо '+GameDemo.progress(s.stage)+'/'+GameDemo.stages.length+' · '+(GameDemo.chapters[GameDemo.progress(s.stage)-1]?.subtitle||next.title):next?.v23?'✦ Физика света · '+next.title:next?.v21?'✧ Навстречу друг другу · '+next.title:next?.v20?'✦ Переплетение миров · '+next.title:'✦ Уровень '+(s.stage+1)+' — '+(next.reality?{mirror:'Две реальности',chronicle:'Прошлое и будущее',gravity:'Антигравитация'}[next.reality.kind]:next.signature?.subtitle||next.title),2.8);tone(600,.16,'sine',.055);}
 
   levelIndex=s.stage;phase=s.phase;connected=s.connected||connected;
   const receivedAt=performance.now();GameQuality.snapshotArrived(receivedAt);
@@ -334,6 +334,7 @@ function consumeSnapshot(s){
     for(let i=0;i<level.crystals.length;i++)if(!previous.world.crystals[i]&&s.world.crystals[i]){const c=level.crystals[i];burst(c.x,c.y,colors.blue,30,200);announce('Кристалл активирован ✦',2);tone(740,.2,'sine',.04);}
   }
   snapshots.push(latest);if(snapshots.length>12)snapshots.shift();
+  if(demoMode&&!previous&&phase==='playing')announce('✦ '+GameDemo.intro,4);
   if(phase==='playing')playingOnce=true;
   if(phase==='win'&&previous?.phase!=='win'){announce(s.ending?.title||'Вы прошли игру вместе!',4);tone(740,.3,'sine',.06);}
   showUI();
