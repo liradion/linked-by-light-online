@@ -1,0 +1,128 @@
+/* Linked by Light — optional auxiliary UI RU/EN catalog.
+   These strings affect presentation only, never room state or recovery keys. */
+(function(root,factory){
+ 'use strict';
+ const api=factory();
+ if(typeof module==='object'&&module.exports)module.exports=api;
+ root.GameAuxLocale=api;
+})(typeof window!=='undefined'?window:globalThis,function(){
+ 'use strict';
+ const RU=Object.freeze({
+  'cloud.open':'☁ Облако','cloud.title':'☁ Облачные сохранения',
+  'cloud.checking':'Проверка подключения...',
+  'cloud.connected':'Облачное хранилище подключено.',
+  'cloud.disabled':'Серверное облако ещё не настроено. Сохранения пока остаются локальными.',
+  'cloud.checkFailed':'Не удалось проверить хранилище.',
+  'cloud.warning':'Один ключ для ваших двух устройств. Ключ открывает доступ к сохранению: не размещайте его публично. Скопируйте и храните отдельно.',
+  'cloud.keyLabel':'Ключ восстановления','cloud.keyPlaceholder':'48 символов',
+  'cloud.create':'Создать ключ','cloud.use':'Подключить ключ','cloud.sync':'Синхронизировать',
+  'cloud.badKey':'Нужен полный 48-значный ключ',
+  'cloud.created':'Ключ создан. Сохраните его в надёжном месте и нажмите «Синхронизировать».',
+  'cloud.attached':'Ключ подключён. Нажмите «Синхронизировать».',
+  'cloud.upToDate':'Сохранение актуально','cloud.synced':'Облачный прогресс синхронизирован',
+  'cloud.failed':'Облако: {message}',
+  'auth.open':'G Войти','auth.openTitle':'Войти через Google','auth.title':'Аккаунт Google',
+  'auth.close':'Закрыть окно','auth.checking':'Проверяем авторизацию…',
+  'auth.disabled':'Серверный вход через Google пока недоступен.',
+  'auth.guest':'Вы играете как гость. Войдите через Google, чтобы привязать прогресс к аккаунту.',
+  'auth.signedIn':'Вход выполнен: {name}','auth.player':'Игрок','auth.account':'Аккаунт',
+  'auth.about':'Google-аккаунт позволяет переносить достижения, костюмы и домик между устройствами. Гостевая игра и коды комнат останутся доступными.',
+  'auth.warning':'При первом входе локальный прогресс объединится с облачным. На общем устройстве не входите в чужой аккаунт.',
+  'auth.signIn':'Войти через Google','auth.sync':'Сохранить и загрузить','auth.signOut':'Выйти',
+  'auth.otherAccount':'На устройстве ранее использовался другой Google-аккаунт. Для защиты прогресса откройте отдельный профиль браузера.',
+  'auth.syncing':'Синхронизация с Google…','auth.upToDate':'Прогресс Google актуален',
+  'auth.synced':'Прогресс привязан к Google-аккаунту',
+  'auth.conflict':'Обнаружен конфликт сохранения, попробуйте ещё раз',
+  'auth.syncError':'Ошибка синхронизации: {message}',
+  'auth.loggedOut':'Вы вышли из Google-аккаунта; локальные данные сохранены',
+  'auth.loginFailed':'Не удалось выполнить вход. Проверьте Google Provider и Redirect URLs.',
+  'auth.loginSuccess':'Вы вошли через Google. Сохранения синхронизируются.',
+  'editor.notesTab':'💌 Записки','editor.mapTab':'🛠 Карты','editor.photoTab':'📸 Кадр',
+  'editor.title':'✦ Наше приключение',
+  'editor.notesIntro':'Записки видят только участники комнаты. Последние 24 записки хранятся в комнате, до 40 попадают в ваш личный архив и синхронизируются с Google при входе.',
+  'editor.noNotes':'Пока нет записок. Оставьте первую ✨',
+  'editor.notePlaceholder':'Напиши что-нибудь друг другу…','editor.sendNote':'Отправить записку',
+  'editor.savedNote':'Личная заметка сохранена на устройстве.',
+  'editor.quickTitle':'Быстрые сигналы','editor.here':'📍 Я здесь','editor.wait':'✋ Подожди',
+  'editor.help':'❗ Помоги','editor.heart':'♡ Люблю',
+  'editor.mapIntro':'Создайте безопасную карту с собственными платформами. Две плиты и портал остаются обязательными. Создатель запускает карту в новой комнате, второй игрок получает её автоматически.',
+  'editor.mapName':'Название уровня','editor.canvasLabel':'Редактор платформ: нажмите, чтобы разместить платформу',
+  'editor.canvasHelp':'Коснитесь поля, чтобы поставить платформу (макс. 8)',
+  'editor.undo':'↶ Убрать последнюю','editor.clear':'Очистить',
+  'editor.play':'🎮 Создать комнату с картой',
+  'editor.invalidMap':'Проверьте название и платформы.',
+  'editor.alreadyRoom':'Сначала завершите текущую комнату или откройте игру в другой вкладке.',
+  'editor.codePlaceholder':'Здесь появится код карты или вставьте код друга',
+  'editor.copyCode':'📋 Код карты','editor.invalidName':'Название карты недопустимо.',
+  'editor.codeCopied':'Код карты скопирован.','editor.codeCopyManual':'Скопируйте код из поля.',
+  'editor.loadCode':'📥 Загрузить код','editor.invalidCode':'Неверный код карты.',
+  'editor.codeInfo':'Коды карт — это переносимый текст; публичного каталога и серверной публикации пока нет.',
+  'editor.photoIntro':'Сохраните памятный кадр текущего уровня. Фото создаётся на устройстве и не загружается на сервер.',
+  'editor.savePhoto':'📸 Сохранить кадр PNG',
+  'editor.photoSaved':'Кадр сохранён на устройстве.',
+  'editor.photoDenied':'Браузер не разрешил сохранить кадр. Сделайте обычный скриншот.'
+ });
+ const EN=Object.freeze({
+  'cloud.open':'☁ Cloud','cloud.title':'☁ Cloud saves',
+  'cloud.checking':'Checking connection...',
+  'cloud.connected':'Cloud storage is connected.',
+  'cloud.disabled':'Server cloud storage is not configured. Your saves remain on this device.',
+  'cloud.checkFailed':'Could not check cloud storage.',
+  'cloud.warning':'Use the same recovery key on both devices. Anyone with the key can access this save: do not publish it. Copy it and store it separately.',
+  'cloud.keyLabel':'Recovery key','cloud.keyPlaceholder':'48 characters',
+  'cloud.create':'Create key','cloud.use':'Use existing key','cloud.sync':'Synchronize',
+  'cloud.badKey':'A complete 48-character key is required',
+  'cloud.created':'Key created. Save it securely, then select “Synchronize”.',
+  'cloud.attached':'Key linked. Select “Synchronize”.',
+  'cloud.upToDate':'Save is up to date','cloud.synced':'Cloud progress synchronized',
+  'cloud.failed':'Cloud: {message}',
+  'auth.open':'G Sign in','auth.openTitle':'Sign in with Google','auth.title':'Google account',
+  'auth.close':'Close account dialog','auth.checking':'Checking sign-in…',
+  'auth.disabled':'Google sign-in is not available on this server.',
+  'auth.guest':'You are playing as a guest. Sign in with Google to link your progress.',
+  'auth.signedIn':'Signed in: {name}','auth.player':'Player','auth.account':'Account',
+  'auth.about':'A Google account lets you move achievements, outfits and your home between devices. Guest play and room codes remain available.',
+  'auth.warning':'On first sign-in, local and cloud progress are merged. Do not sign in to another person’s account on a shared device.',
+  'auth.signIn':'Sign in with Google','auth.sync':'Save and load','auth.signOut':'Sign out',
+  'auth.otherAccount':'A different Google account was previously used on this device. Use a separate browser profile to protect your progress.',
+  'auth.syncing':'Synchronizing with Google…','auth.upToDate':'Google progress is up to date',
+  'auth.synced':'Progress linked to your Google account',
+  'auth.conflict':'Save conflict detected. Try again.',
+  'auth.syncError':'Synchronization error: {message}',
+  'auth.loggedOut':'Signed out of Google. Local data was kept.',
+  'auth.loginFailed':'Sign-in failed. Check the Google provider and redirect URLs.',
+  'auth.loginSuccess':'Signed in with Google. Saves are being synchronized.',
+  'editor.notesTab':'💌 Notes','editor.mapTab':'🛠 Maps','editor.photoTab':'📸 Photo',
+  'editor.title':'✦ Our adventure',
+  'editor.notesIntro':'Notes are visible only to room participants. The last 24 stay in the room; up to 40 appear in your personal archive and sync to Google after sign-in.',
+  'editor.noNotes':'No notes yet. Leave the first one ✨',
+  'editor.notePlaceholder':'Write a note to each other…','editor.sendNote':'Send note',
+  'editor.savedNote':'Personal note saved on this device.',
+  'editor.quickTitle':'Quick signals','editor.here':'📍 I’m here','editor.wait':'✋ Wait',
+  'editor.help':'❗ Help','editor.heart':'♡ Love you',
+  'editor.mapIntro':'Build a safe custom map with your own platforms. Both plates and the portal stay mandatory. The host opens a new room with the map; the guest receives it automatically.',
+  'editor.mapName':'Level name','editor.canvasLabel':'Platform editor: click to place a platform',
+  'editor.canvasHelp':'Tap to place a platform (max. 8)',
+  'editor.undo':'↶ Undo last','editor.clear':'Clear',
+  'editor.play':'🎮 Create room with map',
+  'editor.invalidMap':'Check the map title and platforms.',
+  'editor.alreadyRoom':'Finish the current room first or open the game in another tab.',
+  'editor.codePlaceholder':'A map code will appear here, or paste a friend’s code',
+  'editor.copyCode':'📋 Map code','editor.invalidName':'Invalid map title.',
+  'editor.codeCopied':'Map code copied.','editor.codeCopyManual':'Copy the code from the field.',
+  'editor.loadCode':'📥 Load code','editor.invalidCode':'Invalid map code.',
+  'editor.codeInfo':'Map codes are portable text. There is no public map catalog or server publishing yet.',
+  'editor.photoIntro':'Save a screenshot of the current level. The image stays on this device and is not uploaded.',
+  'editor.savePhoto':'📸 Save PNG',
+  'editor.photoSaved':'Screenshot saved on this device.',
+  'editor.photoDenied':'Your browser could not save the screenshot. Take a normal screenshot instead.'
+ });
+ function text(key,lang='ru',vars){
+  const source=lang==='en'?EN:RU;
+  if(!Object.hasOwn(source,key))return key;
+  let value=source[key];
+  if(vars)for(const [field,item] of Object.entries(vars))value=value.replaceAll('{'+field+'}',String(item));
+  return value;
+ }
+ return Object.freeze({RU,EN,text});
+});
