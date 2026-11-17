@@ -6,6 +6,8 @@ test('the Intertwined Worlds story modal switches RU/EN without blocking access'
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/');
  await page.locator('#languageSelect').selectOption('en');
+ // v27 moves chapter controls into the menu, not the game canvas.
+ await page.locator('.game-menu-trigger').click();
  const open=page.locator('.v20-toggle');
  await expect(open).toBeVisible();
  await expect(open).toContainText('Story / Home');
