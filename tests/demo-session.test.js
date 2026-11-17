@@ -62,6 +62,35 @@ test('demo session: invite, stage restrictions and restart are server-authoritat
   const restarted=await receive(host,m=>m.t==='snapshot'&&m.stage===0&&m.phase==='playing');
   assert.equal(restarted.demo,true);
   assert.equal(restarted.stage,0);
+  // Cross-mode gameplay commands must not replace the curated first act, even
+  // when sent by the legitimate host using a handcrafted WebSocket message.
+  for(const payload of [
+   {t:'v21GalleryPlay',actionId:'demo-gallery-1',id:'nonexistent'},
+   {t:'v25Generate',actionId:'demo-generator-1',seed:123},
+   {t:'v21Action',actionId:'demo-world-1',kind:'transform'},
+   {t:'v23Action',actionId:'demo-world-2',kind:'phase'},
+   {t:'coopAction',actionId:'demo-world-3',kind:'tether_attach'}
+  ]){
+    host.send(payload);
+    const blocked=await receive(host,m=>m.t==='error');
+    assert.match(blocked.message,/недоступна в демоверсии/,payload.t);
+  }
+  host.send({t:'resetStage'});
+  const reset=await receive(host,m=>m.t==='snapshot'&&m.stage===0&&m.phase==='playing');
+  assert.equal(reset.demo,true,'reset must preserve server-owned demo flag');
+  // A second player reconnects with its original seat token and resumes the
+  // exact same demo, rather than getting an unrelated full-campaign room.
+  guest.ws.close();
+  await receive(host,m=>m.t==='members'&&!m.connected[1]);
+  const rejoinedClient=await client(port);
+  guest=rejoinedClient;
+  guest.send({t:'hello',protocol:4});await receive(guest,m=>m.t==='hello');
+  guest.send({t:'join',room:joined.room,token:seated.token});
+  assert.equal((await receive(guest,m=>m.t==='joined')).role,1);
+  const resumed=await receive(guest,m=>m.t==='snapshot');
+  assert.equal(resumed.demo,true);
+  assert.equal(resumed.stage,0);
+  assert.equal(resumed.phase,'playing');
  }finally{
   host?.ws.close();guest?.ws.close();child.kill();
  }
