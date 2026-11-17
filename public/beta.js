@@ -120,7 +120,7 @@ function onRecovered(){
 }
 function init(callbacks){
  api=callbacks||{};
- const target=document.querySelector('.topline > div:last-child')||document.querySelector('.topline')||document.body;
+ const target=document.querySelector('.topline > div:last-of-type')||document.querySelector('.topline')||document.body;
  const guide=btn('ⓘ Как играть',start);guide.id='betaHelpBtn';target.append(guide);
  const report=btn('✎ Отзыв',feedback);report.id='betaReportBtn';target.append(report);
  notice=add('p','beta-connection-note');notice.id='betaConnectionNote';
