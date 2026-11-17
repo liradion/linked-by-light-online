@@ -17,6 +17,7 @@ let settings=loadSettings(),api={},state=null,social=null,meta=null,dialog,conte
 const giftDraft={theme:'stars',message:''};
 const v23=()=>stage>=122&&stage<=136;
 const role=()=>api.role?.()??-1;
+const canLead=()=>root.GameRoomAuthority?.isHost(api,role())??(role()===0);
 const send=(t,params={})=>{if(!api.inRoom?.()||role()<0)return api.announce?.(loc('Сначала создайте комнату вдвоём'));api.send?.({t,...params,actionId:nonce+'-'+(++serial)});};
 const levelAction=(kind,params={})=>send('v23Action',{kind,...params});
 const lifeAction=(kind,params={})=>send('v24Action',{kind,...params});
@@ -119,17 +120,17 @@ function physics(){
   actions(container,a);
  }else p(container,'Выберите уровень главы v23 ниже. Первая карта доступна сразу.');
  const grid=section(content,'Выбрать испытание');
- if(role()===0){
+ if(canLead()){
   const unlocked=state?.v23Unlocked??122;
   const g=el('div','v2346-level-grid');
   lvls.forEach((l,i)=>g.append(button((i+1)+'. '+(root.GameI18n?.stageTitle?.(i+122,l.title)||l.title),()=>api.send?.({t:'selectStage',stage:i+122}),i+122>unlocked)));
   grid.append(g);
- }else p(grid,'Новый уровень может выбрать ведущий (Искра).');
+ }else p(grid,'Новый уровень может выбрать ведущий.');
 }
 const quests=[['keeper','Хранитель рассвета'],['navigator','Звёздный картограф'],['hermit','Странствующий мастер'],['secret','Тайный путешественник']];
 const pretty={keeper:'Хранитель',navigator:'Картограф',hermit:'Мастер',secret:'Тайный'};
 function living(){
- const z=social||{};
+ const z=social||{},host=canLead();
  const intro=section(content,'v24 · Живой мир');
  p(intro,'Побочные задания и совместные развлечения не влияют на результаты основной кампании и не требуют покупок.');
  const npc=section(content,'Новые персонажи и побочные задания');
@@ -143,7 +144,7 @@ function living(){
  const kitchen=section(content,'Совместная кухня');
  row(kitchen,'Готовность',(z.kitchen?.step||0)+'/8');
  const recipes=['Лунный хлеб','Звёздный суп','Ягодный пирог','Солнечный чай'];
- for(let i=0;i<4;i++)kitchen.append(button(recipes[i],()=>lifeAction('recipe_select',{value:i}),role()!==0));
+ for(let i=0;i<4;i++)kitchen.append(button(recipes[i],()=>lifeAction('recipe_select',{value:i}),!host));
  p(kitchen,'Выбирайте ингредиенты в порядке 1 → 2 → 3 → 4, повторите дважды. Роли чередуются.');
  const ingredients=el('div','v2346-actions');
  for(let i=0;i<4;i++)ingredients.append(button(loc('Ингредиент ')+(i+1),()=>lifeAction('kitchen',{ingredient:i})));
@@ -151,7 +152,7 @@ function living(){
  const ex=section(content,'Экспедиция на пять комнат');
  row(ex,'Пройдено комнат',String(z.expedition?.room||0)+'/5');
  row(ex,'Собрано находок',z.expedition?.loot||0);
- ex.append(button('Отправиться в экспедицию',()=>lifeAction('expedition_start'),role()!==0||!!z.expedition?.active));
+ ex.append(button('Отправиться в экспедицию',()=>lifeAction('expedition_start'),!host||!!z.expedition?.active));
  if(z.expedition?.active){
   const required=((z.expedition.seed||0)+(z.expedition.room||0)*7)%3;
   p(ex,loc('Подсказка для следующей двери: ')+(required+1));
@@ -165,11 +166,11 @@ function living(){
  const craft=section(content,'Мастерская изобретений');
  p(craft,'Найдите детали в экспедиции и соберите созвездие, чтобы изготовить предмет для общего дома.');
  const crafted=z.workshop?.crafted||[];
- actions(craft,[['sky-lantern','Небесный фонарь'],['compass','Компас'],['glider','Планер']].map(([v,t])=>button(t,()=>lifeAction('craft',{value:v}),role()!==0||crafted.includes(v))));
+ actions(craft,[['sky-lantern','Небесный фонарь'],['compass','Компас'],['glider','Планер']].map(([v,t])=>button(t,()=>lifeAction('craft',{value:v}),!host||crafted.includes(v))));
  const games=section(content,'Домашний мини-турнир');
  row(games,'Счёт',(z.minigame?.score||[0,0]).join(' : '));
  row(games,'Раунд',(z.minigame?.round||0)+'/6');
- actions(games,[['race','Гонка'],['search','Поиск'],['puzzle','Головоломка']].map(([v,t])=>button(t,()=>lifeAction('minigame_start',{value:v}),role()!==0)));
+ actions(games,[['race','Гонка'],['search','Поиск'],['puzzle','Головоломка']].map(([v,t])=>button(t,()=>lifeAction('minigame_start',{value:v}),!host)));
  actions(games,[0,1,2].map(i=>button(loc('Действие ')+(i+1),()=>lifeAction('minigame_move',{value:i}),!z.minigame?.active)));
  const narrative=section(content,'Сюжетные развилки и диалоги');
  row(narrative,'Совместный выбор',z.narrative?.path?'Путь смелости':'Путь заботы');
@@ -185,14 +186,14 @@ function living(){
 function endless(){
  const box=section(content,'v25 · Endless Together');
  p(box,'Общие seed-карты собираются сервером из заранее проверенных платформ. Один seed — одинаковая геометрия на обоих устройствах.');
- actions(box,[button('✧ Ежедневное испытание',()=>send('v25Generate',{mode:'daily'}),role()!==0)]);
+ actions(box,[button('✧ Ежедневное испытание',()=>send('v25Generate',{mode:'daily'}),!canLead())]);
  const seed=el('input','v2346-input');seed.inputMode='numeric';seed.placeholder='Seed: 1…4294967295';seed.maxLength=10;
  box.append(seed);
  box.append(button('Создать испытание по seed',()=>{
   const n=Number(seed.value);
   if(!Number.isInteger(n)||n<=0||n>0xffffffff)return api.announce?.(loc('Введите целый положительный seed до 4294967295'));
   send('v25Generate',{seed:n,mode:'custom'});
- },role()!==0));
+ },!canLead()));
  if(meta){
   row(box,'Текущий seed',meta.seed||'—');
   row(box,'Ежедневный мир',meta.dailyKey||loc('Не выбран'),true);
