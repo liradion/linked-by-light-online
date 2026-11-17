@@ -40,12 +40,25 @@
     move('.v20-quick','.game-menu-skills');
     move('.v21-quick','.game-menu-skills');
     for(const name of ['#qualityOpen','#controlsOpen','#gamepadOpen','#gameHintBtn','#betaHelpBtn','#betaReportBtn','#installGameBtn','#resetBtn'])move(name,'.game-menu-tools');
+    const refreshLocale=()=>{
+      const english=window.GameI18n?.isEnglish?.()===true;
+      const headings=drawer.querySelectorAll('.game-menu-group-title');
+      const labels=english?['Adventure','Worlds & chapters','Abilities','Settings & help']
+        :['Приключение','Миры и главы','Способности','Настройки и помощь'];
+      headings.forEach((node,i)=>node.textContent=labels[i]||node.textContent);
+      drawer.querySelector('.game-menu-head strong').textContent=english?'Game menu':'Меню игры';
+      trigger.textContent=english?'☰ Menu':'☰ Меню';
+      const close=drawer.querySelector('.game-menu-close');
+      close.setAttribute('aria-label',english?'Close menu':'Закрыть меню');
+    };
+    refreshLocale();
+    window.GameI18n?.subscribe?.(refreshLocale);
     function setOpen(open){
       drawer.classList.toggle('is-open',open);
       shade.classList.toggle('is-open',open);
       drawer.setAttribute('aria-hidden',String(!open));
       trigger.setAttribute('aria-expanded',String(open));
-      trigger.setAttribute('aria-label',open?'Закрыть меню игры':'Открыть меню игры');
+      trigger.setAttribute('aria-label',window.GameI18n?.isEnglish?.()?(open?'Close game menu':'Open game menu'):(open?'Закрыть меню игры':'Открыть меню игры'));
       if(open)drawer.querySelector('.game-menu-close').focus({preventScroll:true});
       else if(drawer.contains(document.activeElement))trigger.focus({preventScroll:true});
     }
@@ -98,9 +111,9 @@
       const extraButtons=touchControls?.querySelector('.adv-extra-controls');
       const getChapter=()=>{
         const label=document.getElementById('levelLabel')?.textContent||'';
-        if(label.startsWith('ПЕРЕПЛЕТЕНИЕ МИРОВ'))return 'v20';
-        if(label.startsWith('НАВСТРЕЧУ ДРУГ ДРУГУ'))return 'v21';
-        if(label.startsWith('ФИЗИКА СВЕТА'))return 'v23';
+        if(label.startsWith('ПЕРЕПЛЕТЕНИЕ МИРОВ')||label.startsWith('INTERTWINED WORLDS'))return 'v20';
+        if(label.startsWith('НАВСТРЕЧУ ДРУГ ДРУГУ')||label.startsWith('TOWARD EACH OTHER'))return 'v21';
+        if(label.startsWith('ФИЗИКА СВЕТА')||label.startsWith('PHYSICS OF LIGHT'))return 'v23';
         return 'base';
       };
       const makeContextButton=(label,fn)=>{
