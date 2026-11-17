@@ -177,7 +177,7 @@ function init(callbacks){
  const host=document.querySelector('.adv-nav')||document.querySelector('.topline');
  if(!host)return;
  const buttons=[['notes','notesTab'],['editor','mapTab'],['photo','photoTab']];
- for(const [id,key] of buttons){const b=el('button',tr(key),'adv-button');b.onclick=()=>open(id);host.append(b);tabButtons[id]=b;}
+ for(const [id,key] of buttons){const b=el('button',tr(key),'adv-button');b.id='exp-'+id+'-open';b.onclick=()=>open(id);host.append(b);tabButtons[id]=b;}
  dialog=el('dialog',undefined,'adv-dialog');dialog.id='exp-dialog';
  const head=el('div',undefined,'adv-dialog-head');titleLabel=el('strong',tr('title'));head.append(titleLabel);const close=el('button','✕','adv-button');close.onclick=()=>dialog.close();head.append(close);dialog.append(head);
  body=el('div',undefined,'adv-dialog-body');dialog.append(body);document.body.append(dialog);
