@@ -10,6 +10,7 @@
  const KEY='linked-light-language-v1';
  const stageLocale=(typeof module==='object'&&module.exports)?require('./stage-locale'):root.GameStageLocale;
  const uiLocale=(typeof module==='object'&&module.exports)?require('./ui-locale'):root.GameUILocale;
+ const auxLocale=(typeof module==='object'&&module.exports)?require('./aux-locale'):root.GameAuxLocale;
  const EN={
   brand:'LINKED BY LIGHT',online:'ONLINE ADVENTURE · 2 PLAYERS',
   titleA:'TWO HEROES.',titleB:'ONE PATH.',
@@ -104,6 +105,7 @@
  let lang='ru',store=null,listeners=[];
  function getLanguage(){return lang;}
  function ui(key,vars){return uiLocale?.text(key,lang,vars)||key;}
+ function aux(key,vars){return auxLocale?.text(key,lang,vars)||key;}
  function networkError(message){return uiLocale?.error(message,lang)??message;}
  function isEnglish(){return lang==='en';}
  function t(key,vars){
@@ -274,5 +276,5 @@
   applyStatic();
   return lang;
  }
- return Object.freeze({KEY,EN,getLanguage,isEnglish,t,ui,networkError,translateExact,formatGoal,localizeHint,stageTitle,stageObjective,stageHint,stageWorld,signatureTip,realityTip,realityLabel,applyStatic,setLanguage,subscribe,init});
+ return Object.freeze({KEY,EN,getLanguage,isEnglish,t,ui,aux,networkError,translateExact,formatGoal,localizeHint,stageTitle,stageObjective,stageHint,stageWorld,signatureTip,realityTip,realityLabel,applyStatic,setLanguage,subscribe,init});
 });
