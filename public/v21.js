@@ -33,6 +33,7 @@ function palette(parent){const g=node('div','v21-palette');palettes.forEach((c,i
 });parent.append(g);}
 function renderLevel(){
  const role=api.role?.()??-1,stage=state?.stage??api.stage?.()??0,core=state?.world?.v21;
+ const canLead=root.GameRoomAuthority?.isHost(api,role)??(role===0);
  const section=group(body,'Новые кооперативные испытания');
  if(core){
   para(section,(stage-111)+'/10 · '+loc(labels[core.kind]||'')+(core.completed?loc(' — решено'):''));
@@ -74,11 +75,11 @@ function renderLevel(){
   para(section,'Все положения предметов и решения сверяются сервером. На компьютере откройте меню клавишей V; на iPhone используйте панель управления.');
  }else para(section,'Новые механики доступны в отдельной главе v21. Старая кампания остаётся без изменений.');
  const select=group(body,'Глава v21 · 10 испытаний');
- if(role===0){
+ if(canLead){
   const g=node('div','v21-levels');const unlocked=state?.v21Unlocked??112;
   levels.forEach((level,i)=>g.append(btn(String(i+1)+' · '+(root.GameI18n?.stageTitle?.(112+i,level.title)||level.title),()=>api.send?.({t:'selectStage',stage:112+i}),112+i>unlocked)));
   select.append(g);
- }else para(select,role<0?'Зритель может наблюдать за игрой':'Попросите Искру выбрать новый уровень.');
+ }else para(select,role<0?'Зритель может наблюдать за игрой':'Попросите ведущего выбрать новый уровень.');
 }
 function renderStory(){
  const m=community||{},role=api.role?.()??-1;
