@@ -436,3 +436,20 @@ html.clean-play-mode .game-hint-panel{top:auto;bottom:calc(126px + env(safe-area
 @media(pointer:coarse) and (orientation:landscape) and (max-height:440px){
  .language-control select{min-height:29px;min-width:49px;font-size:10px;padding:4px 5px}
 }
+
+
+/* G2 language selection inside modal dialogs, rather than an inert header selector. */
+.dialog-language-control{display:inline-flex;flex:none;margin-inline-start:auto;align-items:center}
+.dialog-language-control select{
+ min-height:34px;min-width:57px;padding:5px 7px;
+ border:1px solid #aaa5d27b;border-radius:9px;
+ background:#182642;color:#f6f1ff;
+ font:800 11px/1 system-ui;letter-spacing:.04em;cursor:pointer
+}
+.dialog-language-control select:focus-visible{outline:3px solid #f7dc95;outline-offset:2px}
+.quality-head,.controls-head,.gamepad-head,.adv-dialog-head,.v21-top{
+ flex-wrap:wrap
+}
+@media (max-width:420px){
+ .dialog-language-control select{min-height:31px;min-width:50px;padding:4px 5px}
+}
