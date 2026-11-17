@@ -60,7 +60,17 @@
   'editor.photoIntro':'Сохраните памятный кадр текущего уровня. Фото создаётся на устройстве и не загружается на сервер.',
   'editor.savePhoto':'📸 Сохранить кадр PNG',
   'editor.photoSaved':'Кадр сохранён на устройстве.',
-  'editor.photoDenied':'Браузер не разрешил сохранить кадр. Сделайте обычный скриншот.'
+  'editor.photoDenied':'Браузер не разрешил сохранить кадр. Сделайте обычный скриншот.',
+  'gallery.nav':'✧ v21 · Наш мир','gallery.action':'✦ Действия',
+  'gallery.chapter':'Навстречу друг другу','gallery.close':'✕ Закрыть',
+  'gallery.tabLevel':'Испытания','gallery.tabStory':'История','gallery.tabHome':'Дом',
+  'gallery.tabEvents':'События','gallery.tabCommunity':'Карты','gallery.tabPhoto':'Фото',
+  'gallery.title':'Обмен авторскими уровнями',
+  'gallery.description':'Карты состоят только из проверяемой геометрии. Публичные названия и содержимое требуют модерации; доступна отправка жалобы.',
+  'gallery.publish':'Опубликовать мой уровень','gallery.refresh':'Обновить галерею',
+  'gallery.loading':'Загрузка списка опубликованных уровней.','gallery.empty':'Пока нет опубликованных карт.',
+  'gallery.platforms':'{count} платформ · {author}','gallery.play':'▶ Играть вдвоём',
+  'gallery.report':'Пожаловаться'
  });
  const EN=Object.freeze({
   'cloud.open':'☁ Cloud','cloud.title':'☁ Cloud saves',
@@ -115,7 +125,17 @@
   'editor.photoIntro':'Save a screenshot of the current level. The image stays on this device and is not uploaded.',
   'editor.savePhoto':'📸 Save PNG',
   'editor.photoSaved':'Screenshot saved on this device.',
-  'editor.photoDenied':'Your browser could not save the screenshot. Take a normal screenshot instead.'
+  'editor.photoDenied':'Your browser could not save the screenshot. Take a normal screenshot instead.',
+  'gallery.nav':'✧ v21 · Our world','gallery.action':'✦ Actions',
+  'gallery.chapter':'Toward Each Other','gallery.close':'✕ Close',
+  'gallery.tabLevel':'Challenges','gallery.tabStory':'Story','gallery.tabHome':'Home',
+  'gallery.tabEvents':'Events','gallery.tabCommunity':'Maps','gallery.tabPhoto':'Photo',
+  'gallery.title':'Community-created levels',
+  'gallery.description':'Only validated map geometry is accepted. Published titles and content require moderation; reporting is available.',
+  'gallery.publish':'Publish my level','gallery.refresh':'Refresh gallery',
+  'gallery.loading':'Loading published levels.','gallery.empty':'No published maps yet.',
+  'gallery.platforms':'{count} platforms · {author}','gallery.play':'▶ Play together',
+  'gallery.report':'Report'
  });
  function text(key,lang='ru',vars){
   const source=lang==='en'?EN:RU;
