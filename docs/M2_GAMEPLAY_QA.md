@@ -32,6 +32,12 @@ The project owner reported that two human players completed the nine-stage demo.
 - Added [gamepad button mapping](M2_GAMEPAD_CONTROLS.md) for standard controller buttons, with conflict avoidance, in-dialog capture isolation and browser tests on simulated Gamepad API. Physical Xbox/PlayStation acceptance remains open.
 - Actual disabled-user testing, multiple controller support, full keyboard-layout coverage and RU/EN localization are **still outstanding**. The overall accessibility gate below remains open.
 
+### RU/EN first-act localization (partial)
+
+- Added [language choice and first-act RU/EN](M2_I18N_FIRST_ACT.md) for onboarding, invite room, demo stage names and primary goals, role-specific help and first-act ending.
+- Choice is device-local so Spark and Echo may use different languages in the same online room.
+- **Not full localization:** chapters 9–136 and numerous optional windows and network error messages remain in Russian; the overall language gate stays open.
+
 ## M2 acceptance gates — open
 
 - [ ] A human reviewer completes all 137 stages without debug player relocation
