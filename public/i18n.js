@@ -180,7 +180,11 @@
     const count=goal.match(/(\d+)\/(\d+)/),secs=goal.match(/· (\d+) с/);
     return 'Anti-gravity: both touch the core! '+(count?count[1]+'/'+count[2]:'')+(secs?' · '+secs[1]+' s':'');
    }
-   if((n=goal.match(/Печати (\d+)\/(\d+)/)))return 'Activate both world seals: '+n[1]+'/'+n[2];
+   if((n=goal.match(/Печати (\d+)\/(\d+)/)))
+    return 'Spark sees solar bridges; Echo sees lunar bridges. Charge your seals: '+n[1]+'/'+n[2];
+   if(goal.startsWith('Искра видит солнечные мосты'))return 'Spark sees solar bridges; Echo sees lunar bridges. Activate both personal seals with your abilities.';
+   if(goal.startsWith('Искра запускает прошлое рывком'))return 'Spark starts the past with a dash; Echo has 12 seconds to activate the future with a pulse.';
+   if(goal.startsWith('Оба одновременно встаньте на цветные печати'))return 'Stand together on the colored seals, then both touch the high core in anti-gravity.';
    if((n=goal.match(/\((\d+)\/(\d+)\)$/))&&index<99){
     const kind=['flowers','forest','tide','wind','constellation','prism','city','river','clock','relay','heart'][Math.floor(index/9)];
     return (stageLocale.SIGNATURES[kind]?.tip||stageLocale.objective(index,goal))+' ('+n[1]+'/'+n[2]+')';
