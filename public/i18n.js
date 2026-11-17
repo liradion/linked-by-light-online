@@ -142,6 +142,18 @@
   if(m)return t('goalFirstPads',{on:m[1],total:m[2]});
   m=goal.match(/^Встаньте одновременно на плиты:\s*(\d+)\/(\d+)/);
   if(m)return t('goalPads',{on:m[1],total:m[2]});
+  if(index>=0&&index<9&&goal.startsWith('БОСС ')){
+   const hp=goal.match(/(\d+)\/(\d+) HP/);
+   const turn=goal.endsWith('Эхо')?'Echo':'Spark';
+   return hp?'BOSS · '+hp[1]+'/'+hp[2]+' HP · '+turn+' attacks':'BOSS · Coordinate your attacks';
+  }
+  if(index>=0&&index<9&&goal.startsWith('МИНИ-ИГРА: ')){
+   if(goal.includes('гонка'))return 'MINIGAME: Both race to the finish line';
+   if(goal.includes('пролетите'))return 'MINIGAME: Both fly through the ring';
+   if(goal.includes('ритмических'))return 'MINIGAME: Activate both rhythm nodes';
+   if(goal.includes('паруса'))return 'MINIGAME: Steer right together near the sail';
+   return 'MINIGAME: Work together';
+  }
   if(goal.startsWith('Испытание пройдено!'))return EN.goalBothPortal;
   // Prioritize live flower counters over generic first-act descriptions.
   if(index>=0&&index<9&&/\(\d+\/\d+\)$/.test(goal))
