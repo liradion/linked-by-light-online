@@ -1,7 +1,7 @@
 /* Linked by Light v22 — Public Beta: first-run guide and voluntary feedback.
    Does not transmit IP addresses, emails, room codes, player tokens or profile keys. */
 (function(root){'use strict';
-let dialog,feedbackDialog,notice,step=0,config=null,api={},status;
+let dialog,feedbackDialog,notice,step=0,config=null,api={},status,noticeKind='init',noticeRole=-1;
 const KEY='linked-light-v22-intro';
 const $=id=>document.getElementById(id);
 const add=(tag,cls,content)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(content!==undefined)e.textContent=root.GameI18n?.translateExact?.(content)??content;return e;};
@@ -107,18 +107,29 @@ function buildFeedback(){
  });
  actions.append(cancel,submit);form.append(actions);feedbackDialog.append(form);document.body.append(feedbackDialog);
 }
-function onJoined(role){
- if(notice)notice.textContent=role===0
-  ?'Вы — Искра. Отправьте приглашение второму игроку, затем нажмите «Начать вдвоём».'
-  :role===1?'Вы — Эхо. Подождите, пока ведущий запустит совместное приключение.'
-  :'Вы наблюдатель. Управление персонажами недоступно.';
+function updateNotice(){
+ if(!notice)return;
+ const en=root.GameI18n?.isEnglish?.();
+ if(noticeKind==='joined'){
+  notice.textContent=en?noticeRole===0?'You are Spark. Share the invite, then select “Start together”.'
+   :noticeRole===1?'You are Echo. Waiting for the host to start.'
+   :'You are watching. Hero controls are unavailable.':noticeRole===0
+   ?'Вы — Искра. Отправьте приглашение второму игроку, затем нажмите «Начать вдвоём».'
+   :noticeRole===1?'Вы — Эхо. Подождите, пока ведущий запустит совместное приключение.'
+   :'Вы наблюдатель. Управление персонажами недоступно.';
+ }else if(noticeKind==='disconnected')notice.textContent=en?
+  'Connection lost. Reconnecting automatically; keep this page open.':
+  'Соединение прервано. Выполняется автоматическое переподключение; не закрывайте страницу.';
+ else if(noticeKind==='recovered')notice.textContent=en?
+  'Connection restored. Continue the adventure together.':
+  'Соединение восстановлено. Продолжайте приключение вместе.';
+ else if(noticeKind==='temporary')notice.textContent=en?
+  'Beta: rooms may reset when the server restarts.':
+  'Бета: серверные комнаты могут сбрасываться после перезапуска.';
 }
-function onDisconnected(){
- if(notice)notice.textContent='Соединение прервано. Выполняется автоматическое переподключение; не закрывайте страницу.';
-}
-function onRecovered(){
- if(notice)notice.textContent='Соединение восстановлено. Продолжайте приключение вместе.';
-}
+function onJoined(role){noticeRole=role;noticeKind='joined';updateNotice();}
+function onDisconnected(){noticeKind='disconnected';updateNotice();}
+function onRecovered(){noticeKind='recovered';updateNotice();}
 function init(callbacks){
  api=callbacks||{};
  const target=document.querySelector('.topline > div:last-of-type')||document.querySelector('.topline')||document.body;
@@ -134,7 +145,7 @@ function init(callbacks){
  }
  overlay?.append(info);
  fetch('/api/beta/status',{cache:'no-store'}).then(r=>r.ok?r.json():null)
-  .then(x=>{config=x;if(x&&!x.durableRooms&&notice)notice.textContent='Бета: серверные комнаты могут сбрасываться после перезапуска.';})
+  .then(x=>{config=x;if(x&&!x.durableRooms&&notice&&noticeKind==='init'){noticeKind='temporary';updateNotice();}})
   .catch(()=>{});
  // The first-run guide is optional and never blocks joining or starting a room.
  if(!saved()&&!new URLSearchParams(location.search).has('room')){
@@ -166,6 +177,7 @@ function refreshLanguage(){
  const guide=$('betaHelpBtn'),report=$('betaReportBtn');
  if(guide)guide.textContent=english?'ⓘ How to play':'ⓘ Как играть';
  if(report)report.textContent=english?'✎ Feedback':'✎ Отзыв';
+ updateNotice();
  if(dialog?.open)render();
 }
 root.GamePublicBeta={init,onJoined,onDisconnected,onRecovered,start,feedback,refreshLanguage};
