@@ -25,6 +25,7 @@ All statuses default to TODO until **evidence is linked**. A merged implementati
 - [ ] Review PR #8 against v27.2 UI and v27 storage for conflicts.
 - [ ] Freeze baseline and create recoverable release tag; require reviewed PR and passing CI.
 - [ ] Inventory all 137 levels, mechanics, assets, fonts, libraries, audio licensing, third-party services.
+- [x] Generate **structural** metadata-only inventory of 137 stage definitions; no playability claim (see [STAGE_AUDIT.md](STAGE_AUDIT.md) and `node scripts/audit-levels.js`).
 - [ ] Record architecture risks, crash cases and rollback drill.
 
 ### M1 — 30-minute vertical slice (P0)
