@@ -21,7 +21,7 @@ test('first-run invitation and room UI are device-agnostic',()=>{
  assert.match(client,/id='shareInviteBtn'/);
  assert.match(client,/typeof navigator\.share==='function'/);
  assert.match(client,/navigator\.clipboard\.writeText\(message/);
- assert.match(html,/\/client\.js\?v=26\.5/);
+ assert.match(html,/\/client\.js\?v=26\.6/);
  assert.match(html,/\/play-ui\.css\?v=27\.8/);
 });
 test('clean-play preserves original primary inputs and recovery controls',()=>{
@@ -62,8 +62,8 @@ test('content-alpha hint resources are loaded and never hidden by clean mode',()
  const html=read('public/index.html'),client=read('public/client.js'),ui=read('public/play-ui.js'),css=read('public/play-ui.css');
  const hints=read('public/game-hints.js');
  assert.doesNotThrow(()=>new vm.Script(hints));
- assert.match(html,/\/game-hints\.js\?v=2/);
- assert.ok(html.indexOf('/game-hints.js?v=2')<html.indexOf('/client.js?v=26.4'));
+ assert.match(html,/\/game-hints\.js\?v=3/);
+ assert.ok(html.indexOf('/game-hints.js?v=3')<html.indexOf('/client.js?v=26.4'));
  assert.match(client,/GameHints\.init\(/);
  assert.match(client,/GameHints\.onSnapshot\(s\)/);
  assert.match(ui,/'#gameHintBtn'/);
