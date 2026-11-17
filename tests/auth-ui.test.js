@@ -5,7 +5,7 @@ const vm=require('node:vm');
 const fs=require('node:fs');
 const path=require('node:path');
 function dom(){const nodes=new Map(),host={append(node){nodes.set(node.id,node);}};
- const makeNode=tag=>({tag,hidden:false,style:{},id:'',value:'',open:false,querySelector:()=>null,
+ const makeNode=tag=>({tag,hidden:false,style:{},id:'',value:'',open:false,querySelector:()=>null,setAttribute(){},
   set innerHTML(v){this._html=v;for(const match of v.matchAll(/id="([A-Za-z0-9_-]+)"/g))if(!nodes.has(match[1]))nodes.set(match[1],makeNode('child'));},
   get innerHTML(){return this._html;},
   showModal(){this.open=true;},close(){this.open=false;},append(){}});
