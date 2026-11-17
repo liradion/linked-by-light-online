@@ -62,7 +62,7 @@
  "Новые механики доступны в отдельной главе v21. Старая кампания остаётся без изменений.": "The new mechanics are in the v21 chapter. The original campaign is unchanged.",
  "Глава v21 · 10 испытаний": "Chapter v21 · 10 challenges",
  "Зритель может наблюдать за игрой": "Spectators can watch the game",
- "Попросите Искру выбрать новый уровень.": "Ask Spark to choose a new level.",
+ "Попросите ведущего выбрать новый уровень.": "Ask the host to choose a new level.",
  "Моменты тишины": "Quiet moments",
  "Необязательные совместные сцены под звёздами между испытаниями. Оба участника должны согласиться.": "Optional scenes together beneath the stars between challenges. Both players must agree.",
  "«Мы смотрим на одно небо, даже когда далеко друг от друга».": "“We share the same sky, even when we are far apart.”",
