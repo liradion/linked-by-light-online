@@ -64,7 +64,7 @@ function init(){const host=document.querySelector('.adv-nav')||document.querySel
  <p class="quality-note" id="googleAccountWarning">При первом входе локальный прогресс объединится с облачным. На общем устройстве не входите в чужой аккаунт.</p>
  <div class="quality-actions auth-actions"><button type="button" id="googleSignIn">Войти через Google</button><button type="button" id="googleAccountSync" hidden>Сохранить и загрузить</button><button type="button" id="googleSignOut" hidden>Выйти</button></div>
  <p class="quality-note" id="googleAccountMessage" role="status" aria-live="polite"></p>`;
- document.body.append(dialog);
+ document.body.append(dialog);root.GameI18n?.mountDialogLanguage?.(dialog);
  notice=message=>{if($('googleAccountMessage'))$('googleAccountMessage').textContent=message;};
   root.GameI18n?.subscribe?.(renderLocale);renderLocale();
  button.onclick=()=>{if(!dialog.open)dialog.showModal();};
