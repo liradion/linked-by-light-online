@@ -7,6 +7,7 @@
 - New `public/room-authority.js` provides a reusable `isHost(callbacks, role)` contract. Legacy room behavior: only Spark, role 0, is the host. On host-aware clients, the explicit boolean callback wins, so a host playing Echo (role 1) may select chapters while Spark as guest cannot. Invalid callback results deny ownership.
 - `public/v20.js`, `public/v21.js`, `public/v23plus.js` use that host check **only** for chapter/room management controls: selecting stages, the v24 kitchen recipe/expedition/crafting/tournament host actions, and v25 seed generation. Physical character abilities (Spark/Echo mechanics) stay bound to their assigned roles.
 - Host labels in v21/v23 no longer identify the owner as Spark. RU/EN copy and existing room behavior are preserved.
+- `v21-social.js` now authorizes **music reset** by `r.hostRole` (default role 0), while note-taking still alternates by character; `public/v21.js` only enables the reset for the host. Added `tests/v21-host-melody.test.js` with both host roles and legacy checkpoint fallback.
 - `tests/chapter-host-role.test.js` covers owner callback semantics, 0/1 legacy fallback and invalid callback denial. `e2e/chapter-host-role.spec.cjs` covers a real two-device room and chapter gates across all three UIs. This is a compatibility **foundation**, not proof that PR #8 is integrated.
 
 ## Conflict and dependency inventory
@@ -24,6 +25,8 @@ GitHub reports 11 paths touched by **both** PRs, not necessarily 11 textual conf
 | `playwright.config.cjs` | Reconcile isolated test room capacity without modifying Render production limit |
 | `README_RU.md` | Update documentation after integration acceptance |
 | `tests/auth-ui.test.js` | Update script-version checks only after final frontend bundle selection |
+
+Another non-overlapping but necessary integration edge: `v21-social.js` originally required role 0 for resetting melody; the compatibility branch already adapts it to the authoritative `hostRole` with fallback. Verify server room snapshots contain the host role after porting PR #8.
 
 Non-overlapping but server-sensitive PR #8 files include `v28-core.js`, `v28-telemetry.js`, `v24-world.js`, `public/v28.js`, `public/v28.css`, `public/sw.js`, `public-beta-http.js`, network tests and role-visibility E2E. Simply copying these without adapting their server/client callers is unsafe.
 
