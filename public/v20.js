@@ -185,6 +185,7 @@ function text(group,value){group.append(el('p','v20-text',tr(value)));}
 function render(){
  if(!body||!dialog?.open)return;lastRendered=performance.now();body.replaceChildren();
  const inRoom=!!api.inRoom?.(),role=api.role?.()??-1,stage=state?.stage??api.stage?.()??0;
+ const canLead=root.GameRoomAuthority?.isHost(api,role)??(role===0);
  const v=state?.world?.v20,h=state?.v20Home||{},story=state?.v20Story||{},b=body;
  heading(b,'Связанные светом · История и дом');
  text(b,'Переплетение миров · общая кампания и совместные активности');
@@ -208,8 +209,8 @@ function render(){
   campaign.append(controls);
   text(campaign,'Клавиши: Q — нить, E — измерение, Z — время. На iPhone доступны кнопки сверху игрового поля.');
  }else text(campaign,'Кампания v20 доступна из главного меню или по кнопке ниже.');
- const start=button(role===0?'✦ Перейти в главу v20':'Историю запускает ведущий',()=>api.send?.({t:'selectStage',stage:100}),role!==0);campaign.append(start);
- if(role===0){const levels=el('div','v20-levels');const unlocked=state?.v20Unlocked||100;
+ const start=button(canLead?'✦ Перейти в главу v20':'Историю запускает ведущий',()=>api.send?.({t:'selectStage',stage:100}),!canLead);campaign.append(start);
+ if(canLead){const levels=el('div','v20-levels');const unlocked=state?.v20Unlocked||100;
  for(let id=100;id<=111;id++){levels.append(button(String(id-99),()=>api.send?.({t:'selectStage',stage:id}),id>unlocked));}
  campaign.append(levels);text(campaign,'Номера 1–12: доступные эпизоды. Только ведущий выбирает уровень.');}
  b.append(campaign);
