@@ -125,7 +125,7 @@ function act(r,role,kind,raw={}){
   return ok('Нота '+z.melody.length+'/16 добавлена');
  }
  if(kind==='music_reset'){
-  if(role!==0)return fail('Начать новую мелодию может ведущий');
+  if(role!==(r.hostRole===1?1:0))return fail('Начать новую мелодию может ведущий');
   z.melody=[];return ok('Чистый нотный лист');
  }
  if(kind==='paint_cell'){
