@@ -8,6 +8,7 @@
 })(typeof window!=='undefined'?window:globalThis,function(root){
  'use strict';
  const KEY='linked-light-language-v1';
+ const stageLocale=(typeof module==='object'&&module.exports)?require('./stage-locale'):root.GameStageLocale;
  const EN={
   brand:'LINKED BY LIGHT',online:'ONLINE ADVENTURE · 2 PLAYERS',
   titleA:'TWO HEROES.',titleB:'ONE PATH.',
@@ -159,10 +160,53 @@
   if(index>=0&&index<9&&/\(\d+\/\d+\)$/.test(goal))
    return objectiveEn[index]+' '+goal.match(/\(\d+\/\d+\)$/)[0];
   if(index>=0&&index<9&&/[\u0400-\u04FF]/.test(goal))return objectiveEn[index];
+  if(stageLocale?.has(index)){
+   let n;
+   if(goal.startsWith('БОСС ')){
+    const hp=goal.match(/(\d+)\/(\d+) HP/);
+    const turn=goal.endsWith('Эхо')?'Echo':'Spark';
+    return hp?'BOSS · '+hp[1]+'/'+hp[2]+' HP · '+turn+' attacks':'BOSS · Work together';
+   }
+   if(goal.startsWith('МИНИ-ИГРА: '))return 'MINIGAME: '+stageLocale.objective(index,goal);
+   if(goal.startsWith('Печати активированы.'))return EN.goalBothPortal;
+   if(goal.startsWith('Пока идут часы,')&&(n=goal.match(/Осталось (\d+) с/)))
+    return 'Clock running: BOTH heroes must cross the timed gate! '+n[1]+' s remaining.';
+   if(goal.startsWith('Эхо: запусти часы'))return 'Echo: start the clock with a pulse. The gate stays open briefly.';
+   if(goal.startsWith('Порядок звёзд:')&&(n=goal.match(/(\d+)\/(\d+)/)))
+    return 'Activate the numbered stars in order: '+n[1]+'/'+n[2];
+   if(goal.startsWith('Прошлое активировано.')&&(n=goal.match(/Осталось (\d+) с/)))
+    return 'Past activated! Echo: enable the future. '+n[1]+' s remaining.';
+   if(goal.startsWith('Антигравитация:')){
+    const count=goal.match(/(\d+)\/(\d+)/),secs=goal.match(/· (\d+) с/);
+    return 'Anti-gravity: both touch the core! '+(count?count[1]+'/'+count[2]:'')+(secs?' · '+secs[1]+' s':'');
+   }
+   if((n=goal.match(/Печати (\d+)\/(\d+)/)))return 'Activate both world seals: '+n[1]+'/'+n[2];
+   if((n=goal.match(/\((\d+)\/(\d+)\)$/))&&index<99){
+    const kind=['flowers','forest','tide','wind','constellation','prism','city','river','clock','relay','heart'][Math.floor(index/9)];
+    return (stageLocale.SIGNATURES[kind]?.tip||stageLocale.objective(index,goal))+' ('+n[1]+'/'+n[2]+')';
+   }
+   if(/[\u0400-\u04FF]/.test(goal))return stageLocale.objective(index,goal);
+  }
   return goal;
  }
  function localizeHint(message,index,role,depth){
-  if(!isEnglish()||index<0||index>8||typeof message!=='string')return message;
+  if(!isEnglish()||!stageLocale?.has(index)||typeof message!=='string')return message;
+  if(index>=9){
+   if(depth<=1)return stageLocale.objective(index,message);
+   if(/ворота открыты|порталу/i.test(message))return EN.goalGate;
+   if(/стен|преград|рывком/i.test(message))
+    return role===0?'Spark: dash into the cracked wall.':'Echo: help Spark reach and break the cracked wall.';
+   if(/кристалл|импульс/i.test(message))
+    return role===1?'Echo: use your pulse to charge the glowing crystal.':'Spark: hold the bridge or plate while Echo charges the crystal.';
+   if(/плит[уыае]|оранжев|голуб/i.test(message))
+    return role===0?'Spark: stand on the orange plate until Echo reaches the blue one.'
+      :'Echo: stand on the blue plate while Spark holds the orange one.';
+   if(index<99){
+    const kind=['flowers','forest','tide','wind','constellation','prism','city','river','clock','relay','heart'][Math.floor(index/9)];
+    return stageLocale.SIGNATURES[kind]?.tip||stageLocale.objective(index,message);
+   }
+   return stageLocale.objective(index,message)+' Open the chapter actions menu (⋯) when a special ability is required.';
+  }
   if(depth<=1)return objectiveEn[index];
   if(/Ворота открыты|портал/.test(message))return EN.goalGate;
   if(/оранжевую плиту|голубую плиту|плиты|цветные/.test(message))
@@ -178,8 +222,13 @@
    return 'Work together to activate the glowing mechanisms using each hero’s abilities.';
   return objectiveEn[index];
  }
- function stageTitle(index,fallback){return isEnglish()&&index>=0&&index<9?titleEn[index]:fallback;}
- function stageObjective(index,fallback){return isEnglish()&&index>=0&&index<9?objectiveEn[index]:fallback;}
+ function stageTitle(index,fallback){return isEnglish()&&stageLocale?.has(index)?stageLocale.title(index,fallback):fallback;}
+ function stageObjective(index,fallback){return isEnglish()&&stageLocale?.has(index)?stageLocale.objective(index,fallback):fallback;}
+ function stageHint(index,fallback){return isEnglish()&&stageLocale?.has(index)?stageLocale.hint(index,fallback):fallback;}
+ function stageWorld(index){return isEnglish()?stageLocale?.world(index)||'':'';}
+ function signatureTip(kind){return isEnglish()?stageLocale?.SIGNATURES[kind]?.tip||'':'';}
+ function realityTip(kind){return isEnglish()?stageLocale?.REALITIES[kind]?.tip||'':'';}
+ function realityLabel(kind){return isEnglish()?stageLocale?.REALITIES[kind]?.label||'':'';}
  function applyStatic(){
   if(typeof document==='undefined')return;
   document.documentElement.lang=lang;
@@ -228,5 +277,5 @@
   applyStatic();
   return lang;
  }
- return Object.freeze({KEY,EN,getLanguage,isEnglish,t,translateExact,formatGoal,localizeHint,stageTitle,stageObjective,applyStatic,setLanguage,subscribe,init});
+ return Object.freeze({KEY,EN,getLanguage,isEnglish,t,translateExact,formatGoal,localizeHint,stageTitle,stageObjective,stageHint,stageWorld,signatureTip,realityTip,realityLabel,applyStatic,setLanguage,subscribe,init});
 });
