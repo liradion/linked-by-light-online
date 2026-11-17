@@ -187,16 +187,16 @@ $('copyBtn').parentElement.append(spectatorCopy);
 $('soundBtn').addEventListener('click',()=>{sound=!sound;GameQuality.setSound(sound);$('soundBtn').textContent=sound?'♫ Вкл.':'♫ Выкл.';if(sound)GameQuality.audioUnlock();});
 function resetKeys(){keys.clear();input.left=false;input.right=false;
   document.querySelectorAll('.touch-button').forEach(b=>b.classList.remove('pressed'));sendInput();}
-function updateInput(){const left=role===0?'a':'arrowleft',right=role===0?'d':'arrowright';
+function updateInput(){const left=GameControls.keyFor(role,'left'),right=GameControls.keyFor(role,'right');
   input.left=keys.has(left)||keys.has('touch-left')||keys.has('gamepad-left');input.right=keys.has(right)||keys.has('touch-right')||keys.has('gamepad-right');sendInput();}
 function activateKey(kind){if(role<0)return;GameExpansion.haptic(12);GameQuality.audioUnlock();if(kind==='jump')GameQuality.effect('jump');else if(kind==='ability')GameQuality.effect('ability');if(kind==='jump'){input.jumpSeq++;predJumpAt=performance.now();}else if(kind==='ability')input.abilitySeq++;else if(kind==='bond')input.bondSeq++;else if(kind==='emote')input.emoteSeq++;sendInput();}
-const prevent=new Set(['arrowleft','arrowright','arrowup','arrowdown',' ','enter']);
+const prevent=new Set(['arrowleft','arrowright','arrowup','arrowdown','space','enter']);
 window.addEventListener('keydown',e=>{
-  if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)||document.activeElement?.isContentEditable)return;
-  const k=e.key.toLowerCase();if(prevent.has(k))e.preventDefault();
+  if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)||document.activeElement?.isContentEditable||document.querySelector('dialog[open]'))return;
+  const k=GameControls.normalize(e.key);if(prevent.has(k)||GameControls.isBound(k))e.preventDefault();
   if(e.repeat||!room||role<0||phase!=='playing')return;
   if(k==='r'&&role===0){wsSend({t:'resetStage'});return;}
-  const left=role===0?'a':'arrowleft',right=role===0?'d':'arrowright',jump=role===0?'w':'arrowup',ability=role===0?'f':'enter';
+  const left=GameControls.keyFor(role,'left'),right=GameControls.keyFor(role,'right'),jump=GameControls.keyFor(role,'jump'),ability=GameControls.keyFor(role,'ability');
   GameQuality.audioUnlock();if(k===jump)activateKey('jump');if(k===ability)activateKey('ability');
   if(k==='g')activateKey('bond');if(k==='t')activateKey('emote');
   if(k==='v'){GameV21.open('level');return;}
@@ -205,7 +205,7 @@ window.addEventListener('keydown',e=>{
   if(k==='z'&&levelIndex>=100&&levelIndex<=111)GameV20.act(role===0?'time_lock':'time_echo');
   if(k===left||k===right){keys.add(k);updateInput();}
 });
-window.addEventListener('keyup',e=>{keys.delete(e.key.toLowerCase());updateInput();});
+window.addEventListener('keyup',e=>{keys.delete(GameControls.normalize(e.key));updateInput();});
 window.addEventListener('blur',resetKeys);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)resetKeys();else if(!ready)openConnection();});
 window.addEventListener('online',()=>{if(!ready)openConnection();});
@@ -447,6 +447,14 @@ const RESULT_KEY='linked-light-stars-v11';
 function saveStageResult(result){try{const all=JSON.parse(localStorage.getItem(RESULT_KEY)||'{}');
  const k=String(result.level),prev=all[k];if(!prev||result.stars>prev.stars||result.stars===prev.stars&&result.elapsed<prev.elapsed){all[k]={stars:result.stars,elapsed:result.elapsed,deaths:result.deaths};localStorage.setItem(RESULT_KEY,JSON.stringify(all));}}
  catch(e){console.warn('Result not saved',e);}}
+function refreshKeyboardGuides(){
+ for(const [who,id] of [[0,'amberControlsGuide'],[1,'blueControlsGuide']]){
+  const el=$(id);if(!el)continue;
+  const labels=['left','right','jump','ability'].map(key=>GameControls.labelFor(who,key));
+  el.textContent=labels[0]+' / '+labels[1]+' — ходить · '+labels[2]+' — прыжок · '+labels[3]+' — способность · G — связь · T — эмоция';
+ }
+}
+GameControls.init({onChange:()=>{resetKeys();refreshKeyboardGuides();}});
 GameQuality.init({getSession:()=>({phase,role,room}),onControls:(left,right)=>{if(left)keys.add('gamepad-left');else keys.delete('gamepad-left');if(right)keys.add('gamepad-right');else keys.delete('gamepad-right');updateInput();},onAction:activateKey});
 GameQuality.ambient(0);
 GameAdventure.init({send:wsSend,currentStage:()=>levelIndex,bestStage,inRoom:()=>!!room,startStage:(n)=>{if(room){if(role===0)wsSend({t:'selectStage',stage:n,secrets:GameAdventure.data().secrets.length});else announce('Уровни выбирает создатель комнаты.');}else createRoom(false,n);}});
