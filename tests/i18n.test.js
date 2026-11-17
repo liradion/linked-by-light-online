@@ -62,7 +62,8 @@ test('G2 hint localization stays role-specific in English first chapter',()=>{
   assert.match(echo,/blue/);
   assert.ok(!/[\u0400-\u04FF]/.test(spark+echo));
   assert.match(locale.localizeHint('Коснитесь цветами',0,0,1),/orange plate/);
-  assert.equal(locale.localizeHint('Оригинальное описание',20,0,2),'Оригинальное описание');
+  assert.match(locale.localizeHint('Оригинальное описание',20,0,2),/moon lantern/);
+  assert.equal(locale.localizeHint('Оригинальное описание',137,0,2),'Оригинальное описание');
  });
 });
 test('G2 per-device language preference survives reload without server state changes',()=>{
