@@ -1,5 +1,7 @@
 # Linked by Light — game design and vertical slice specification
 
+**Status:** prototype first-act demo code exists in PR #17, not yet human playtested. See [DEMO_VERTICAL_SLICE.md](DEMO_VERTICAL_SLICE.md).
+
 **Status:** design candidate. Stage index 0–136 exists; no claim that every stage is commercially polished.
 
 ## Existing structure (verified in code)
