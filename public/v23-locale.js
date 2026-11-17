@@ -52,7 +52,7 @@
  "✦ Нанести удар": "✦ Strike",
  "Выберите уровень главы v23 ниже. Первая карта доступна сразу.": "Select a chapter challenge below. The first stage is available now.",
  "Выбрать испытание": "Choose a challenge",
- "Новый уровень может выбрать ведущий (Искра).": "Only the host (Spark) can choose a new level.",
+ "Новый уровень может выбрать ведущий.": "Only the host can choose a new level.",
  "Хранитель рассвета": "Dawn keeper",
  "Звёздный картограф": "Star cartographer",
  "Странствующий мастер": "Wandering master",
