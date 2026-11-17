@@ -1,0 +1,71 @@
+'use strict';
+const {test,expect}=require('@playwright/test');
+
+test('G2 RU/EN language choice is independent for two co-op devices and survives reload',async({browser})=>{
+ const hostContext=await browser.newContext({viewport:{width:1280,height:800},serviceWorkers:'block'});
+ const guestContext=await browser.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true,serviceWorkers:'block'});
+ try{
+  const host=await hostContext.newPage(),guest=await guestContext.newPage();
+  const hostErrors=[],guestErrors=[];
+  host.on('pageerror',error=>hostErrors.push(error.message));
+  guest.on('pageerror',error=>guestErrors.push(error.message));
+  await host.goto('/');
+  await expect(host.locator('#languageSelect')).toHaveValue('ru');
+  await host.locator('#languageSelect').selectOption('en');
+  await expect(host.locator('#demoBtn')).toHaveText('Play the demo ✦');
+  await expect(host.locator('#createBtn')).toContainText('Create room');
+  await expect(host.locator('#menuView .hero-title')).toContainText('TWO HEROES');
+  await host.locator('#demoBtn').click();
+  await expect(host.locator('#roomCode')).toHaveText(/^[A-HJ-NP-Z2-9]{6}$/,{timeout:15000});
+  await expect(host.locator('#lobbyHint')).toContainText('nine challenges');
+  const code=(await host.locator('#roomCode').textContent()).trim();
+  await guest.goto('/?room='+code);
+  await expect(guest.locator('#languageSelect')).toHaveValue('ru');
+  await expect(guest.locator('#lobbyHint')).toContainText('Демо:');
+  await expect(host.locator('#startBtn')).toBeEnabled({timeout:15000});
+  await host.locator('#startBtn').click();
+  await expect(host.locator('#overlay')).toHaveClass(/hidden/);
+  await expect(guest.locator('#overlay')).toHaveClass(/hidden/);
+  await expect(host.locator('#levelLabel')).toHaveText('DEMO · CHALLENGE 1 / 9');
+  await expect(guest.locator('#levelLabel')).toHaveText('ДЕМО · ИСПЫТАНИЕ 1 / 9');
+  await expect(host.locator('#levelName')).toHaveText('First Contact');
+  await expect(guest.locator('#levelName')).toHaveText('Первый контакт');
+  await expect(host.locator('#objective')).toContainText('Spark');
+  await guest.locator('#languageSelect').selectOption('en');
+  await expect(guest.locator('#levelLabel')).toHaveText('DEMO · CHALLENGE 1 / 9');
+  await expect(guest.locator('#levelName')).toHaveText('First Contact');
+  await guest.reload();
+  await expect(guest.locator('#languageSelect')).toHaveValue('en');
+  await expect(guest.locator('#overlay')).toHaveClass(/hidden/,{timeout:15000});
+  await expect(guest.locator('#myRole')).toContainText('Echo');
+  await expect(guest.locator('#levelLabel')).toHaveText('DEMO · CHALLENGE 1 / 9');
+  await guest.locator('.game-menu-trigger').click();
+  await guest.locator('#gameHintBtn').click();
+  await expect(guest.locator('#gameHintPanel')).toBeVisible();
+  await expect(guest.locator('.game-hint-text')).toContainText('orange plate');
+  await guest.locator('.game-hint-actions button').last().click();
+  await host.locator('#languageSelect').selectOption('ru');
+  await expect(host.locator('#levelLabel')).toHaveText('ДЕМО · ИСПЫТАНИЕ 1 / 9');
+  await expect(guest.locator('#levelLabel')).toHaveText('DEMO · CHALLENGE 1 / 9');
+  expect(hostErrors).toEqual([]);
+  expect(guestErrors).toEqual([]);
+ }finally{await hostContext.close();await guestContext.close();}
+});
+
+test('G2 first-use help updates without reload when English is selected',async({page})=>{
+ await page.goto('/');
+ await expect(page.locator('#betaQuickStart')).toBeVisible();
+ await page.locator('#languageSelect').selectOption('en');
+ await expect(page.locator('#betaQuickStart .beta-quickstart-title')).toContainText('Two players');
+ await expect(page.locator('#betaQuickStart .beta-quickstart-open')).toHaveText('How to play');
+ await page.locator('#betaQuickStart .beta-quickstart-open').click();
+ await expect(page.locator('#betaIntro')).toBeVisible();
+ await expect(page.locator('#beta-intro-content')).toContainText('Welcome to Linked by Light');
+ await page.locator('#betaIntro .beta-actions button').last().click();
+ await expect(page.locator('#beta-intro-content')).toContainText('Create a room');
+ await page.locator('#betaIntro .beta-close').click();
+ await expect(page.locator('#betaIntro')).toBeHidden();
+ await page.reload();
+ await expect(page.locator('#languageSelect')).toHaveValue('en');
+ await expect(page.locator('#demoBtn')).toHaveText('Play the demo ✦');
+});
