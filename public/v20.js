@@ -1,11 +1,177 @@
 /* Linked by Light v20: cooperative campaign, home and story UX. */
 (function(root){'use strict';
-let api={},state=null,version='',dialog=null,body=null,quick=null,launch=null,seq=0,nonce='',lastRendered=0,lastLevel=-1;
+let api={},state=null,version='',dialog=null,body=null,quick=null,launch=null,continueBtn=null,toggleBtn=null,topTitle=null,closeBtn=null,seq=0,nonce='',lastRendered=0,lastLevel=-1;
 const $=id=>document.getElementById(id);
+
+const TRANSLATIONS_EN=Object.freeze({
+ "Связанные светом · История и дом": "Linked by Light · Story & Home",
+ "Переплетение миров · общая кампания и совместные активности": "Intertwined Worlds · shared campaign and cooperative activities",
+ "Подключение": "Connection",
+ "Сервер": "Server",
+ "проверка": "checking",
+ "RTT / jitter": "RTT / jitter",
+ "FPS / буфер": "FPS / buffer",
+ "мс": "ms",
+ "Повторные подключения": "Reconnects",
+ "Новая история": "New story",
+ "Создайте комнату главы v20 и пригласите второго игрока обычной ссылкой.": "Create a story room and invite your partner using the usual link.",
+ "Начать новую историю": "Start a new story",
+ "Продолжить с открытого уровня": "Resume from an unlocked stage",
+ "Режим наблюдателя. События доступны только для просмотра.": "Spectator mode. You can watch events but not interact.",
+ "Кампания · 12 уровней": "Campaign · 12 stages",
+ "Нить света": "Light tether",
+ "Измерения": "Dimensions",
+ "Управление временем": "Time control",
+ "Все три механики": "All three mechanics",
+ " · головоломка решена": " · puzzle solved",
+ " · головоломка активна": " · puzzle in progress",
+ "Нить": "Tether",
+ "Миры": "Worlds",
+ "Время": "Time",
+ "Босс": "Boss",
+ "готово": "ready",
+ "активна": "active",
+ "неактивна": "inactive",
+ "объединены": "merged",
+ "свет": "light",
+ "исполнено": "completed",
+ " с": " s",
+ "⛓ Соединить нить": "⛓ Attach tether",
+ "⛓ Отпустить": "⛓ Release tether",
+ "◈ Переключить мир": "◈ Shift dimension",
+ "◷ Заморозить часы": "◷ Freeze time",
+ "◷ Восстановить эхо": "◷ Restore echo",
+ "Клавиши: Q — нить, E — измерение, Z — время. На iPhone доступны кнопки сверху игрового поля.": "Keys: Q — tether, E — dimension, Z — time. On iPhone, use the buttons above the playfield.",
+ "Кампания v20 доступна из главного меню или по кнопке ниже.": "You can open this campaign from the main menu or using the button below.",
+ "✦ Перейти в главу v20": "✦ Enter the Intertwined Worlds chapter",
+ "Историю запускает ведущий": "Only the host can start the story",
+ "Номера 1–12: доступные эпизоды. Только ведущий выбирает уровень.": "Numbers 1–12 indicate unlocked episodes. Only the host selects the stage.",
+ "История · ": "Story · ",
+ "Помочь друг другу": "Help each other",
+ "Открыть новый путь": "Open a new path",
+ "Память о вашем решении: поддержать друг друга.": "Your past choice: support each other.",
+ "Память о вашем решении: открыть неизвестный путь.": "Your past choice: explore the unknown path.",
+ "Ваше общее решение: ": "Your shared choice: ",
+ "Голоса: ": "Votes: ",
+ "ожидаем": "waiting",
+ "Оба игрока должны выбрать один вариант.": "Both players must choose an option.",
+ "Наш дом · живые комнаты": "Our home · living rooms",
+ "Зона": "Area",
+ "Гостиная": "Living room",
+ "Сад": "Garden",
+ "Мастерская": "Workshop",
+ "Сад света": "Garden of light",
+ "Искра направляет свет, Эхо отражает. Три последовательных раунда.": "Spark directs the light; Echo reflects it. Complete three rounds together.",
+ "Прогресс": "Progress",
+ "Завершено": "Completed",
+ "☀ Направить свет": "☀ Direct light",
+ "✧ Отразить луч": "✧ Reflect beam",
+ "Мастерская воспоминаний": "Memory workshop",
+ "Искра открывает фрагмент, Эхо помещает его на место. Четыре раунда.": "Spark reveals each fragment; Echo places it in position. Complete four rounds together.",
+ "Показать фрагмент": "Reveal fragment",
+ "Разместить фрагмент": "Place fragment",
+ "Питомец и украшения": "Pet and decorations",
+ "Настроение": "Mood",
+ "♡ Погладить питомца": "♡ Pet companion",
+ "Фонарик": "Lantern",
+ "Цветок": "Flower",
+ "Кристалл": "Crystal",
+ "Украшения": "Decorations",
+ "Сначала подключитесь к комнате": "Join a room first",
+ "Действие принято": "Action accepted",
+ "Действие отклонено": "Action rejected",
+ "Искра · нить": "Spark · tether",
+ "Эхо · нить": "Echo · tether",
+ "Свет · E": "Light · E",
+ "Тень · E": "Shadow · E",
+ "Время · Z": "Time · Z",
+ "Эхо · Z": "Echo · Z",
+ "✦ Новая история": "✦ New story",
+ "▶ Продолжить историю": "▶ Continue story",
+ "✦ История / Дом": "✦ Story / Home",
+ "Переплетение миров": "Intertwined Worlds",
+ "Закрыть ✕": "Close ✕",
+ "⛓ Нить": "⛓ Tether",
+ "◈ Мир": "◈ Dimension",
+ "◷ Время": "◷ Time"
+});
+const STORY_EN=Object.freeze([
+ [
+  "Two lights find a broken tether.",
+  "Spark: “Can you still hear me?”",
+  "Echo: “Yes. Even through the silence.”"
+ ],
+ [
+  "The first mirror shows two different roads.",
+  "Echo: “I see a bridge that you cannot.”",
+  "Spark: “Then I will trust your steps.”"
+ ],
+ [
+  "A shared memory lies preserved in a crystal.",
+  "Spark: “What if we forget the way?”",
+  "Echo: “I will remember it for both of us.”"
+ ],
+ [
+  "The Warden of Edges seals the passage.",
+  "Warden: “Two reflections can never become one.”",
+  "Heroes: “We can help each other.”"
+ ],
+ [
+  "Time no longer runs in step.",
+  "Echo: “My moment has already passed.”",
+  "Spark: “Then I will share mine.”"
+ ],
+ [
+  "Only mutual trust can move the mechanism.",
+  "Spark: “Now I will wait.”",
+  "Echo: “And I will finish the move.”"
+ ],
+ [
+  "Even frozen time leaves a trace.",
+  "Echo: “Do you hear footsteps from the past?”",
+  "Spark: “Those are ours. And we keep moving.”"
+ ],
+ [
+  "The Keeper of Seconds returns a forgotten moment.",
+  "Keeper: “No moment can ever return.”",
+  "Heroes: “But we can create a new one.”"
+ ],
+ [
+  "The first shared flame appears in the garden.",
+  "Spark: “This could be our home.”",
+  "Echo: “Then let us build it together.”"
+ ],
+ [
+  "A shadow opens the final passage.",
+  "Echo: “Should we fear the dark?”",
+  "Spark: “Not while we can see each other.”"
+ ],
+ [
+  "Two threads weave into one pattern.",
+  "Spark: “Can we let go now?”",
+  "Echo: “We will still stay close.”"
+ ],
+ [
+  "The heart of the world begins to glow again.",
+  "Heart: “What will you leave behind?”",
+  "Heroes: “A path for those who follow.”"
+ ]
+]);
+function tr(value){
+ if(root.GameI18n?.getLanguage?.()!=='en'||typeof value!=='string')return value;
+ if(Object.hasOwn(TRANSLATIONS_EN,value))return TRANSLATIONS_EN[value];
+ // Original authored dialogue is the only other source eligible for translation.
+ for(let i=0;i<storyLines.length;i++){
+  const index=storyLines[i].indexOf(value);
+  if(index>=0)return STORY_EN[i][index];
+ }
+ return value;
+}
+
 const title=['Осколки зеркала','Часы без стрелок','Дом на рассвете'];
 const kinds={tether:'Нить света',phase:'Измерения',time:'Управление временем',combo:'Все три механики'};
 function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e;}
-function button(label,callback,disabled=false){const b=el('button','v20-button',label);b.type='button';b.disabled=!!disabled;b.onclick=callback;return b;}
+function button(label,callback,disabled=false){const b=el('button','v20-button',tr(label));b.type='button';b.disabled=!!disabled;b.onclick=callback;return b;}
 function action(type,kind,extra={}){
  if(!api.inRoom?.()||api.role?.()<0)return api.announce?.('Сначала подключитесь к комнате');
  const actionId=nonce+'-'+(++seq);api.send?.({t:type,actionId,kind,...extra});
@@ -13,26 +179,26 @@ function action(type,kind,extra={}){
 function act(kind){action('coopAction',kind);}
 function home(kind){action('homeAction',kind);}
 function vote(sceneId,option){action('sceneVote','vote',{sceneId,option});}
-function line(group,label,value){const row=el('div','v20-line');row.append(el('span','',label),el('strong','',String(value)));group.append(row);}
-function heading(group,text){group.append(el('h3','v20-heading',text));}
-function text(group,value){group.append(el('p','v20-text',value));}
+function line(group,label,value){const row=el('div','v20-line');row.append(el('span','',tr(label)),el('strong','',tr(String(value))));group.append(row);}
+function heading(group,value){group.append(el('h3','v20-heading',tr(value)));}
+function text(group,value){group.append(el('p','v20-text',tr(value)));}
 function render(){
  if(!body||!dialog?.open)return;lastRendered=performance.now();body.replaceChildren();
  const inRoom=!!api.inRoom?.(),role=api.role?.()??-1,stage=state?.stage??api.stage?.()??0;
  const v=state?.world?.v20,h=state?.v20Home||{},story=state?.v20Story||{},b=body;
- heading(b,'Linked by Light · v20.0');
+ heading(b,'Связанные светом · История и дом');
  text(b,'Переплетение миров · общая кампания и совместные активности');
  const network=el('section','v20-section');heading(network,'Подключение');
- const n=GameQuality.stats();line(network,'Сервер',version||'проверка');line(network,'RTT / jitter',(n.rtt||0)+' / '+(n.jitter||0)+' мс');line(network,'FPS / буфер',(n.fps||0)+' / '+(n.buffer||0)+' мс');
+ const n=GameQuality.stats();line(network,'Сервер',version||'проверка');line(network,'RTT / jitter',(n.rtt||0)+' / '+(n.jitter||0)+' '+tr('мс'));line(network,'FPS / буфер',(n.fps||0)+' / '+(n.buffer||0)+' '+tr('мс'));
  line(network,'Повторные подключения',api.reconnects?.()??0);
  b.append(network);
  if(!inRoom){heading(b,'Новая история');text(b,'Создайте комнату главы v20 и пригласите второго игрока обычной ссылкой.');b.append(button('Начать новую историю',()=>{dialog.close();api.create?.();}));const saved=GameAdventure.data()?.v20?.unlockedStages||[];if(saved.length>1)b.append(button('Продолжить с открытого уровня',()=>{dialog.close();api.resume?.(99+Math.min(12,saved.length));}));return;}
  if(role<0){text(b,'Режим наблюдателя. События доступны только для просмотра.');return;}
  const campaign=el('section','v20-section');heading(campaign,'Кампания · 12 уровней');
- if(v){text(campaign,(v.stageId||'')+' · '+(kinds[v.kind]||'')+(v.complete?' · головоломка решена':' · головоломка активна'));
+ if(v){text(campaign,(v.stageId||'')+' · '+tr(kinds[v.kind]||'')+tr(v.complete?' · головоломка решена':' · головоломка активна'));
   line(campaign,'Нить',v.flags?.tether?'готово':v.tether?.active?'активна':'неактивна');
   line(campaign,'Миры',v.flags?.phase?'объединены':v.phase?.state||'свет');
-  line(campaign,'Время',v.flags?.time?'исполнено':(v.time?.locked||0)+' с');
+  line(campaign,'Время',v.flags?.time?'исполнено':(v.time?.locked||0)+tr(' с'));
   if(v.boss)line(campaign,'Босс',v.boss.name+' · HP '+v.boss.hp+'/'+v.boss.max);
   const controls=el('div','v20-actions');
   controls.append(button('⛓ Соединить нить',()=>act('tether_attach')),
@@ -48,17 +214,17 @@ function render(){
  campaign.append(levels);text(campaign,'Номера 1–12: доступные эпизоды. Только ведущий выбирает уровень.');}
  b.append(campaign);
  const scene=GameV20Stages&&stage>=100&&stage<=111?{
-  id:'scene-'+(stage-99),title:GameV20Stages.stages[stage-100].title,lines:storyLines[stage-100],
+  id:'scene-'+(stage-99),title:root.GameI18n?.stageTitle?.(stage,GameV20Stages.stages[stage-100].title)||GameV20Stages.stages[stage-100].title,lines:storyLines[stage-100],
   choices:[101,103,105,107,109,111].includes(stage)?['Помочь друг другу','Открыть новый путь']:null
  }:null;
- if(scene){const sec=el('section','v20-section v20-story');heading(sec,'История · '+scene.title);
+ if(scene){const sec=el('section','v20-section v20-story');heading(sec,tr('История · ')+scene.title);
   const portrait=el('div','v20-story-art');portrait.append(el('span','v20-hero-one','✦'),el('span','v20-story-horizon','✧  ⋆  ✧'),el('span','v20-hero-two','◈'));sec.append(portrait);
   for(const l of scene.lines)text(sec,l);
   const prev=story.choices?.['scene-'+(stage-100)];
   if(prev!==undefined)text(sec,prev===0?'Память о вашем решении: поддержать друг друга.':'Память о вашем решении: открыть неизвестный путь.');
   if(scene.choices){const value=story.choices?.[scene.id],votes=story.votes?.[scene.id];
-   if(value!==undefined)text(sec,'Ваше общее решение: '+scene.choices[value]);
-   else {text(sec,votes?'Голоса: '+votes.map(x=>x===null?'ожидаем':scene.choices[x]).join(' / '):'Оба игрока должны выбрать один вариант.');
+   if(value!==undefined)text(sec,tr('Ваше общее решение: ')+tr(scene.choices[value]));
+   else {text(sec,votes?tr('Голоса: ')+votes.map(x=>x===null?tr('ожидаем'):tr(scene.choices[x])).join(' / '):'Оба игрока должны выбрать один вариант.');
     for(let i=0;i<2;i++)sec.append(button(scene.choices[i],()=>vote(scene.id,i)));}
   }b.append(sec);
  }
@@ -104,7 +270,7 @@ function onJoined(){state=null;lastLevel=-1;if(dialog?.open)render();refreshQuic
 function onMessage(m){
  if(m.t==='v20Home'&&state)state.v20Home=m.home;
  if(m.t==='v20Story'&&state)state.v20Story=m.story;
- if(m.t==='actionResult')api.announce?.(m.ok?m.detail||'Действие принято':m.error||'Действие отклонено');
+ if(m.t==='actionResult')api.announce?.(m.ok?m.detail||tr('Действие принято'):m.error||tr('Действие отклонено'));
  if(dialog?.open)render();
 }
 function onSnapshot(s){
@@ -121,7 +287,7 @@ function draw(ctx,level,players,v,clock,role){
  if(!v||!level?.v20)return;
  const c=level.v20;
  ctx.save();ctx.textAlign='center';ctx.font='bold 14px system-ui';
- const marker=(x,label,color,active)=>{ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;ctx.globalAlpha=active?1:.58;ctx.beginPath();ctx.arc(x,GROUND-21,21+Math.sin(clock*3)*2,0,Math.PI*2);ctx.stroke();ctx.fillText(label,x,GROUND-53);ctx.globalAlpha=1;};
+ const marker=(x,label,color,active)=>{ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;ctx.globalAlpha=active?1:.58;ctx.beginPath();ctx.arc(x,GROUND-21,21+Math.sin(clock*3)*2,0,Math.PI*2);ctx.stroke();ctx.fillText(tr(label),x,GROUND-53);ctx.globalAlpha=1;};
  if(['tether','combo'].includes(v.kind)){marker(c.tether[0],'Искра · нить','#ffc17f',v.flags.tether);marker(c.tether[1],'Эхо · нить','#80eff7',v.flags.tether);}
  if(['phase','combo'].includes(v.kind)){marker(c.phase[0],'Свет · E','#ffc17f',v.phase.flags[0]);marker(c.phase[1],'Тень · E','#b3a1ff',v.phase.flags[1]);}
  if(['time','combo'].includes(v.kind)){marker(c.time[0],'Время · Z','#ffc17f',v.time.locked>0);marker(c.time[1],'Эхо · Z','#80eff7',v.time.complete);}
@@ -149,14 +315,14 @@ function init(callbacks){
  api=callbacks||{};
  try{const bytes=new Uint32Array(2);crypto.getRandomValues(bytes);nonce='v20'+Array.from(bytes,n=>n.toString(36)).join('');}catch(_){nonce='v20'+String(Date.now());}
  const menu=$('createBtn')?.parentElement;if(menu){
-  launch=button('✦ Новая история v20',()=>api.create?.());launch.classList.add('v20-launch');menu.append(launch);
+  launch=button('✦ Новая история',()=>api.create?.());launch.classList.add('v20-launch');menu.append(launch);
   const saved=GameAdventure.data()?.v20?.unlockedStages||[];
   let max=100;for(let id=100;id<=111;id++){if(!saved.includes('v20-'+String(id-99).padStart(2,'0')))break;max=id;}
-  if(max>100)menu.append(button('▶ Продолжить v20 · '+(max-99)+'/12',()=>api.resume?.(max)));
+  if(max>100){continueBtn=button(tr('▶ Продолжить историю')+' · '+(max-99)+'/12',()=>api.resume?.(max));continueBtn.dataset.stageProgress=(max-99)+'/12';menu.append(continueBtn);}
  }
  const frame=document.querySelector('.frame')||document.body;
- const toggle=button('✦ v20 · История / Дом',()=>{if(!dialog.open){dialog.showModal();render();}else dialog.close();});toggle.classList.add('v20-toggle');frame.append(toggle);
- dialog=el('dialog','v20-dialog');const top=el('div','v20-top');top.append(el('strong','','Переплетение миров'),button('Закрыть ✕',()=>dialog.close()));dialog.append(top);
+ toggleBtn=button('✦ История / Дом',()=>{if(!dialog.open){dialog.showModal();render();}else dialog.close();});toggleBtn.classList.add('v20-toggle');frame.append(toggleBtn);
+ dialog=el('dialog','v20-dialog');const top=el('div','v20-top');topTitle=el('strong','','Переплетение миров');closeBtn=button('Закрыть ✕',()=>dialog.close());top.append(topTitle,closeBtn);dialog.append(top);
  body=el('div','v20-body');dialog.append(body);document.body.append(dialog);
  quick=el('div','v20-quick');
  for(const [label,kind] of [['⛓ Нить','tether_attach'],['◈ Мир','phase_shift'],['◷ Время','clock']]){
@@ -164,7 +330,18 @@ function init(callbacks){
  }
  frame.append(quick);
  fetch('/version',{cache:'no-store'}).then(r=>r.json()).then(j=>{version=j.version+' / '+(j.commit||'local');if(dialog.open)render();}).catch(()=>{version='нет данных';});
- refreshQuick();
+ root.GameI18n?.mountDialogLanguage?.(dialog);
+ root.GameI18n?.subscribe?.(refreshLanguage);
+ refreshLanguage();refreshQuick();
 }
-root.GameV20={init,onSnapshot,onMessage,onJoined,refreshQuick,draw,act};
+function refreshLanguage(){
+ if(launch)launch.textContent=tr('✦ Новая история');
+ if(continueBtn)continueBtn.textContent=tr('▶ Продолжить историю')+' · '+continueBtn.dataset.stageProgress;
+ if(toggleBtn)toggleBtn.textContent=tr('✦ История / Дом');
+ if(topTitle)topTitle.textContent=tr('Переплетение миров');
+ if(closeBtn)closeBtn.textContent=tr('Закрыть ✕');
+ if(quick)for(const [button,label] of [...quick.querySelectorAll('button')].map((b,i)=>[b,['⛓ Нить','◈ Мир','◷ Время'][i]]))button.textContent=tr(label);
+ if(dialog?.open)render();
+}
+root.GameV20={init,onSnapshot,onMessage,onJoined,refreshQuick,draw,act,translate:tr};
 })(typeof window!=='undefined'?window:globalThis);
