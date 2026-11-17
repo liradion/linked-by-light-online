@@ -58,3 +58,46 @@ test('live objectives retain progress counters and timed mechanics in EN',async(
  expect(goals.boss).toContain('2/4 HP');
  expect(goals.late).toContain('Echo adjusts the mirrors');
 });
+
+
+test('two browsers can start stage 42 from a saved checkpoint with different languages',async({browser})=>{
+ const hostContext=await browser.newContext({viewport:{width:1280,height:800},serviceWorkers:'block'});
+ const guestContext=await browser.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true,serviceWorkers:'block'});
+ try{
+  const host=await hostContext.newPage(),guest=await guestContext.newPage();
+  await host.addInitScript(()=>{
+   localStorage.setItem('linked-light-checkpoint-v99','42');
+   localStorage.setItem('linked-light-language-v1','en');
+   localStorage.setItem('linked-light-v22-intro','done');
+  });
+  await guest.addInitScript(()=>{
+   localStorage.setItem('linked-light-language-v1','ru');
+   localStorage.setItem('linked-light-v22-intro','done');
+  });
+  await host.goto('/');
+  await expect(host.locator('#createBtn')).toContainText('Continue from level 43');
+  await host.locator('#createBtn').click();
+  await expect(host.locator('#roomCode')).toHaveText(/^[A-HJ-NP-Z2-9]{6}$/,{timeout:15000});
+  const room=(await host.locator('#roomCode').textContent()).trim();
+  await guest.goto('/?room='+room);
+  await expect(host.locator('#startBtn')).toBeEnabled({timeout:15000});
+  await host.locator('#startBtn').click();
+  await expect(host.locator('#overlay')).toHaveClass(/hidden/);
+  await expect(guest.locator('#overlay')).toHaveClass(/hidden/);
+  await expect(host.locator('#levelName')).toHaveText('Constellation Garden · Double Glow');
+  await expect(guest.locator('#levelName')).toHaveText('Сад созвездий · Двойное сияние');
+  await expect(host.locator('#levelLabel')).toContainText('LEVEL 43 / 99');
+  await expect(guest.locator('#levelLabel')).toContainText('УРОВЕНЬ 43 / 99');
+  await expect(host.locator('#worldTag')).toContainText('Constellation Garden');
+  await expect(host.locator('#worldTag')).toContainText('Anti-gravity');
+  await expect(host.locator('#objective')).not.toContainText('Эхо');
+  await host.locator('.game-menu-trigger').click();
+  await host.locator('#gameHintBtn').click();
+  await expect(host.locator('#gameHintPanel')).toBeVisible();
+  await expect(host.locator('.game-hint-text')).toContainText('Echo');
+  await host.locator('.game-hint-actions button').last().click();
+  await host.locator('#languageSelect').selectOption('ru');
+  await expect(host.locator('#levelName')).toHaveText('Сад созвездий · Двойное сияние');
+  await expect(guest.locator('#levelName')).toHaveText('Сад созвездий · Двойное сияние');
+ }finally{await hostContext.close();await guestContext.close();}
+});
