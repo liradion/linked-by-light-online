@@ -27,6 +27,8 @@ test('two real browsers form one v26-compatible v23 cooperative room',async({bro
   await host.locator('#startBtn').click();
   await expect(host.locator('#game')).toBeVisible();
   await expect(guest.locator('#game')).toBeVisible();
+  // v27 compact UI preserves chapter actions behind the menu.
+  await host.locator('.game-menu-trigger').click();
   await expect(host.locator('.v2346-toggle')).toBeVisible({timeout:12000});
   await host.locator('.v2346-toggle').click();
   await expect(host.locator('.v2346-dialog')).toBeVisible();
@@ -34,6 +36,7 @@ test('two real browsers form one v26-compatible v23 cooperative room',async({bro
   await host.locator('.v2346-header button').click();
   // Reload guest to exercise reconnect; the browser retains seat ownership.
   await guest.reload();
+  await guest.locator('.game-menu-trigger').click();
   await expect(guest.locator('.v2346-toggle')).toBeVisible({timeout:15000});
   await expect(host.locator('#game')).toBeVisible();
  }finally{
