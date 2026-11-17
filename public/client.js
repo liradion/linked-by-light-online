@@ -297,7 +297,7 @@ function updateHUD(){
   }
   if(GameI18n.isEnglish()){
     const pad2=n=>String(n).padStart(2,'0');
-    $('levelName').textContent=GameI18n.stageTitle(levelIndex,level.title);
+    $('levelName').textContent=latest?.customLevel?level.title:GameI18n.stageTitle(levelIndex,level.title);
     $('levelLabel').textContent=demoMode?'DEMO · CHALLENGE '+GameDemo.progress(levelIndex)+' / '+GameDemo.stages.length
       :levelIndex>=122?'PHYSICS OF LIGHT · '+(levelIndex-121)+'/15'
       :levelIndex>=112?'TOWARD EACH OTHER · '+(levelIndex-111)+'/10'
@@ -308,11 +308,11 @@ function updateHUD(){
       :levelIndex>=122?'CHAPTER V23':levelIndex>=112?'CHAPTER V21'
       :levelIndex>=100?'CHAPTER '+(Math.floor((levelIndex-100)/4)+1)+'/3'
       :'ACT '+pad2(Math.floor(levelIndex/9)+1);
-    if(worldTag)worldTag.textContent=demoMode?'✦ Chapter One'
+    if(worldTag)worldTag.textContent=latest?.customLevel?'🛠 Custom Level':demoMode?'✦ Chapter One'
       :GameI18n.stageWorld(levelIndex)+(level.reality?' · '+GameI18n.realityLabel(level.reality.kind):'');
     if(P[0]?.cool<=0)$('amberStatus').textContent=GameI18n.t('readyDash');
     if(P[1]?.cool<=0)$('blueStatus').textContent=GameI18n.t('readyPulse');
-    goal=GameI18n.formatGoal(goal,levelIndex,GameControls.labelFor(0,'ability'),GameControls.labelFor(1,'ability'));
+    if(!latest?.customLevel)goal=GameI18n.formatGoal(goal,levelIndex,GameControls.labelFor(0,'ability'),GameControls.labelFor(1,'ability'));
   }
   $('objective').textContent=goal;
 }
