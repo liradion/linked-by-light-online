@@ -244,3 +244,26 @@ html.clean-play-mode #touchControls.clean-show-extra .adv-extra-controls .touch-
 html.clean-play-mode .clean-play-toggle{z-index:12!important}
 html.clean-play-mode .clean-context-toggle,
 html.clean-play-mode .clean-context-actions:not([hidden]){z-index:3}
+
+
+/* G1: non-blocking first-use help, never a modal by default. */
+.beta-quickstart{
+  margin:10px auto 12px;max-width:540px;
+  display:flex;align-items:center;justify-content:center;flex-wrap:wrap;
+  gap:7px 10px;padding:10px 12px;
+  border:1px solid #998eb650;border-radius:14px;
+  background:#19243ac9;color:#f2eaff;font:12px/1.35 system-ui;
+}
+.beta-quickstart-title{font-weight:760;color:#f6dca8}
+.beta-quickstart-copy{color:#cbd5eb}
+.beta-quickstart .beta-btn{
+  min-height:33px;padding:5px 9px;border:1px solid #a1acdc78;
+  border-radius:10px;background:#273251;color:#f9f4ff;
+  cursor:pointer;font-size:12px;white-space:nowrap;
+}
+.beta-quickstart .beta-quickstart-dismiss{background:transparent;border-color:#ffffff22;color:#c6cde5}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:450px){
+  .beta-quickstart{margin:6px auto 8px;padding:6px 10px;gap:5px 8px}
+  .beta-quickstart-title,.beta-quickstart-copy{font-size:10px}
+  .beta-quickstart .beta-btn{min-height:31px}
+}
