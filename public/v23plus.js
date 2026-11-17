@@ -2,19 +2,22 @@
  * All shared gameplay state is server-authoritative. */
 (function(root){'use strict';
 const $=id=>document.getElementById(id);
+const loc=value=>root.GameV23Locale?.text(value,root.GameI18n?.getLanguage?.())??value;
 const el=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;};
-const button=(txt,fn,disabled=false)=>{const b=el('button','v2346-button',txt);b.type='button';b.disabled=disabled;b.addEventListener('click',fn);return b;};
-const row=(parent,label,value)=>{const x=el('div','v2346-row');x.append(el('span','',label),el('strong','',String(value)));parent.append(x);};
-const section=(parent,title)=>{const x=el('section','v2346-section');x.append(el('h3','',title));parent.append(x);return x;};
-const p=(parent,txt)=>{parent.append(el('p','v2346-paragraph',txt));};
+const button=(txt,fn,disabled=false)=>{const b=el('button','v2346-button',loc(txt));b.type='button';b.disabled=disabled;b.addEventListener('click',fn);return b;};
+const row=(parent,label,value,raw=false)=>{const x=el('div','v2346-row');x.append(el('span','',loc(label)),el('strong','',raw?String(value):loc(String(value))));parent.append(x);};
+const section=(parent,title)=>{const x=el('section','v2346-section');x.append(el('h3','',loc(title)));parent.append(x);return x;};
+const p=(parent,txt)=>{parent.append(el('p','v2346-paragraph',loc(txt)));};
+const pRaw=(parent,txt)=>{parent.append(el('p','v2346-paragraph',txt));};
 const actions=(parent,items)=>{const x=el('div','v2346-actions');for(const item of items)x.append(item);parent.append(x);};
 const storage='linked-light-v26-accessibility';
 const defaults={largeControls:false,highContrast:false,reducedMotion:false,colorNames:true,ghostVisible:true};
 function loadSettings(){try{const x=JSON.parse(localStorage.getItem(storage)||'{}');return {...defaults,...Object.fromEntries(Object.entries(x).filter(([k,v])=>Object.hasOwn(defaults,k)&&typeof v==='boolean'))};}catch(_){return {...defaults};}}
 let settings=loadSettings(),api={},state=null,social=null,meta=null,dialog,content,toggle,tab='physics',nonce='',serial=0,stage=0,room='',lastRender=0,ghost=[],replay={id:'',stage:-1,frames:[],received:0,total:0},playback=false,playbackAt=0;
+const giftDraft={theme:'stars',message:''};
 const v23=()=>stage>=122&&stage<=136;
 const role=()=>api.role?.()??-1;
-const send=(t,params={})=>{if(!api.inRoom?.()||role()<0)return api.announce?.('Сначала создайте комнату вдвоём');api.send?.({t,...params,actionId:nonce+'-'+(++serial)});};
+const send=(t,params={})=>{if(!api.inRoom?.()||role()<0)return api.announce?.(loc('Сначала создайте комнату вдвоём'));api.send?.({t,...params,actionId:nonce+'-'+(++serial)});};
 const levelAction=(kind,params={})=>send('v23Action',{kind,...params});
 const lifeAction=(kind,params={})=>send('v24Action',{kind,...params});
 const lvls=GameV23Stages.stages;
@@ -32,7 +35,14 @@ function applySettings(){
 }
 function sync(){
  if(!dialog?.open)return;
- lastRender=performance.now();content.replaceChildren();
+ lastRender=performance.now();
+ const message=content.querySelector('[data-gift-message]');
+ const theme=content.querySelector('[data-gift-theme]');
+ if(message)giftDraft.message=message.value;
+ if(theme)giftDraft.theme=theme.value;
+ const active=document.activeElement?.dataset?.giftMessage!==undefined?'message':document.activeElement?.dataset?.giftTheme!==undefined?'theme':null;
+ const selection=active==='message'&&message?[message.selectionStart,message.selectionEnd]:null;
+ content.replaceChildren();
  if(!api.inRoom?.()&&tab!=='access'){
   p(content,'Создайте игровую комнату и пригласите второго участника для совместных действий. Сюжетные возможности требуют двух игроков.');
  }
@@ -40,17 +50,19 @@ function sync(){
  else if(tab==='world')living();
  else if(tab==='endless')endless();
  else if(tab==='access')access();
+ if(active==='message'){const input=content.querySelector('[data-gift-message]');if(input){input.focus({preventScroll:true});if(selection)input.setSelectionRange(...selection);}}
+ if(active==='theme')content.querySelector('[data-gift-theme]')?.focus({preventScroll:true});
 }
 function physics(){
  const container=section(content,'v23 · Физика света и пять хранителей');
  p(container,'15 новых уровней. Находясь у обозначенного механизма, нажимайте соответствующую кнопку. Сервер проверяет расстояние и роли.');
  if(v23()&&state?.world?.v23){
   const z=state.world.v23,level=lvls[stage-122];
-  p(container,level.objective);
-  row(container,'Испытание',String(stage-121)+'/15 · '+level.title);
+  p(container,root.GameI18n?.stageObjective?.(stage,level.objective)||level.objective);
+  row(container,'Испытание',String(stage-121)+'/15 · '+(root.GameI18n?.stageTitle?.(stage,level.title)||level.title));
   row(container,'Статус',z.done?'Завершено':'Ожидает совместного решения');
   if(z.boss)row(container,'Здоровье хранителя',z.boss.hp+'/'+z.boss.max);
-  if(z.kind==='prism')row(container,'Зажжено призм',z.step+'/3 · зеркало '+(z.mirror+1));
+  if(z.kind==='prism')row(container,'Зажжено призм',z.step+loc('/3 · зеркало ')+(z.mirror+1));
   if(z.kind==='world-switch')row(container,'Печати',z.switches.filter(Boolean).length+'/2');
   if(z.kind==='water')row(container,'Речные жемчужины',z.water.pearls+'/3');
   if(z.kind==='rhythm')row(container,'Ритм',z.rhythm.progress+'/4');
@@ -110,7 +122,7 @@ function physics(){
  if(role()===0){
   const unlocked=state?.v23Unlocked??122;
   const g=el('div','v2346-level-grid');
-  lvls.forEach((l,i)=>g.append(button((i+1)+'. '+l.title,()=>api.send?.({t:'selectStage',stage:i+122}),i+122>unlocked)));
+  lvls.forEach((l,i)=>g.append(button((i+1)+'. '+(root.GameI18n?.stageTitle?.(i+122,l.title)||l.title),()=>api.send?.({t:'selectStage',stage:i+122}),i+122>unlocked)));
   grid.append(g);
  }else p(grid,'Новый уровень может выбрать ведущий (Искра).');
 }
@@ -124,7 +136,7 @@ function living(){
  for(const [id,title] of quests){
   const here=(z.npcs||[]).includes(id),progress=z.quests?.[id]||0;
   const line=el('div','v2346-quest');
-  line.append(el('strong','',title),el('span','',here?'История '+progress+'/3':'Ещё не знаком'));
+  line.append(el('strong','',loc(title)),el('span','',here?loc('История ')+progress+'/3':loc('Ещё не знаком')));
   line.append(button(here?'Продолжить историю':'Познакомиться',()=>lifeAction(here?'npc_quest':'npc_meet',{npc:id}),here&&progress>=3));
   npc.append(line);
  }
@@ -134,7 +146,7 @@ function living(){
  for(let i=0;i<4;i++)kitchen.append(button(recipes[i],()=>lifeAction('recipe_select',{value:i}),role()!==0));
  p(kitchen,'Выбирайте ингредиенты в порядке 1 → 2 → 3 → 4, повторите дважды. Роли чередуются.');
  const ingredients=el('div','v2346-actions');
- for(let i=0;i<4;i++)ingredients.append(button('Ингредиент '+(i+1),()=>lifeAction('kitchen',{ingredient:i})));
+ for(let i=0;i<4;i++)ingredients.append(button(loc('Ингредиент ')+(i+1),()=>lifeAction('kitchen',{ingredient:i})));
  kitchen.append(ingredients);
  const ex=section(content,'Экспедиция на пять комнат');
  row(ex,'Пройдено комнат',String(z.expedition?.room||0)+'/5');
@@ -142,8 +154,8 @@ function living(){
  ex.append(button('Отправиться в экспедицию',()=>lifeAction('expedition_start'),role()!==0||!!z.expedition?.active));
  if(z.expedition?.active){
   const required=((z.expedition.seed||0)+(z.expedition.room||0)*7)%3;
-  p(ex,'Подсказка для следующей двери: '+(required+1));
-  for(let i=0;i<3;i++)ex.append(button('Дверь '+(i+1),()=>lifeAction('expedition_step',{value:i})));
+  p(ex,loc('Подсказка для следующей двери: ')+(required+1));
+  for(let i=0;i<3;i++)ex.append(button(loc('Дверь ')+(i+1),()=>lifeAction('expedition_step',{value:i})));
  }
  const obs=section(content,'Небесная обсерватория');
  row(obs,'Звёзды',String(z.observatory?.progress||0)+'/8');
@@ -158,7 +170,7 @@ function living(){
  row(games,'Счёт',(z.minigame?.score||[0,0]).join(' : '));
  row(games,'Раунд',(z.minigame?.round||0)+'/6');
  actions(games,[['race','Гонка'],['search','Поиск'],['puzzle','Головоломка']].map(([v,t])=>button(t,()=>lifeAction('minigame_start',{value:v}),role()!==0)));
- actions(games,[0,1,2].map(i=>button('Действие '+(i+1),()=>lifeAction('minigame_move',{value:i}),!z.minigame?.active)));
+ actions(games,[0,1,2].map(i=>button(loc('Действие ')+(i+1),()=>lifeAction('minigame_move',{value:i}),!z.minigame?.active)));
  const narrative=section(content,'Сюжетные развилки и диалоги');
  row(narrative,'Совместный выбор',z.narrative?.path?'Путь смелости':'Путь заботы');
  actions(narrative,[button('Путь заботы',()=>lifeAction('branch_vote',{value:0})),button('Путь смелости',()=>lifeAction('branch_vote',{value:1}))]);
@@ -168,7 +180,7 @@ function living(){
  const ending=section(content,'Эпилоги с последствиями');
  row(ending,'Выбранный финал',z.narrative?.epilogue||'Не открыт');
  actions(ending,[['Рассвет',0],['Обещание',1],['Сияние',2]].map(([title,value])=>button(title,()=>lifeAction('ending_vote',{value}),!!z.narrative?.epilogue)));
- if(z.events?.length){const journal=section(content,'Последние события');z.events.slice(-8).reverse().forEach(item=>p(journal,item.text));}
+ if(z.events?.length){const journal=section(content,'Последние события');z.events.slice(-8).reverse().forEach(item=>pRaw(journal,item.text));}
 }
 function endless(){
  const box=section(content,'v25 · Endless Together');
@@ -178,22 +190,22 @@ function endless(){
  box.append(seed);
  box.append(button('Создать испытание по seed',()=>{
   const n=Number(seed.value);
-  if(!Number.isInteger(n)||n<=0||n>0xffffffff)return api.announce?.('Введите целый положительный seed до 4294967295');
+  if(!Number.isInteger(n)||n<=0||n>0xffffffff)return api.announce?.(loc('Введите целый положительный seed до 4294967295'));
   send('v25Generate',{seed:n,mode:'custom'});
  },role()!==0));
  if(meta){
   row(box,'Текущий seed',meta.seed||'—');
-  row(box,'Ежедневный мир',meta.dailyKey||'Не выбран');
+  row(box,'Ежедневный мир',meta.dailyKey||loc('Не выбран'),true);
   row(box,'Лучшее время сегодня',meta.bests?.[meta.dailyKey]||'—');
  }
  const ghostBox=section(content,'Призрачные повторы и история');
  p(ghostBox,'Сервер сохраняет короткую запись координат без звука и персональных сообщений. После завершения можно выгрузить JSON-повтор или видеть призраков в игре.');
- row(ghostBox,'Последний повтор',(meta?.replayStages||[]).map(x=>'Уровень '+(x.stage+1)).join(', ')||'Пусто');
+ row(ghostBox,'Последний повтор',(meta?.replayStages||[]).map(x=>loc('Уровень ')+(x.stage+1)).join(', ')||loc('Пусто'));
  row(ghostBox,'Сохранённые кадры',meta?.ghostFrames||0);
  actions(ghostBox,[
   button('Получить последний повтор',()=>send('v25ReplayGet',{stage:meta?.replayStages?.at(-1)?.stage}),!meta?.replayStages?.length),
   button('Получить Ghost Replay',()=>send('v25ReplayGet',{which:'ghost'}),!(meta?.ghostFrames>0)),
-  button('Просмотреть запись',()=>{if(replay.frames.length){playback=true;playbackAt=performance.now();api.announce?.('Призраки повторяют прохождение в игровом окне');}},!replay.frames.length),
+  button('Просмотреть запись',()=>{if(replay.frames.length){playback=true;playbackAt=performance.now();api.announce?.(loc('Призраки повторяют прохождение в игровом окне'));}},!replay.frames.length),
   button('Сохранить запись JSON',()=>toFile('linked-by-light-replay.json',{version:25,stage:replay.stage,frames:replay.frames}),!replay.frames.length)
  ]);
  row(ghostBox,'Загрузка записи',replay.total?replay.received+'/'+replay.total:'—');
@@ -215,7 +227,7 @@ function access(){
  for(const [key,title] of options){
   const line=el('label','v2346-choice');
   const check=el('input');check.type='checkbox';check.checked=settings[key];check.addEventListener('change',()=>{settings[key]=check.checked;saveSettings();});
-  line.append(check,document.createTextNode(title));box.append(line);
+  line.append(check,document.createTextNode(loc(title)));box.append(line);
  }
  const assist=section(content,'Совместный режим без спешки');
  p(assist,'Чтобы замедлить серверное время задач, оба участника должны подтвердить режим. Результаты с помощью не участвуют в соревновательной таблице.');
@@ -226,17 +238,18 @@ function access(){
  const invite=section(content,'Подарочное приглашение');
  p(invite,'Подготовьте персональное приглашение в комнату, выбрав открытку и короткую подпись. Адрес комнаты добавляется только при отправке вами.');
  const theme=el('select','v2346-input');
- for(const [v,t] of [['stars','Звёзды'],['forest','Волшебный лес'],['aurora','Сияние']]){const opt=el('option','',t);opt.value=v;theme.append(opt);}
- const input=el('input','v2346-input');input.maxLength=60;input.placeholder='Короткое приглашение (без личных данных)';
+ for(const [v,t] of [['stars','Звёзды'],['forest','Волшебный лес'],['aurora','Сияние']]){const opt=el('option','',loc(t));opt.value=v;theme.append(opt);}
+ theme.dataset.giftTheme='';theme.value=giftDraft.theme;theme.addEventListener('change',()=>giftDraft.theme=theme.value);
+ const input=el('input','v2346-input');input.dataset.giftMessage='';input.maxLength=60;input.placeholder=loc('Короткое приглашение (без личных данных)');input.value=giftDraft.message;input.addEventListener('input',()=>giftDraft.message=input.value);
  invite.append(theme,input);
  invite.append(button('Скопировать красивое приглашение',async()=>{
-  const code=api.room?.();if(!code)return api.announce?.('Сначала создайте комнату');
+  const code=api.room?.();if(!code)return api.announce?.(loc('Сначала создайте комнату'));
   const message=input.value.normalize('NFC').replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,60);
   const url=new URL(location.pathname,location.origin);url.searchParams.set('room',code);url.searchParams.set('gift',theme.value);
   if(message)url.searchParams.set('wish',message);
-  const greeting=['✦ Приглашаю в приключение для двоих!',message, url.href].filter(Boolean).join('\n');
-  try{await navigator.clipboard.writeText(greeting);api.announce?.('Приглашение скопировано');}
-  catch(_){api.announce?.('Не удалось скопировать: '+url.href);}
+  const greeting=[loc('✦ Приглашаю в приключение для двоих!'),message, url.href].filter(Boolean).join('\n');
+  try{await navigator.clipboard.writeText(greeting);api.announce?.(loc('Приглашение скопировано'));}
+  catch(_){api.announce?.(loc('Не удалось скопировать: ')+url.href);}
  }));
 }
 function draw(ctx,level,players,z,time,who,stats){
@@ -249,9 +262,9 @@ function draw(ctx,level,players,z,time,who,stats){
   ctx.beginPath();ctx.arc(x,y,25,0,Math.PI*2);ctx.stroke();
   ctx.fillStyle='#fff';ctx.fillText(title,x,y-37);ctx.shadowBlur=0;
  }
- mark(c.anchor,510,level.title,z.done);mark(c.goal,507,z.boss?'Хранитель':'Вторая печать',z.done);
+ mark(c.anchor,510,root.GameI18n?.stageTitle?.(stage,level.title)||level.title,z.done);mark(c.goal,507,loc(z.boss?'Хранитель':'Вторая печать'),z.done);
  if(z.branch===1){ctx.fillStyle='#b6c1f9b3';ctx.fillRect(c.anchor+300,390,175,17);}
- if(z.kind==='boss-perception')ctx.fillText(who===0?'✦ Видимое слабое место':'◈ Заметный защитный контур',c.goal,310);
+ if(z.kind==='boss-perception')ctx.fillText(loc(who===0?'✦ Видимое слабое место':'◈ Заметный защитный контур'),c.goal,310);
  const plat=(x,y,w,h,col)=>{ctx.fillStyle=col;ctx.fillRect(x,y,w,h);};
  if(z.kind==='gravity-duet'){
   ctx.strokeStyle='#a8eaffaa';ctx.lineWidth=3;
@@ -278,7 +291,7 @@ function draw(ctx,level,players,z,time,who,stats){
   ctx.strokeStyle='#71d6efbb';ctx.lineWidth=5;
   ctx.beginPath();
   for(let i=0;i<=22;i++){const x=c.anchor+i*39,y=524+Math.sin(time*3+i*.65)*5;if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
-  ctx.stroke();ctx.fillStyle='#c8f1ff';ctx.fillText(z.water.direction===1?'➜ ТЕЧЕНИЕ':z.water.direction===-1?'⬅ ТЕЧЕНИЕ':'◈ ВОДА',c.anchor+350,515);
+  ctx.stroke();ctx.fillStyle='#c8f1ff';ctx.fillText(loc(z.water.direction===1?'➜ ТЕЧЕНИЕ':z.water.direction===-1?'⬅ ТЕЧЕНИЕ':'◈ ВОДА'),c.anchor+350,515);
  }
  if(z.kind==='magnets'){
   for(let i=0;i<2;i++){
@@ -293,7 +306,7 @@ function draw(ctx,level,players,z,time,who,stats){
  if(z.kind==='resize'){
   if(z.scale[1]!==.5)plat(c.anchor+250,406,24,138,'#bba1f3a0');
   if(z.scale[0]===2)plat(c.anchor+460,468,175,18,'#f9d39a7a');
-  players.forEach((p,i)=>{if(z.scale[i]!==1){ctx.fillStyle='#fff';ctx.fillText(z.scale[i]===2?'ВЕЛИКАН':'МИНИ',p.x+15,p.y-12);}});
+  players.forEach((p,i)=>{if(z.scale[i]!==1){ctx.fillStyle='#fff';ctx.fillText(loc(z.scale[i]===2?'ВЕЛИКАН':'МИНИ'),p.x+15,p.y-12);}});
  }
  if(z.kind==='pendulum'){
   if(who===0||who===-1)plat(c.anchor+205,475,190,16,'#a3ccf8a0');
@@ -331,7 +344,7 @@ function draw(ctx,level,players,z,time,who,stats){
    ctx.strokeStyle='#fff';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(x,405,58,32,0,0,Math.PI*2);ctx.stroke();
    ctx.fillStyle='#181d45';ctx.beginPath();ctx.arc(x,405,14+Math.sin(time*3)*4,0,Math.PI*2);ctx.fill();
   }
-  ctx.fillStyle='#221c43';ctx.fillText('Босс · '+z.boss.hp+'/'+z.boss.max,x,415);
+  ctx.fillStyle='#221c43';ctx.fillText(loc('Босс · ')+z.boss.hp+'/'+z.boss.max,x,415);
  }
  }
  // Local-only ghost overlay; servers send coordinates, not video.
