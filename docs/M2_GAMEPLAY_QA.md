@@ -24,6 +24,13 @@ The project owner reported that two human players completed the nine-stage demo.
 - `tests/game-hints.test.js` validates non-empty hints for every level and both roles, plus read-only behavior.
 - `e2e/campaign-hints.spec.cjs` validates desktop and phone hint use with real local WebSocket room, and clean-play restore.
 
+### Keyboard accessibility (engineering subtask)
+
+- Added [local role-specific remapping](M2_KEYBOARD_CONTROLS.md) for movement, jump and ability, with collision protection, persisted device-only settings and original defaults.
+- Keyboard hints and on-screen PC control labels now reflect custom bindings. The original touch and gamepad controls are unchanged.
+- Node and dual-browser regression tests specifically exercise remapping and gameplay input packets.
+- Gamepad remapping, actual disabled-user testing, full keyboard-layout coverage and RU/EN localization are **still outstanding**. The overall accessibility gate below remains open.
+
 ## M2 acceptance gates — open
 
 - [ ] A human reviewer completes all 137 stages without debug player relocation
