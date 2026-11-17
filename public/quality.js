@@ -49,7 +49,7 @@ function interpolationDelay(){
 function predictionLead(){return clamp(avg/2000+.045,.09,.35);}
 function stats(){return {rtt:Math.round(avg),jitter:Math.round(jitter),fps:Math.round(fps),quality,buffer:Math.round(interpolationDelay()),snapshotHz:snapshotSamples?Math.round(1000/snapshotGap):0};}
 function sample(dt){if(!Number.isFinite(dt)||dt<=0)return;frames++;fpsElapsed+=dt;
- if(fpsElapsed>=1){fps=Math.round(frames/fpsElapsed);frames=0;fpsElapsed=0;const next=adapt();if(next!==quality){quality=next;document.documentElement.dataset.gameGraphics=quality;}const d=$('qualityStats');if(d){const s=stats();d.textContent=`FPS ${s.fps} · RTT ${s.rtt} мс · Джиттер ${s.jitter} мс · Буфер ${s.buffer} мс · Снимки ${s.snapshotHz} Гц · ${s.quality}`;}}
+ if(fpsElapsed>=1){fps=Math.round(frames/fpsElapsed);frames=0;fpsElapsed=0;const next=adapt();if(next!==quality){quality=next;document.documentElement.dataset.gameGraphics=quality;}const d=$('qualityStats');if(d){const s=stats();d.textContent=root.GameI18n?.ui?.('quality.stats',s)||`FPS ${s.fps} · RTT ${s.rtt} мс · Джиттер ${s.jitter} мс · Буфер ${s.buffer} мс · Снимки ${s.snapshotHz} Гц · ${s.quality}`;}}
  pollGamepad();
 }
 function pollGamepad(){
@@ -90,12 +90,30 @@ function init(api={}){onControls=api.onControls||onControls;onAction=api.onActio
  <div class="quality-actions"><button type="button" id="qualitySave">Применить</button></div>`;
  document.body.append(d);
  const bind=[['qualityGraphics','graphics','value'],['qualityButtons','buttons','number'],['qualityOpacity','opacity','percent'],['qualityLift','lift','number'],['qualityInset','inset','number'],['qualitySound','sound','checked'],['qualityReduced','reducedMotion','checked'],['qualityDiag','diagnostics','checked']];
+ function refreshLanguage(){
+   const translate=(key)=>root.GameI18n?.ui?.('quality.'+key)||key;
+   settings.textContent=translate('open');
+   d.querySelector('.quality-head strong').textContent=translate('title');
+   $('qualityClose').setAttribute('aria-label',translate('close'));
+   const fields=[['qualityGraphics','graphics'],['qualityButtons','buttons'],['qualityOpacity','opacity'],['qualityLift','lift'],['qualityInset','inset'],
+    ['qualitySound','sound'],['qualityReduced','motion'],['qualityDiag','diagnostics']];
+   for(const [id,key]of fields){
+    const label=$(id)?.closest('label');if(!label)continue;
+    const node=$(id).type==='checkbox'?label.lastChild:label.firstChild;
+    if(node&&node.nodeType===3)node.textContent=$(id).type==='checkbox'?' '+translate(key):translate(key)+' ';
+   }
+   const opts=d.querySelectorAll('#qualityGraphics option');
+   ['auto','low','medium','high'].forEach((key,i)=>{if(opts[i])opts[i].textContent=translate(key);});
+   d.querySelector('.quality-note').textContent=translate('note');
+   $('qualitySave').textContent=translate('apply');
+  }
  function refresh(){for(const [id,key,kind] of bind){const n=$(id);n[kind==='checked'?'checked':'value']=kind==='percent'?String(Math.round(options[key]*100)):options[key];}const vals=[['qualityButtonsValue',options.buttons+' px'],['qualityOpacityValue',Math.round(options.opacity*100)+'%'],['qualityLiftValue',options.lift+' px'],['qualityInsetValue',options.inset+' px']];for(const [id,value] of vals)$(id).textContent=value;}
  for(const [id,key,kind] of bind)$(id).addEventListener(kind==='checked'?'change':'input',()=>{const n=$(id);options[key]=kind==='checked'?n.checked:kind==='percent'?Number(n.value)/100:kind==='number'?Number(n.value):n.value;refresh();apply();});
  const close=()=>d.close();$('qualityClose').addEventListener('click',close);$('qualitySave').addEventListener('click',close);
  settings.addEventListener('click',()=>{refresh();if(!d.open)d.showModal();});d.addEventListener('click',e=>{if(e.target===d)close();});
  const stat=document.createElement('div');stat.id='qualityStats';stat.className='quality-stats';const frame=$('frame');if(frame)frame.append(stat);
- apply();refresh();return d;
+ root.GameI18n?.subscribe?.(refreshLanguage);
+  apply();refresh();refreshLanguage();return d;
 }
 function setSound(enabled){options.sound=!!enabled;save();if(padGain&&audioCtx)padGain.gain.setTargetAtTime(enabled?.012:0,audioCtx.currentTime,.4);}
 function audioUnlock(){if(!options.sound)return;try{
