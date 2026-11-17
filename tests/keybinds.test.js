@@ -86,3 +86,19 @@ test('M2 mapping API cannot be modified through current() result',()=>{
  assert.equal(mod.keyFor(0,'left'),'a');
  assert.equal(mod.keyFor(1,'right'),'arrowright');
 });
+
+test('remapped ability key propagates to current cooperative hints',()=>{
+ const {stages}=require('../shared/stages');
+ const hints=require('../public/game-hints');
+ const store=storage();mod.init({storage:store});mod.reset();
+ assert.equal(mod.set(0,'ability','k'),true);
+ assert.equal(mod.set(1,'ability','l'),true);
+ const base={gateOpen:false,walls:[false],crystals:[false],padLatched:false,adventure:{}};
+ const spark=hints.hint(stages[1],base,0,2);
+ const echo=hints.hint(stages[1],{...base,walls:[true]},1,2);
+ assert.match(spark,/K на ПК/);
+ assert.match(echo,/L на ПК/);
+ assert.doesNotMatch(spark,/ F на ПК/);
+ assert.doesNotMatch(echo,/Enter на ПК/);
+ mod.reset();
+});
