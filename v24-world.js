@@ -50,6 +50,7 @@ const note=(z,text)=>{
  z.events.push({at:Date.now(),text});if(z.events.length>20)z.events.shift();
 };
 function action(r,role,kind,msg={}){
+ const leader=r.hostRole===1?1:0;
  if(![0,1].includes(role))return {ok:false,error:'Нужны два участника'};
  const z=r.v24World||(r.v24World=initial()),fail=error=>({ok:false,error}),ok=detail=>({ok:true,detail});
  const mark=(id)=>{if(!z.achievements.includes(id))z.achievements.push(id);};
@@ -86,11 +87,11 @@ function action(r,role,kind,msg={}){
   return ok('Шаг готовки '+z.kitchen.step+'/8');
  }
  if(kind==='recipe_select'){
-  if(role!==0||!integer(msg.value,0,3))return fail('Выбор рецепта доступен ведущему');
+  if(role!==leader||!integer(msg.value,0,3))return fail('Выбор рецепта доступен ведущему');
   z.kitchen.recipe=msg.value;z.kitchen.step=0;return ok('Рецепт выбран');
  }
  if(kind==='expedition_start'){
-  if(role!==0||z.expedition.active)return fail('Экспедицию запускает ведущий, когда предыдущая закончена');
+  if(role!==leader||z.expedition.active)return fail('Экспедицию запускает ведущий, когда предыдущая закончена');
   z.expedition.seed=crypto.randomInt(1,0x7fffffff);z.expedition.room=0;z.expedition.active=true;
   return ok('Открыта новая экспедиция на пять комнат');
  }
@@ -119,14 +120,14 @@ function action(r,role,kind,msg={}){
   return ok('Звёзды '+obs.progress+'/8');
  }
  if(kind==='craft'){
-  if(role!==0||!CRAFTS.includes(msg.value))return fail('Инструмент выбирает ведущий');
+  if(role!==leader||!CRAFTS.includes(msg.value))return fail('Инструмент выбирает ведущий');
   if(z.workshop.crafted.includes(msg.value))return fail('Такое устройство уже построено');
   if(z.expedition.loot<=0||z.observatory.constellations<=0)return fail('Нужны находка из экспедиции и созвездие');
   z.expedition.loot--;z.workshop.crafted.push(msg.value);mark('maker');note(z,'Создан предмет: '+msg.value);
   return ok('Устройство создано для дома');
  }
  if(kind==='minigame_start'){
-  if(role!==0||!GAMES.includes(msg.value))return fail('Ведущий выбирает игру');
+  if(role!==leader||!GAMES.includes(msg.value))return fail('Ведущий выбирает игру');
   z.minigame={...z.minigame,kind:msg.value,round:0,score:[0,0],active:true};
   return ok('Мини-турнир: '+msg.value);
  }
