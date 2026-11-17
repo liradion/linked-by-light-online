@@ -71,7 +71,7 @@
     if(!next&&dialog&&!dialog.hidden){close();return;}
     depth=next?Math.min(2,depth+1):1;
     const result=hint(state.level,state.world,state.role,depth);
-    body.textContent=result;
+    body.textContent=root.GameI18n?.localizeHint?.(result,state.stageIndex,state.role,depth)??result;
     dialog.querySelector('.game-hint-caption').textContent=(state.role===1?'Эхо':'Искра')+' · '+(state.level?.title||'Уровень');
     nextButton.hidden=depth>=2;
     dialog.hidden=false;
