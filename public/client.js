@@ -27,7 +27,13 @@ function refreshCampaignMenu(){
  if(fresh)fresh.style.display=saved>0?'inline-flex':'none';
  if(hint)hint.textContent=saved>0?'Прогресс сохранён на этом устройстве: уровень '+(saved+1)+' из '+stageDefs.length+'.':'Впереди 99 уровней в 11 мирах.';
 }
-function setError(message){$('networkError').textContent=message;}
+let lastErrorCode='',lastErrorVars=null;
+function setError(message='',vars=null){
+ lastErrorCode=message;lastErrorVars=vars;
+ $('networkError').textContent=message.startsWith('network.')
+  ?GameI18n.ui(message,vars)
+  :GameI18n.networkError(message);
+}
 function wsSend(m){if(socket&&socket.readyState===WebSocket.OPEN)socket.send(JSON.stringify(m));}
 function updateStatus(){const online=socket?.readyState===WebSocket.OPEN;
   $('statusDot').className='status-dot '+(online?'online':'offline');
@@ -74,9 +80,7 @@ function openConnection(){
     if(m.t==='error'){
       const msg=m.message||'Ошибка подключения.';
       if(room&&msg.includes('Комната не найдена')){room='';role=-1;token='';phase='waiting';latest=null;snapshots=[];history.replaceState({},'',location.pathname);}
-      const help=msg.includes('Комната не найдена')
-        ?'Комната не найдена. Сначала создайте новую комнату на первом устройстве и отправьте свежую ссылку. После перезапуска сервера прежние коды исчезают.'
-        :msg;
+      const help=msg.includes('Комната не найдена')?'network.roomHelp':msg;
       setError(help);if(!room)pendingRoom='';showUI();return;
     }
     if(m.t==='pong'){
@@ -86,7 +90,7 @@ function openConnection(){
   socket.addEventListener('close',()=>{
     ready=false;updateStatus();resetKeys();GamePublicBeta.onDisconnected();
     if(room){connected=[false,false];$('waitingBanner').classList.remove('hidden');}
-    setError(room?'Связь прервалась. Автоматически переподключаемся…':'Нет связи с сервером. Повторная попытка…');
+    setError(room?'network.lost':'network.retry');
     reconnectCount++;const delay=Math.min(10_000,500*2**Math.min(reconnectCount,5))+Math.floor(Math.random()*220);
     wsTimer=setTimeout(openConnection,delay);showUI();
   });
@@ -177,7 +181,7 @@ $('copyBtn').addEventListener('click',async()=>{
   const url=new URL(location.pathname,location.href);url.searchParams.set('room',room);
   const text=GameI18n.t('copyInviteMessage',{url:url.href,room});
   try{await navigator.clipboard.writeText(text);$('copyBtn').textContent=GameI18n.isEnglish()?'Copied ✓':'Скопировано ✓';setTimeout(()=>$('copyBtn').textContent=GameI18n.isEnglish()?GameI18n.EN.copyInvite:GameI18n.t('copyInvite'),1500);}
-  catch(_){setError('Не удалось скопировать автоматически. Код: '+room+' — '+url.href);}
+  catch(_){setError('network.copyFailed',{room,url:url.href});}
 });
 // Native share on iPhone/Android, clipboard fallback for desktop and older browsers.
 const shareInviteBtn=document.createElement('button');
@@ -186,7 +190,7 @@ shareInviteBtn.className='button-secondary';
 shareInviteBtn.textContent='Поделиться ↗';
 shareInviteBtn.setAttribute('aria-label','Отправить приглашение второму игроку');
 shareInviteBtn.addEventListener('click',async()=>{
- if(!room){setError('Сначала создайте комнату.');return;}
+ if(!room){setError('network.createFirst');return;}
  const url=new URL(location.pathname,location.href);url.searchParams.set('room',room);
  const message=GameI18n.isEnglish()?'Join me in Linked by Light! Let’s solve co-op puzzles together.':'Присоединяйся ко мне в «Связанные светом»! Вместе пройдём приключение.';
  if(typeof navigator.share==='function'){
@@ -197,7 +201,7 @@ shareInviteBtn.addEventListener('click',async()=>{
   await navigator.clipboard.writeText(message+' '+url.href+' (код '+room+')');
   shareInviteBtn.textContent=GameI18n.isEnglish()?'Link copied ✓':'Ссылка скопирована ✓';
   setTimeout(()=>shareInviteBtn.textContent=GameI18n.isEnglish()?'Share ↗':'Поделиться ↗',1800);
- }catch(_){setError('Скопируйте ссылку вручную: '+url.href);}
+ }catch(_){setError('network.manualCopy',{url:url.href});}
 });
 $('copyBtn').parentElement.insertBefore(shareInviteBtn,$('copyBtn'));
 const spectatorCopy=document.createElement('button');spectatorCopy.type='button';spectatorCopy.className='button-secondary';spectatorCopy.textContent='👀 Ссылка наблюдателю';
@@ -205,7 +209,7 @@ spectatorCopy.onclick=async()=>{
  if(!room)return;
  const url=new URL(location.pathname,location.href);url.searchParams.set('room',room);url.searchParams.set('spectate','1');
  try{await navigator.clipboard.writeText(url.href);spectatorCopy.textContent='Скопировано ✓';setTimeout(()=>spectatorCopy.textContent='👀 Ссылка наблюдателю',1600);}
- catch(_){setError('Ссылка наблюдателю: '+url.href);}
+ catch(_){setError('network.spectatorLink',{url:url.href});}
 };
 $('copyBtn').parentElement.append(spectatorCopy);
 $('soundBtn').addEventListener('click',()=>{sound=!sound;GameQuality.setSound(sound);$('soundBtn').textContent=sound?'♫ Вкл.':'♫ Выкл.';if(sound)GameQuality.audioUnlock();});
@@ -500,7 +504,10 @@ function refreshKeyboardGuides(){
 GameI18n.init();
 GameI18n.subscribe(()=>{
   showUI();
+  updateStatus();
   if(latest?.world)updateHUD();
+  setError(lastErrorCode,lastErrorVars);
+  refreshKeyboardGuides();
   GamePublicBeta.refreshLanguage?.();
 });
 GameControls.init({onChange:()=>{resetKeys();refreshKeyboardGuides();}});
