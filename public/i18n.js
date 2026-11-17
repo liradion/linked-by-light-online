@@ -66,7 +66,26 @@
   serverDurable:'Persistent storage is configured. Keep a backup of your progress.',
   copyInviteMessage:'Play Linked by Light with me! Open the link on your phone or computer: {url} (room {room})'
  };
- const RU={};
+ const RU={
+  waiting:'Ожидаем…',online:'● В сети',offline:'○ Нет подключения',awaitPlayer:'○ Ожидаем игрока',
+  lobbyHost:'Отправьте приглашение. Когда оба игрока подключатся, нажмите «Начать вдвоём».',
+  lobbyGuest:'Вы подключены. Ждём, когда создатель комнаты запустит игру.',
+  demoHost:'Демо: девять испытаний. Поделитесь приглашением и начните вместе.',
+  demoGuest:'Демо: дождитесь начала совместного приключения.',
+  youSpark:'Искра (ведущий)',youEcho:'Эхо (гость)',youSpectator:'Наблюдатель',
+  demoEndingTitle:'Наш первый общий путь',
+  demoEndingText:'Вы прошли демоверсию вместе. Спасибо за игру! Основное приключение продолжается в полной кампании.',
+  demoEndingTag:'ДЕМО · ПЕРВАЯ ГЛАВА · 9 ИСПЫТАНИЙ',
+  readyDash:'· Рывок готов',readyPulse:'· Импульс готов',
+  networkOnline:'На связи',networkOffline:'Нет связи',networkConnecting:'Подключение…',
+  connectionLost:'Партнёр отключился. Игра остановлена. Переподключение через прежнюю ссылку сохранит его роль.',
+  replayDemo:'Пройти демо снова ↻',replay:'Сыграть сначала ↻',
+  roomInvalid:'Введите шестизначный код комнаты.',
+  act:'АКТ',level:'УРОВЕНЬ',chapter:'ГЛАВА',
+  demoTitlePrefix:'ДЕМО · ИСПЫТАНИЕ',demoProgressPrefix:'ДЕМО',
+  copyInvite:'Скопировать приглашение',
+  copyInviteMessage:'Сыграем вместе в «Связанные светом»? Открой ссылку на компьютере или телефоне: {url} (код {room})'
+ };
  const titleEn=['First Contact','Bridge of Trust','One Rhythm','Bright Valley · Stronger Together','Bright Valley · Shared Signal','Bright Valley · Hold the Bridge','Bright Valley · Double Glow','Bright Valley · The Right Choice','Bright Valley · Final Connection'];
  const objectiveEn=[
   'Spark stands on the orange plate; Echo on the blue. Hold them simultaneously.',
@@ -125,6 +144,10 @@
   if(m)return t('goalPads',{on:m[1],total:m[2]});
   if(index>=0&&index<9&&/[\u0400-\u04FF]/.test(goal))return objectiveEn[index];
   if(goal.startsWith('Испытание пройдено!'))return EN.goalBothPortal;
+  // First-act signature text contains authored flower instructions. Keep
+  // dynamic count feedback instead of replacing a partial objective with prose.
+  if(index>=0&&index<9&&/\(\d+\/\d+\)$/.test(goal))
+   return objectiveEn[index]+' '+goal.match(/\(\d+\/\d+\)$/)[0];
   return goal;
  }
  function stageTitle(index,fallback){return isEnglish()&&index>=0&&index<9?titleEn[index]:fallback;}
@@ -150,6 +173,13 @@
   const lobby=document.querySelector('#lobbyView > .hero-title');
   if(lobby){const em=lobby.querySelector('em');if(lobby.firstChild?.nodeType===3)lobby.firstChild.textContent=isEnglish()?EN.lobbyTitleA:'ВЫ ';
    if(em)em.textContent=isEnglish()?EN.lobbyTitleB:'ПОЧТИ ВМЕСТЕ.';}
+  const banner=document.getElementById('waitingBanner');
+  if(banner){
+   banner.replaceChildren();
+   const rows=(isEnglish()?EN.connectionLost:RU.connectionLost).split('. ');
+   banner.append(document.createTextNode(rows[0]+'.'));
+   banner.append(document.createElement('br'),document.createTextNode(rows.slice(1).join('. ')));
+  }
   const sel=document.getElementById('languageSelect');
   if(sel&&sel.value!==lang)sel.value=lang;
  }
