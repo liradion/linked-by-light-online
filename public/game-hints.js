@@ -83,7 +83,7 @@
   function init(callbacks){
     if(dialog)return;
     api=callbacks||{};
-    const frame=document.getElementById('frame'),top=document.querySelector('.topline > div:last-child');
+    const frame=document.getElementById('frame'),top=document.querySelector('.topline > div:last-of-type');
     if(!frame||!top)return;
     headerButton=document.createElement('button');
     headerButton.type='button';headerButton.id='gameHintBtn';
