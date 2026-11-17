@@ -1,0 +1,48 @@
+'use strict';
+const {test,expect}=require('@playwright/test');
+
+test('v23-v26 chapter stays bilingual and retains an unsent invitation across tabs',async({page})=>{
+ const errors=[];
+ page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('/');
+ await page.locator('#languageSelect').selectOption('en');
+ await page.locator('#createBtn').click();
+ await expect(page.locator('#roomCode')).toHaveText(/^[A-HJ-NP-Z2-9]{6}$/,{timeout:15000});
+ await page.evaluate(()=>window.GameFuture.open('physics'));
+ const modal=page.locator('.v2346-dialog');
+ await expect(modal).toBeVisible();
+ await expect(modal.locator('.v2346-content')).toContainText('Light physics · Five guardians');
+ await expect(modal.locator('.v2346-content')).toContainText('Choose a challenge');
+ await expect(modal.locator('.v2346-tabs [data-future-tab="physics"]')).toHaveText('Physics');
+ await expect(modal.locator('.v2346-content')).not.toContainText('Физика света');
+
+ await modal.locator('[data-future-tab="world"]').click();
+ await expect(modal.locator('.v2346-content')).toContainText('Shared kitchen');
+ await expect(modal.locator('.v2346-content')).toContainText('Celestial observatory');
+ await modal.locator('[data-future-tab="endless"]').click();
+ await expect(modal.locator('.v2346-content')).toContainText('Ghost replays and history');
+ await modal.locator('[data-future-tab="access"]').click();
+ await expect(modal.locator('.v2346-content')).toContainText('Accessibility and controls');
+ const message=modal.locator('[data-gift-message]');
+ const theme=modal.locator('[data-gift-theme]');
+ await message.fill('Дорогая, играем вместе ✦');
+ await theme.selectOption('forest');
+ await modal.locator('[data-dialog-language]').selectOption('ru');
+ await expect(modal.locator('.v2346-content')).toContainText('Подарочное приглашение');
+ await expect(message).toHaveValue('Дорогая, играем вместе ✦');
+ await expect(theme).toHaveValue('forest');
+ await modal.locator('[data-future-tab="world"]').click();
+ await expect(modal.locator('.v2346-content')).toContainText('Совместная кухня');
+ await modal.locator('[data-future-tab="access"]').click();
+ await expect(message).toHaveValue('Дорогая, играем вместе ✦');
+ await expect(theme).toHaveValue('forest');
+ await modal.locator('[data-dialog-language]').selectOption('en');
+ await expect(modal.locator('.v2346-content')).toContainText('Gift invitation');
+ await expect(message).toHaveAttribute('placeholder','Short invitation (no personal details)');
+ await expect(message).toHaveValue('Дорогая, играем вместе ✦');
+ await expect(theme).toHaveValue('forest');
+ await expect(theme.locator('option[value="forest"]')).toHaveText('Enchanted forest');
+ await modal.locator('.v2346-header button').click();
+ await expect(modal).toBeHidden();
+ expect(errors).toEqual([]);
+});
