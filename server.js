@@ -29,6 +29,7 @@ const v20=require('./v20-core');
 const v21=require('./v21-core');
 const social=require('./v21-social');
 const v23=require('./v23-core');
+const demo=require('./shared/demo-mode');
 const v24=require('./v24-world');
 const v25=require('./v25-endless');
 let V21_BOARD=[],V21_GALLERY=[];
@@ -68,6 +69,7 @@ function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.roo
    for(const key of ['players','shards','tick','padTimer','completion','transition','stats','lastResult','level','customChallenge','expansion','v20','v21','v23','assistMode'])
     if(saved.game[key]!==undefined)game[key]=saved.game[key];
    game.phase=saved.game.phase==='win'?'win':saved.game.phase==='playing'?'playing':'waiting';
+    game.demo=saved.game.demo===true&&demo.includes(game.stage);
    game.input.forEach(i=>{i.left=false;i.right=false;});
    ROOMS.set(saved.code,{code:saved.code,seats,game,home:cleanHome(saved.home),unlockedMax:Math.max(0,Math.min(98,Number(saved.unlockedMax)||0)),lastActivity:Date.now(),story:saved.story||null,notes:Array.isArray(saved.notes)?saved.notes.filter(n=>expansion.cleanNote(n?.text)).slice(-24).map(n=>({text:expansion.cleanNote(n.text),role:[0,1].includes(n.role)?n.role:0,at:Number(n.at)||0})):[],customLevel:expansion.cleanBlueprint(saved.customLevel),spectators:new Set(),storyChoices:saved.storyChoices&&typeof saved.storyChoices==='object'?saved.storyChoices:{},ending:saved.ending||null,v20Unlocked:Math.max(100,Math.min(v20.LAST,Number(saved.v20Unlocked)||100)),v20Home:v20.cleanHome(saved.v20Home),v20Story:v20.cleanStory(saved.v20Story),v21Unlocked:Math.max(v21.FIRST,Math.min(v21.LAST,Number(saved.v21Unlocked)||v21.FIRST)),v21World:social.cleanRoom(saved.v21World),v23Unlocked:Math.max(v23.FIRST,Math.min(v23.LAST,Number(saved.v23Unlocked)||v23.FIRST)),v24World:v24.clean(saved.v24World),v25:v25.clean(saved.v25),assistVotes:[null,null]});
   }
@@ -114,7 +116,7 @@ const allowedPets=['none','fox','owl','moth','cat','orb'];
 const newSeat=()=>({token:crypto.randomBytes(24).toString('hex'),peer:null,online:false,look:{skin:'classic',pet:'none'},actionCache:new Map()});
 function cleanLook(x){return {skin:allowedSkins.includes(x?.skin)?x.skin:'classic',pet:allowedPets.includes(x?.pet)?x.pet:'none'};}
 function cleanHome(x){if(!Array.isArray(x))return [];return x.slice(0,16).map(v=>({item:allowedFurniture.includes(v?.item)?v.item:'lamp',slot:Number.isInteger(v?.slot)?Math.max(0,Math.min(15,v.slot)):0}));}
-function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),looks:r.seats.map(s=>s?.look||null),home:r.home||[],v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v20Unlocked:r.v20Unlocked||100,v21Unlocked:r.v21Unlocked||v21.FIRST,v23Unlocked:r.v23Unlocked||v23.FIRST,v25Meta:v25.meta(r),assistMode:!!r.game.assistMode,assistVotes:r.assistVotes||[null,null],story:r.story||null,storyChoices:r.storyChoices||{},customLevel:r.customLevel||null,ending:r.ending||null};}
+function roomSnapshot(r){return {...snapshot(r.game,countOnline(r)),demo:r.game.demo===true,looks:r.seats.map(s=>s?.look||null),home:r.home||[],v20Home:r.v20Home||v20.cleanHome(),v20Story:r.v20Story||v20.cleanStory(),v20Unlocked:r.v20Unlocked||100,v21Unlocked:r.v21Unlocked||v21.FIRST,v23Unlocked:r.v23Unlocked||v23.FIRST,v25Meta:v25.meta(r),assistMode:!!r.game.assistMode,assistVotes:r.assistVotes||[null,null],story:r.story||null,storyChoices:r.storyChoices||{},customLevel:r.customLevel||null,ending:r.ending||null};}
 restoreRooms();
 function countOnline(r){return r.seats.map(s=>!!s?.online);}
 function sendSeatRoom(r){const obj={t:'members',room:r.code,connected:countOnline(r),phase:r.game.phase};
@@ -163,7 +165,7 @@ const server=http.createServer((req,res)=>{
     return;
   }
   let file;
-  if(pathname==='/shared/stages.js'||pathname==='/shared/v20-stages.js'||pathname==='/shared/v21-stages.js'||pathname==='/shared/v23-stages.js')file=path.join(__dirname,'shared',pathname.slice('/shared/'.length));
+  if(pathname==='/shared/demo-mode.js'||pathname==='/shared/stages.js'||pathname==='/shared/v20-stages.js'||pathname==='/shared/v21-stages.js'||pathname==='/shared/v23-stages.js')file=path.join(__dirname,'shared',pathname.slice('/shared/'.length));
   else if(pathname==='/'||pathname==='/index.html')file=path.join(PUBLIC,'index.html');
   else if(/^\/[a-zA-Z0-9._-]+$/.test(pathname))file=path.join(PUBLIC,pathname.slice(1));
   else{res.writeHead(404);res.end('Not found');return;}
@@ -227,8 +229,9 @@ server.on('upgrade',(req,socket,head)=>{
       if(room)return error('Вы уже в комнате.');
       if(ROOMS.size>=MAX_ROOMS)return error('Сервер заполнен. Попробуйте позже.');
       const code=newCode(),game=createGame(),blueprint=expansion.cleanBlueprint(msg.blueprint);
+       const demoMode=msg.demo===true&&!blueprint;game.demo=demoMode;
       // Progress is supplied by the host's browser; rooms still run one authoritative server state.
-      const requested=Number.isSafeInteger(msg.stage)?msg.stage:0;
+      const requested=demoMode?demo.stages[0]:Number.isSafeInteger(msg.stage)?msg.stage:0;
        if(v23.hasStage(requested)&&clientProtocol<4)return error('Для новой физики необходим клиент v26.');
        if(v21.hasStage(requested)&&clientProtocol<3)return error('Оба игрока должны открыть v21 для новых испытаний.');
        if(v20.hasStage(requested)&&clientProtocol<2)return error('Обновите игру до v20, чтобы открыть новую кампанию.');
@@ -252,7 +255,7 @@ server.on('upgrade',(req,socket,head)=>{
        if(!ids23.includes('v23-'+String(i-v23.FIRST+1).padStart(2,'0')))break;
        resume23=i;
       }
-      const saved=v23.hasStage(requested)?Math.min(requested,resume23):v21.hasStage(requested)?Math.min(requested,resume21):v20.hasStage(requested)?Math.min(requested,resumeMax):Math.max(0,Math.min(requested===99&&msg.secrets===11?99:98,requested));
+      const saved=demoMode?demo.stages[0]:v23.hasStage(requested)?Math.min(requested,resume23):v21.hasStage(requested)?Math.min(requested,resume21):v20.hasStage(requested)?Math.min(requested,resumeMax):Math.max(0,Math.min(requested===99&&msg.secrets===11?99:98,requested));
       if(saved>0)initStage(game,saved);
       if(blueprint)expansion.applyBlueprint(game,blueprint);
       const r={code,seats:[newSeat(),null],game,home:cleanHome(msg.home),notes:[],customLevel:blueprint,spectators:new Set(),storyChoices:{},ending:null,unlockedMax:Math.min(98,saved),v20Unlocked:resumeMax,v20Home:v20.cleanHome(msg.v20Home),v20Story:v20.cleanStory({choices:msg.v20Choices}),v21Unlocked:resume21,v21World:social.cleanRoom(msg.v21Profile),v23Unlocked:resume23,v24World:v24.clean(msg.v24Profile),v25:v25.initial(),assistVotes:[null,null],lastActivity:Date.now()};
@@ -460,6 +463,7 @@ server.on('upgrade',(req,socket,head)=>{
       room.home=cleanHome(msg.items);broadcast(room,{t:'home',items:room.home});return;
     }
     if(msg.t==='selectStage'&&role===0&&room.seats.every(s=>s?.online)){
+       if(room.game.demo===true)return error('Демоверсия проходится по порядку. Чтобы сыграть другую главу, создайте новую обычную комнату.');
       const target=msg.stage;
       if(!Number.isSafeInteger(target)||target<0||target>v23.LAST)return error('Неверный номер уровня.');
       if(v23.hasStage(target)){
@@ -519,7 +523,7 @@ const loop=setInterval(()=>{
         const seat=r.seats[i];if(seat?.online)seat.peer.send({t:'v21Private',data:social.privateState(r,i)});
       }
     }
-    if(r.game.phase==='win'&&!r.ending)r.ending=v23.hasStage(r.game.stage)?{kind:'v23',title:'Мастера физики света',text:'Все древние хранители побеждены вдвоём!'}:v21.hasStage(r.game.stage)?{kind:'v21',title:'Навстречу друг другу',text:'Ваши пути снова встретились! Новые воспоминания ждут дома.'}:v20.hasStage(r.game.stage)?v20.endingForStory(r.v20Story):r.customLevel?{kind:'creator',title:'Мастера света',text:'Ваш собственный уровень пройден вдвоём!',choices:0}:expansion.endingFor(r);
+    if(r.game.phase==='win'&&!r.ending)r.ending=r.game.demo===true?demo.ending:v23.hasStage(r.game.stage)?{kind:'v23',title:'Мастера физики света',text:'Все древние хранители побеждены вдвоём!'}:v21.hasStage(r.game.stage)?{kind:'v21',title:'Навстречу друг другу',text:'Ваши пути снова встретились! Новые воспоминания ждут дома.'}:v20.hasStage(r.game.stage)?v20.endingForStory(r.v20Story):r.customLevel?{kind:'creator',title:'Мастера света',text:'Ваш собственный уровень пройден вдвоём!',choices:0}:expansion.endingFor(r);
     if(r.ending?.kind==='v20-together'&&r.v20Home&&!r.v20Home.decor.includes('lampion')&&r.v20Home.decor.length<6)r.v20Home.decor.push('lampion');
      const previousV21=r.v21World?.lastResult;
      social.completed(r,V21_BOARD);
@@ -528,7 +532,7 @@ const loop=setInterval(()=>{
        broadcast(r,{t:'v21State',data:social.publicState(r)});
        for(const seat of r.seats)if(seat?.online)seat.peer.send({t:'v21Private',data:social.privateState(r,seat===r.seats[0]?0:1)});
      }
-     r.unlockedMax=Math.max(r.unlockedMax,Math.min(98,r.game.stage));
+     if(r.game.demo!==true)r.unlockedMax=Math.max(r.unlockedMax,Math.min(98,r.game.stage));
      if(v20.hasStage(r.game.stage))r.v20Unlocked=Math.max(r.v20Unlocked||100,r.game.stage);
      if(v21.hasStage(r.game.stage))r.v21Unlocked=Math.max(r.v21Unlocked||v21.FIRST,r.game.stage);
      if(v23.hasStage(r.game.stage))r.v23Unlocked=Math.max(r.v23Unlocked||v23.FIRST,r.game.stage);
