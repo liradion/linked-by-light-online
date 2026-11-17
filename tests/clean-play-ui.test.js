@@ -11,7 +11,7 @@ test('commercial clean-play UI has loadable JS/CSS and versioned references',()=
  const js=read('public/play-ui.js'),css=read('public/play-ui.css'),html=read('public/index.html');
  assert.doesNotThrow(()=>new vm.Script(js));
  assert.match(html,/\/play-ui\.js\?v=27\.4/);
- assert.match(html,/\/play-ui\.css\?v=27\.5/);
+ assert.match(html,/\/play-ui\.css\?v=27\.6/);
  assert.equal((css.match(/\{/g)||[]).length,(css.match(/\}/g)||[]).length);
 });
 test('first-run invitation and room UI are device-agnostic',()=>{
@@ -21,8 +21,8 @@ test('first-run invitation and room UI are device-agnostic',()=>{
  assert.match(client,/id='shareInviteBtn'/);
  assert.match(client,/typeof navigator\.share==='function'/);
  assert.match(client,/navigator\.clipboard\.writeText\(message/);
- assert.match(html,/\/client\.js\?v=26\.1/);
- assert.match(html,/\/play-ui\.css\?v=27\.5/);
+ assert.match(html,/\/client\.js\?v=26\.3/);
+ assert.match(html,/\/play-ui\.css\?v=27\.6/);
 });
 test('clean-play preserves original primary inputs and recovery controls',()=>{
  const html=read('public/index.html'),css=read('public/play-ui.css'),js=read('public/play-ui.js');
@@ -45,4 +45,15 @@ test('clean-play does not hide required overlays, errors and dialogs',()=>{
  for(const forbidden of [/html\.clean-play-mode\s+\.overlay\s*[,\{]/,/html\.clean-play-mode\s+\.banner\s*[,\{]/,/html\.clean-play-mode\s+\.toast\s*[,\{]/])
   assert.doesNotMatch(css,forbidden);
  assert.match(css,/\.clean-context-actions\[hidden\]\{display:none!important\}/);
+});
+
+test('demo has independent entry, server flag and isolated campaign awards',()=>{
+ const html=read('public/index.html'),client=read('public/client.js'),adventure=read('public/adventure.js');
+ assert.match(html,/id="demoBtn"/);
+ assert.match(html,/id="demoBackBtn"/);
+ assert.match(html,/\/shared\/demo-mode\.js\?v=1/);
+ assert.match(client,/demo:pendingDemo/);
+ assert.match(client,/demoMode=s\.demo===true/);
+ assert.match(client,/!demoMode&&!s\.customLevel/);
+ assert.match(adventure,/if\(s\.demo===true\)/);
 });
