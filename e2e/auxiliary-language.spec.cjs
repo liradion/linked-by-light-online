@@ -7,6 +7,8 @@ test('cloud recovery and Google account dialogs switch RU/EN without changing ke
  await page.goto('/');
  await page.locator('#languageSelect').selectOption('en');
  await expect(page.locator('#cloudOpen')).toContainText('Cloud');
+ await page.locator('.game-menu-trigger').click();
+ await expect(page.locator('#cloudOpen')).toBeVisible();
  await page.locator('#cloudOpen').click();
  const cloud=page.locator('#cloudDialog');
  await expect(cloud).toBeVisible();
@@ -21,6 +23,8 @@ test('cloud recovery and Google account dialogs switch RU/EN without changing ke
  await page.locator('#cloudClose').click();
 
  await expect(page.locator('#googleAccountBtn')).toContainText('Sign in');
+ await page.locator('.game-menu-trigger').click();
+ await expect(page.locator('#googleAccountBtn')).toBeVisible();
  await page.locator('#googleAccountBtn').click();
  const account=page.locator('#googleAccountDialog');
  await expect(account).toBeVisible();
@@ -41,6 +45,8 @@ test('editing a community map and draft note survives language changes within ed
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/');
  await page.locator('#languageSelect').selectOption('en');
+ await page.locator('.game-menu-trigger').click();
+ await expect(page.locator('#exp-editor-open')).toBeVisible();
  await page.locator('#exp-editor-open').click();
  const dialog=page.locator('#exp-dialog');
  await expect(dialog).toBeVisible();
@@ -56,6 +62,8 @@ test('editing a community map and draft note survives language changes within ed
  await expect(dialog.locator('input.exp-input')).toHaveValue('Our private map ✦');
  await dialog.locator('.adv-dialog-head button').click();
 
+ await page.locator('.game-menu-trigger').click();
+ await expect(page.locator('#exp-notes-open')).toBeVisible();
  await page.locator('#exp-notes-open').click();
  await expect(dialog).toBeVisible();
  await dialog.locator('#exp-note-draft').fill('Do not lose this note');
