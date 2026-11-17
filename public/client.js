@@ -8,6 +8,9 @@ const colors={amber:'#ffc17f',blue:'#80eff7'};
 let levelIndex=0,level=structuredClone(stageDefs[0]),P=[],camera=0,clock=0;
 let particles=[],rings=[],screenShake=0,collectibles=[],toastTimer=0;
 let room='',role=-1,token='',phase='waiting',connected=[false,false],socket=null,ready=false,demoMode=false;
+let hostRole=0,soloMode=false,soloActiveRole=0,pendingHostRole=0,pendingSolo=false;
+const isHost=()=>role>=0&&role===hostRole;
+const controlledRole=()=>soloMode?soloActiveRole:role;
 let pendingRoom='',pendingCreate=false,pendingCreateStage=0,pendingBlueprint=null,pendingDemo=false,connectedBefore=false,reconnectCount=0,totalReconnects=0,wsTimer=null;
 let latest=null,snapshots=[],fpsTime=performance.now(),sound=true,ac=null;
 const keys=new Set(),input={left:false,right:false,jumpSeq:0,abilitySeq:0,bondSeq:0,emoteSeq:0};
@@ -37,6 +40,7 @@ function setError(message='',vars=null){
 }
 function wsSend(m){if(socket&&socket.readyState===WebSocket.OPEN)socket.send(JSON.stringify(m));}
 function updateStatus(){const online=socket?.readyState===WebSocket.OPEN;
+  GameV28.connection(online);
   $('statusDot').className='status-dot '+(online?'online':'offline');
   $('connectionStatus').textContent=online?GameI18n.t('networkOnline'):room?GameI18n.t('networkOffline'):GameI18n.t('networkConnecting');
   $('ping').textContent=online&&latency?`${latency} ${GameI18n.isEnglish()?'ms':'мс'}`:'';
@@ -51,21 +55,23 @@ function openConnection(){
   socket=new WebSocket(protocol+'//'+location.host+'/ws');ready=false;updateStatus();
   socket.addEventListener('open',()=>{
     if(connectedBefore){totalReconnects++;GamePublicBeta.onRecovered();}reconnectCount=0;ready=true;connectedBefore=true;setError('');updateStatus();
-    wsSend({t:'hello',protocol:4});
+    wsSend({t:'hello',protocol:4});wsSend({t:'v28Visit',invite:!!invite});
     if(room||pendingRoom){const code=room||pendingRoom;wsSend({t:'join',room:code,token:token||roomToken(code),spectate:role===-1&&!!room||pendingSpectate});}
-    else if(pendingCreate){wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome(),unlockedV20:GameAdventure.data().v20?.unlockedStages||[],v20Home:GameAdventure.data().v20?.house||{},v20Choices:GameAdventure.data().v20?.choices||{},unlockedV21:GameAdventure.data().v21?.unlockedStages||[],v21Profile:{unlockedStages:GameAdventure.data().v21?.unlockedStages||[],completed:GameAdventure.data().v21?.completed||[],trophies:GameAdventure.data().v21?.trophies||[],aquarium:GameAdventure.data().v21?.aquarium||[]},unlockedV23:GameAdventure.data().v23?.unlockedStages||[],v24Profile:GameAdventure.data().v24||{},demo:pendingDemo});pendingCreate=false;pendingBlueprint=null;pendingDemo=false;}
+    else if(pendingCreate){wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome(),unlockedV20:GameAdventure.data().v20?.unlockedStages||[],v20Home:GameAdventure.data().v20?.house||{},v20Choices:GameAdventure.data().v20?.choices||{},unlockedV21:GameAdventure.data().v21?.unlockedStages||[],v21Profile:{unlockedStages:GameAdventure.data().v21?.unlockedStages||[],completed:GameAdventure.data().v21?.completed||[],trophies:GameAdventure.data().v21?.trophies||[],aquarium:GameAdventure.data().v21?.aquarium||[]},unlockedV23:GameAdventure.data().v23?.unlockedStages||[],v24Profile:GameAdventure.data().v24||{},demo:pendingDemo,hostRole:pendingHostRole,solo:pendingSolo});pendingCreate=false;pendingBlueprint=null;pendingDemo=false;pendingSolo=false;}
     else showUI();
   });
   socket.addEventListener('message',e=>{
     let m;try{m=JSON.parse(e.data);}catch(_){return;}
     if(m.t==='joined'){
        demoMode=false;room=m.room;role=m.role;token=m.token;phase=m.phase;pendingRoom='';
+      hostRole=m.hostRole===1?1:0;soloMode=m.solo===true;soloActiveRole=m.soloActiveRole===1?1:0;GameV28.onJoined(m);
       latest=null;snapshots=[];lastAck=0;predictor.reset();if(role>=0)saveToken(room,token);
       history.replaceState({},'',location.pathname+'?room='+encodeURIComponent(room));
-      connected=m.connected||[false,false];$('myRole').textContent=role===0?'Искра (ведущий)':role===1?'Эхо (гость)':'Наблюдатель';
+      connected=m.connected||[false,false];$('myRole').textContent=role<0?'Наблюдатель':(role===0?'Искра':'Эхо')+(isHost()?' (ведущий)':' (партнёр)');
       if(role>=0&&m.home)GameAdventure.receiveHome(m.home);GameAdventure.onJoined(room,role);GameExpansion.onJoined(m.notes||[]);GameV20.onJoined();GameV21.onJoined?.();
       setError('');resetKeys();GamePublicBeta.onJoined(role);showUI();return;
     }
+    if(['v28Ping','v28Intel'].includes(m.t)){GameV28.message(m);return;}
     if(m.t==='home'){if(role>=0)GameAdventure.receiveHome(m.items);return;}
     if(m.t==='note'){GameExpansion.onNote(m.note);return;}
     if(m.t==='quick'){GameExpansion.onQuick(m);return;}
@@ -100,7 +106,7 @@ function openConnection(){
 function updateTouchRole(){
   const badge=$('touchRoleBadge'),icon=$('touchRoleIcon'),name=$('touchRoleName'),hint=$('touchRoleHint');
   if(!badge||!icon||!name||!hint)return;
-  const echo=role===1;
+  const echo=controlledRole()===1;
   icon.textContent=role<0?'◉':echo?'◈':'✦';name.textContent=role<0?'Зритель':echo?'Эхо':'Искра';
   hint.textContent=role<0?'без управления':echo?'прыжок и импульс':'прыжок и рывок';
   icon.style.color=echo?'#8ff8ff':'#ffcf83';
@@ -115,10 +121,10 @@ function showUI(){
   $('roomCode').textContent=room||'------';
   if(!room)refreshCampaignMenu();
    $('demoBtn').disabled=!!room;
-  $('startBtn').disabled=!(role===0&&connected[0]&&connected[1]&&ready&&phase==='waiting');
-  $('restartBtn').disabled=role!==0||!connected.every(Boolean);
-  $('resetBtn').disabled=role!==0;
-  $('lobbyHint').textContent=GameI18n.t(demoMode?(role===0?'demoHost':'demoGuest'):role===0?'lobbyHost':'lobbyGuest');
+  $('startBtn').disabled=!(isHost()&&connected[0]&&connected[1]&&ready&&phase==='waiting');
+  $('restartBtn').disabled=!isHost()||!connected.every(Boolean);
+  $('resetBtn').disabled=!isHost();
+  $('lobbyHint').textContent=GameI18n.t(demoMode?(isHost()?'demoHost':'demoGuest'):isHost()?'lobbyHost':'lobbyGuest');
   if(!room)overlay.dataset.view='menu';
   else if(phase==='waiting')overlay.dataset.view='lobby';
   else if(phase==='win')overlay.dataset.view='win';
@@ -133,9 +139,9 @@ function showUI(){
   $('restartBtn').textContent=GameI18n.t(demoMode?'replayDemo':'replay');
   if(GameI18n.isEnglish()){
     const me=$('myRole');
-    if(me&&role>=0)me.textContent=GameI18n.t(role===0?'youSpark':role===1?'youEcho':'youSpectator');
-    $('touchRoleName').textContent=role===1?'Echo':role===0?'Spark':'Spectator';
-    $('touchRoleHint').textContent=role===1?'jump and pulse':role===0?'jump and dash':'view only';
+    if(me&&role>=0)me.textContent=(role===0?'Spark':'Echo')+(isHost()?' (host)':' (partner)');
+    $('touchRoleName').textContent=controlledRole()===1?'Echo':controlledRole()===0?'Spark':'Spectator';
+    $('touchRoleHint').textContent=controlledRole()===1?'jump and pulse':controlledRole()===0?'jump and dash':'view only';
     $('mobileConnectionText').textContent=ready?'Server connected':'Connecting to server…';
     shareInviteBtn.textContent='Share ↗';
     shareInviteBtn.setAttribute('aria-label','Send a co-op invitation to your partner');
@@ -161,10 +167,10 @@ function showUI(){
   }
   $('touchControls').style.visibility=!!room&&role>=0&&phase==='playing'?'visible':'hidden';
 }
-function createRoom(newGame=false,stageOverride=null,blueprint=null,startDemo=false){
- setError('');pendingCreate=true;pendingRoom='';pendingBlueprint=blueprint;pendingDemo=startDemo===true;pendingCreateStage=pendingDemo?GameDemo.stages[0]:Number.isInteger(stageOverride)?stageOverride:(newGame?0:bestStage());
+function createRoom(newGame=false,stageOverride=null,blueprint=null,startDemo=false,soloRequested=false){
+ setError('');pendingCreate=true;pendingRoom='';pendingBlueprint=blueprint;pendingDemo=startDemo===true;pendingHostRole=GameV28.selectedHostRole();pendingSolo=soloRequested===true;pendingCreateStage=pendingDemo?GameDemo.stages[0]:Number.isInteger(stageOverride)?stageOverride:(newGame?0:bestStage());
  if(!ready)openConnection();
- else{wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome(),unlockedV20:GameAdventure.data().v20?.unlockedStages||[],v20Home:GameAdventure.data().v20?.house||{},v20Choices:GameAdventure.data().v20?.choices||{},unlockedV21:GameAdventure.data().v21?.unlockedStages||[],v21Profile:{unlockedStages:GameAdventure.data().v21?.unlockedStages||[],completed:GameAdventure.data().v21?.completed||[],trophies:GameAdventure.data().v21?.trophies||[],aquarium:GameAdventure.data().v21?.aquarium||[]},unlockedV23:GameAdventure.data().v23?.unlockedStages||[],v24Profile:GameAdventure.data().v24||{},demo:pendingDemo});pendingCreate=false;pendingBlueprint=null;pendingDemo=false;}
+ else{wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome(),unlockedV20:GameAdventure.data().v20?.unlockedStages||[],v20Home:GameAdventure.data().v20?.house||{},v20Choices:GameAdventure.data().v20?.choices||{},unlockedV21:GameAdventure.data().v21?.unlockedStages||[],v21Profile:{unlockedStages:GameAdventure.data().v21?.unlockedStages||[],completed:GameAdventure.data().v21?.completed||[],trophies:GameAdventure.data().v21?.trophies||[],aquarium:GameAdventure.data().v21?.aquarium||[]},unlockedV23:GameAdventure.data().v23?.unlockedStages||[],v24Profile:GameAdventure.data().v24||{},demo:pendingDemo,hostRole:pendingHostRole,solo:pendingSolo});pendingCreate=false;pendingBlueprint=null;pendingDemo=false;pendingSolo=false;}
 }
 function joinRoom(code){const value=(code||'').trim().toUpperCase();if(!/^[A-HJ-NP-Z2-9]{6}$/.test(value)){setError(GameI18n.t('roomInvalid'));return;}
   pendingRoom=value;pendingSpectate=false;setError('');if(ready)wsSend({t:'join',room:value,token:roomToken(value)});else openConnection();
