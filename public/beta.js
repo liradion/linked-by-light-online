@@ -7,7 +7,7 @@ const $=id=>document.getElementById(id);
 const add=(tag,cls,content)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(content!==undefined)e.textContent=content;return e;};
 const btn=(label,fn)=>{const b=add('button','beta-btn',label);b.type='button';b.addEventListener('click',fn);return b;};
 const saved=()=>{try{return localStorage.getItem(KEY)==='done';}catch(_){return false;}};
-const finish=()=>{try{localStorage.setItem(KEY,'done');}catch(_){}dialog?.close();};
+const finish=()=>{try{localStorage.setItem(KEY,'done');}catch(_){}dialog?.close();document.getElementById('betaQuickStart')?.remove();};
 const isMobile=()=>matchMedia('(pointer:coarse)').matches;
 function start(){
  step=0;
@@ -135,7 +135,21 @@ function init(callbacks){
  fetch('/api/beta/status',{cache:'no-store'}).then(r=>r.ok?r.json():null)
   .then(x=>{config=x;if(x&&!x.durableRooms&&notice)notice.textContent='Бета: серверные комнаты могут сбрасываться после перезапуска.';})
   .catch(()=>{});
- if(!saved())setTimeout(()=>{if(!saved()&&!dialog?.open)start();},900);
+ // The first-run guide is optional and never blocks joining or starting a room.
+ if(!saved()&&!new URLSearchParams(location.search).has('room')){
+  const card=add('section','beta-quickstart');
+  card.id='betaQuickStart';
+  card.setAttribute('aria-label','Краткая инструкция');
+  const heading=add('strong','beta-quickstart-title','Два игрока — одно приключение');
+  const caption=add('span','beta-quickstart-copy','Создайте комнату и пригласите второго игрока по ссылке.');
+  const readGuide=btn('Как играть',start);
+  readGuide.classList.add('beta-quickstart-open');
+  const dismiss=btn('Понятно',finish);
+  dismiss.classList.add('beta-quickstart-dismiss');
+  card.append(heading,caption,readGuide,dismiss);
+  const menu=$('menuView');
+  menu?.insertBefore(card,menu.querySelector('.menu-actions'));
+ }
 }
 root.GamePublicBeta={init,onJoined,onDisconnected,onRecovered,start,feedback};
 })(typeof window!=='undefined'?window:globalThis);
