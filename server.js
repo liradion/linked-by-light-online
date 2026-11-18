@@ -19,6 +19,7 @@ const beta=createPublicBeta({maxRooms:onRender?Math.min(requestedBetaRooms,5):re
 const {createGame,initStage,updateInput,clearMovement,tick,snapshot}=require('./game-core');
 const {stages}=require('./shared/stages');
 const cloud=require('./cloud-store');
+const {createCloudSaveQueue}=require('./cloud-save-queue');
 const {createRuntimeMonitor}=require('./runtime-monitor');
 const recovery=createRuntimeMonitor({storageConfigured:cloud.active,requireDurable:process.env.LL_REQUIRE_DURABLE_STORAGE==='1'});
 const checkpoints=require('./room-checkpoint');
@@ -84,28 +85,16 @@ function restoreRooms(){
  const recovered=checkpoints.load(SAVE_FILE,warning=>console.warn('Corrupt session candidate:',warning.file,warning.error));
  if(recovered)hydrateRooms(recovered.payload);
 }
-let cloudSaveInFlight=null;
-async function persistRoomsCloud(force=false){
- if(!cloud.active)return false;
- if(cloudSaveInFlight){
-  if(!force)return cloudSaveInFlight;
-  await cloudSaveInFlight; // Flush the newest snapshot after the previous write.
+const cloudSaves=createCloudSaveQueue({
+ capture:roomBackups,
+ write:state=>cloud.saveRooms(state),
+ observe:(ok,elapsed,error)=>{
+  recovery.recorded('backup',ok,elapsed);
+  if(!ok&&error)console.warn('Cloud room save failed:',error.message);
  }
- const start=performance.now();
- cloudSaveInFlight=cloud.saveRooms(roomBackups()).then(()=>{
-  recovery.recorded('backup',true,performance.now()-start);return true;
- }).catch(e=>{
-  recovery.recorded('backup',false,performance.now()-start);
-  console.warn('Cloud room save failed:',e.message);return false;
- }).finally(()=>{cloudSaveInFlight=null;});
- return cloudSaveInFlight;
-}
-// Durable room/seat/role changes are checkpointed before network acknowledgement.
-// Ordinary in-level movement still uses the periodic 12-second checkpoint.
-// Cloud writes remain asynchronous; SIGKILL evidence only covers local disk.
-function persistStructural(){
- persistRooms();
- if(cloud.active)void persistRoomsCloud(true);
+});
+function persistRoomsCloud(force=false){
+ return cloud.active?cloudSaves.save(force):Promise.resolve(false);
 }
 async function restoreRoomsCloud(){if(!cloud.active)return;
  try{const data=await cloud.loadRooms();if(data)hydrateRooms(data);recovery.recorded('restore',true);}
