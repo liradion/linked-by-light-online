@@ -11,7 +11,7 @@ let room='',role=-1,token='',phase='waiting',connected=[false,false],socket=null
 let hostRole=0,soloMode=false,soloActiveRole=0,pendingHostRole=0,pendingSolo=false;
 const isHost=()=>role>=0&&role===hostRole;
 const controlledRole=()=>soloMode?soloActiveRole:role;
-let pendingRoom='',pendingCreate=false,pendingCreateStage=0,pendingBlueprint=null,pendingDemo=false,connectedBefore=false,reconnectCount=0,totalReconnects=0,wsTimer=null;
+let pendingRoom='',pendingCreate=false,pendingCreateStage=0,pendingBlueprint=null,pendingDemo=false,connectedBefore=false,reconnectCount=0,totalReconnects=0,wsTimer=null,joinAckTimer=null;
 let latest=null,snapshots=[],fpsTime=performance.now(),sound=true,ac=null;
 const keys=new Set(),input={left:false,right:false,jumpSeq:0,abilitySeq:0,bondSeq:0,emoteSeq:0};
 let prediction=null,lastPredStage=-1,predJumpAt=0,lastAck=0,lastResultId='',packetSeq=0,wasOnGround=null,lastFootstep=0;
@@ -52,17 +52,29 @@ function openConnection(){
   if(socket&&(socket.readyState===WebSocket.CONNECTING||socket.readyState===WebSocket.OPEN))return;
   clearTimeout(wsTimer);
   const protocol=location.protocol==='https:'?'wss:':'ws:';
-  socket=new WebSocket(protocol+'//'+location.host+'/ws');ready=false;updateStatus();
+  socket=new WebSocket(protocol+'//'+location.host+'/ws');const connection=socket;ready=false;updateStatus();
   socket.addEventListener('open',()=>{
+    if(socket!==connection)return;
     if(connectedBefore){totalReconnects++;GamePublicBeta.onRecovered();}reconnectCount=0;ready=true;connectedBefore=true;setError('');updateStatus();
     wsSend({t:'hello',protocol:4});wsSend({t:'v28Visit',invite:!!invite});
-    if(room||pendingRoom){const code=room||pendingRoom;wsSend({t:'join',room:code,token:token||roomToken(code),spectate:role===-1&&!!room||pendingSpectate});}
+    if(room||pendingRoom){
+      const code=room||pendingRoom;
+      wsSend({t:'join',room:code,token:token||roomToken(code),spectate:role===-1&&!!room||pendingSpectate});
+      // A live socket may never receive a join acknowledgement; rejoin with saved credentials.
+      clearTimeout(joinAckTimer);
+      joinAckTimer=setTimeout(()=>{
+        if(socket!==connection||connection.readyState!==WebSocket.OPEN)return;
+        setError('network.retry');connection.close(4000,'room join timeout');
+      },8000);
+    }
     else if(pendingCreate){wsSend({t:'create',stage:pendingCreateStage,blueprint:pendingBlueprint,secrets:GameAdventure.data().secrets.length,home:GameAdventure.getHome(),unlockedV20:GameAdventure.data().v20?.unlockedStages||[],v20Home:GameAdventure.data().v20?.house||{},v20Choices:GameAdventure.data().v20?.choices||{},unlockedV21:GameAdventure.data().v21?.unlockedStages||[],v21Profile:{unlockedStages:GameAdventure.data().v21?.unlockedStages||[],completed:GameAdventure.data().v21?.completed||[],trophies:GameAdventure.data().v21?.trophies||[],aquarium:GameAdventure.data().v21?.aquarium||[]},unlockedV23:GameAdventure.data().v23?.unlockedStages||[],v24Profile:GameAdventure.data().v24||{},demo:pendingDemo,hostRole:pendingHostRole,solo:pendingSolo});pendingCreate=false;pendingBlueprint=null;pendingDemo=false;pendingSolo=false;}
     else showUI();
   });
   socket.addEventListener('message',e=>{
+    if(socket!==connection)return;
     let m;try{m=JSON.parse(e.data);}catch(_){return;}
     if(m.t==='joined'){
+       clearTimeout(joinAckTimer);joinAckTimer=null;
        demoMode=false;room=m.room;role=m.role;token=m.token;phase=m.phase;pendingRoom='';
       hostRole=m.hostRole===1?1:0;soloMode=m.solo===true;soloActiveRole=m.soloActiveRole===1?1:0;GameV28.onJoined(m);
       latest=null;snapshots=[];lastAck=0;predictor.reset();if(role>=0)saveToken(room,token);
@@ -85,6 +97,7 @@ function openConnection(){
     }
     if(m.t==='snapshot'){consumeSnapshot(m);return;}
     if(m.t==='error'){
+      clearTimeout(joinAckTimer);joinAckTimer=null;
       const msg=m.message||'Ошибка подключения.';
       if(room&&msg.includes('Комната не найдена')){room='';role=-1;token='';phase='waiting';latest=null;snapshots=[];history.replaceState({},'',location.pathname);}
       const help=msg.includes('Комната не найдена')?'network.roomHelp':msg;
@@ -95,6 +108,8 @@ function openConnection(){
     }
   });
   socket.addEventListener('close',()=>{
+    if(socket!==connection)return;
+    clearTimeout(joinAckTimer);joinAckTimer=null;
     ready=false;updateStatus();resetKeys();GamePublicBeta.onDisconnected();
     if(room){connected=[false,false];$('waitingBanner').classList.remove('hidden');}
     setError(room?'network.lost':'network.retry');
