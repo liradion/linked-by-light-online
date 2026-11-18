@@ -96,6 +96,11 @@ const cloudSaves=createCloudSaveQueue({
 function persistRoomsCloud(force=false){
  return cloud.active?cloudSaves.save(force):Promise.resolve(false);
 }
+// Keep disk acknowledgements synchronous; remote writes run through the serialized queue.
+function persistStructural(){
+ persistRooms();
+ if(cloud.active)void persistRoomsCloud(true);
+}
 async function restoreRoomsCloud(){if(!cloud.active)return;
  try{const data=await cloud.loadRooms();if(data)hydrateRooms(data);recovery.recorded('restore',true);}
  catch(e){recovery.recorded('restore',false);console.warn('Cloud room restore failed:',e.message);}
