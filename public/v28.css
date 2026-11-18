@@ -14,7 +14,7 @@
 .v28-wake-spinner{animation:v28pulse 1.5s ease-in-out infinite;color:#ffe5af;font-size:20px}
 .v28-wake-retry{background:#244267;color:#fff;border:1px solid #acd7f2;padding:7px;border-radius:7px;cursor:pointer}
 .v28-role-selector :focus-visible,.v28-ping-wheel :focus-visible,.v28-ping-toggle:focus-visible{outline:3px solid #ffe8ae;outline-offset:2px}
-.v28-ping-toggle[hidden],v28-wake[hidden],.v28-tip[hidden],.v28-ping-wheel[hidden],.v28-role-selector [hidden]{display:none!important}
+.v28-ping-toggle[hidden],.v28-wake[hidden],.v28-tip[hidden],.v28-ping-wheel[hidden],.v28-role-selector [hidden]{display:none!important}
 .v28-ping-toggle:disabled{opacity:.55;cursor:progress}
 @keyframes v28pulse{50%{opacity:.35;transform:rotate(90deg)}}
 @media(max-width:700px){.v28-tip{top:82px;max-width:calc(100% - 50px);font-size:11px}.v28-ping-toggle{top:145px;right:6px;font-size:11px;min-height:35px;padding:4px}.v28-ping-wheel{top:187px;right:6px}.v28-wake{top:26px;right:-5px;max-width:95vw;flex-wrap:wrap}}
