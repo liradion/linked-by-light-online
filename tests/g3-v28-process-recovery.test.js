@@ -244,3 +244,116 @@ test('G3: corrupted primary journal and legacy snapshot restore verified backup 
   fs.rmSync(dir,{recursive:true,force:true});
  }
 });
+
+
+async function killWithoutShutdown(child){
+ if(!child||child.exitCode!==null||child.signalCode!==null)return;
+ const exited=once(child,'exit').catch(()=>{});
+ child.kill('SIGKILL');
+ await Promise.race([exited,delay(2000)]);
+ assert.ok(child.exitCode!==null||child.signalCode!==null,'Expected hard-terminated child process');
+}
+test('G3 SIGKILL: a just-acknowledged Echo-host room exists on disk before the 12-second timer',{timeout:20000},async()=>{
+ const {dir,file}=temp(),port=await freePort();
+ let app,host,restored;
+ try{
+  app=await launch(port,dir);
+  host=await connect(port);host.send({t:'hello',protocol:4});
+  host.send({t:'create',stage:0,hostRole:1});
+  const joined=await receive(host,m=>m.t==='joined');
+  assert.equal(joined.role,1);
+  // No 12-second periodic save or graceful SIGTERM is allowed to help.
+  await killWithoutShutdown(app);app=null;
+  const candidate=checkpoint.load(file);
+  assert.ok(candidate,'Room should be persisted at create acknowledgement');
+  assert.equal(candidate.payload.version,11);
+  assert.equal(candidate.payload.rooms.find(r=>r.code===joined.room)?.hostRole,1);
+  assert.equal(candidate.payload.rooms.find(r=>r.code===joined.room)?.seats[1]?.token,joined.token);
+  app=await launch(port,dir);
+  restored=await connect(port);restored.send({t:'hello',protocol:4});
+  restored.send({t:'join',room:joined.room,token:joined.token});
+  const back=await receive(restored,m=>m.t==='joined');
+  assert.equal(back.role,1);assert.equal(back.hostRole,1);
+  const snap=await receive(restored,m=>m.t==='snapshot');
+  assert.equal(snap.phase,'waiting');noSecrets(snap,joined.token);
+ }finally{
+  for(const peer of [host,restored])await close(peer).catch(()=>{});
+  await stop(app).catch(()=>{});
+  fs.rmSync(dir,{recursive:true,force:true});
+ }
+});
+test('G3 SIGKILL: confirmed start and host-selected stage recover with both seat tokens',{timeout:24000},async()=>{
+ const {dir,file}=temp(),port=await freePort();
+ let app,host,guest,backHost,backGuest;
+ try{
+  app=await launch(port,dir);
+  host=await connect(port);host.send({t:'hello',protocol:4});
+  host.send({t:'create',hostRole:1,stage:123,unlockedV23:['v23-01','v23-02']});
+  const made=await receive(host,m=>m.t==='joined');
+  guest=await connect(port);guest.send({t:'hello',protocol:4});
+  guest.send({t:'join',room:made.room});
+  const joined=await receive(guest,m=>m.t==='joined');
+  assert.equal(joined.role,0);
+  host.send({t:'start'});
+  await receive(host,m=>m.t==='snapshot'&&m.phase==='playing');
+  host.send({t:'selectStage',stage:122});
+  await receive(guest,m=>m.t==='snapshot'&&m.stage===122&&m.phase==='playing');
+  await killWithoutShutdown(app);app=null;
+  const checkpointed=checkpoint.load(file);
+  assert.ok(checkpointed);
+  const saved=checkpointed.payload.rooms.find(r=>r.code===made.room);
+  assert.equal(saved.game.stage,122,'Confirmed stage select must be durable at acknowledgement');
+  assert.equal(saved.game.phase,'playing');
+  assert.equal(saved.seats[0].token,joined.token);
+  assert.equal(saved.seats[1].token,made.token);
+  app=await launch(port,dir);
+  backHost=await connect(port);backHost.send({t:'hello',protocol:4});
+  backHost.send({t:'join',room:made.room,token:made.token});
+  assert.equal((await receive(backHost,m=>m.t==='joined')).role,1);
+  backGuest=await connect(port);backGuest.send({t:'hello',protocol:4});
+  backGuest.send({t:'join',room:made.room,token:joined.token});
+  assert.equal((await receive(backGuest,m=>m.t==='joined')).role,0);
+  const snap=await receive(backGuest,m=>m.t==='snapshot');
+  assert.equal(snap.stage,122);assert.equal(snap.hostRole,1);
+  noSecrets(snap,made.token,joined.token);
+  backGuest.send({t:'selectStage',stage:123});
+  await delay(150);
+  assert.equal(backHost.events.some(m=>m.t==='snapshot'&&m.stage===123),false);
+ }finally{
+  for(const peer of [host,guest,backHost,backGuest])await close(peer).catch(()=>{});
+  await stop(app).catch(()=>{});
+  fs.rmSync(dir,{recursive:true,force:true});
+ }
+});
+test('G3 SIGKILL: confirmed solo role swap recovers without spawning a second physical seat',{timeout:23000},async()=>{
+ const {dir,file}=temp(),port=await freePort();
+ let app,solo,restored,intruder;
+ try{
+  app=await launch(port,dir);
+  solo=await connect(port);solo.send({t:'hello',protocol:4});
+  solo.send({t:'create',hostRole:1,solo:true,stage:0});
+  const made=await receive(solo,m=>m.t==='joined');
+  solo.send({t:'start'});
+  await receive(solo,m=>m.t==='snapshot'&&m.phase==='playing');
+  solo.send({t:'v28SoloSwitch',activeRole:0});
+  await receive(solo,m=>m.t==='snapshot'&&m.soloActiveRole===0);
+  await killWithoutShutdown(app);app=null;
+  const saved=checkpoint.load(file).payload.rooms.find(r=>r.code===made.room);
+  assert.ok(saved);assert.equal(saved.solo,true);assert.equal(saved.soloActiveRole,0);
+  assert.equal(saved.seats[0],null);assert.equal(saved.seats[1].token,made.token);
+  app=await launch(port,dir);
+  restored=await connect(port);restored.send({t:'hello',protocol:4});
+  restored.send({t:'join',room:made.room,token:made.token});
+  const recovered=await receive(restored,m=>m.t==='joined');
+  assert.deepEqual([recovered.role,recovered.hostRole,recovered.solo,recovered.soloActiveRole],[1,1,true,0]);
+  const snap=await receive(restored,m=>m.t==='snapshot'&&m.phase==='playing');
+  assert.equal(snap.soloActiveRole,0);noSecrets(snap,made.token);
+  intruder=await connect(port);intruder.send({t:'hello',protocol:4});
+  intruder.send({t:'join',room:made.room});
+  assert.match((await receive(intruder,m=>m.t==='error')).message,/одиночном режиме/);
+ }finally{
+  for(const peer of [solo,restored,intruder])await close(peer).catch(()=>{});
+  await stop(app).catch(()=>{});
+  fs.rmSync(dir,{recursive:true,force:true});
+ }
+});
