@@ -58,7 +58,11 @@
  "Искра: выпусти луч, когда зеркало правильно направлено": "Spark: fire the beam when the mirror is aligned",
  "Эхо: изменяй направление призмы": "Echo: adjust the prism's direction",
  "Не удалось поделиться": "Could not share",
- "Ожидание сервера": "Waiting for server"
+ "Ожидание сервера": "Waiting for server",
+ " Коснитесь кнопки смены героя.": " Tap the switch-hero button.",
+ "Переключить на Эхо": "Switch to Echo",
+ "Переключить на Искру": "Switch to Spark",
+ "Поставить метку": "Place a marker"
 });
  function text(source,language='ru'){
   if(typeof source!=='string'||language!=='en')return source;
