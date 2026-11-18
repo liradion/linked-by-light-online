@@ -6,7 +6,7 @@
     const shell=document.querySelector('.game-shell');
     const header=document.querySelector('.topline');
     if(!shell||!header)return;
-    const right=header.querySelector(':scope > div:last-child')||header;
+    const right=header.querySelector(':scope > div:last-of-type')||header;
     const trigger=document.createElement('button');
     trigger.type='button';
     trigger.className='mini-btn game-menu-trigger';
@@ -39,13 +39,26 @@
     for(const name of ['.v20-toggle','.v21-toggle','.v2346-toggle'])move(name,'.game-menu-worlds');
     move('.v20-quick','.game-menu-skills');
     move('.v21-quick','.game-menu-skills');
-    for(const name of ['#qualityOpen','#betaHelpBtn','#betaReportBtn','#installGameBtn','#resetBtn'])move(name,'.game-menu-tools');
+    for(const name of ['#qualityOpen','#controlsOpen','#gamepadOpen','#gameHintBtn','#betaHelpBtn','#betaReportBtn','#installGameBtn','#resetBtn'])move(name,'.game-menu-tools');
+    const refreshLocale=()=>{
+      const english=window.GameI18n?.isEnglish?.()===true;
+      const headings=drawer.querySelectorAll('.game-menu-group-title');
+      const labels=english?['Adventure','Worlds & chapters','Abilities','Settings & help']
+        :['Приключение','Миры и главы','Способности','Настройки и помощь'];
+      headings.forEach((node,i)=>node.textContent=labels[i]||node.textContent);
+      drawer.querySelector('.game-menu-head strong').textContent=english?'Game menu':'Меню игры';
+      trigger.textContent=english?'☰ Menu':'☰ Меню';
+      const close=drawer.querySelector('.game-menu-close');
+      close.setAttribute('aria-label',english?'Close menu':'Закрыть меню');
+    };
+    refreshLocale();
+    window.GameI18n?.subscribe?.(refreshLocale);
     function setOpen(open){
       drawer.classList.toggle('is-open',open);
       shade.classList.toggle('is-open',open);
       drawer.setAttribute('aria-hidden',String(!open));
       trigger.setAttribute('aria-expanded',String(open));
-      trigger.setAttribute('aria-label',open?'Закрыть меню игры':'Открыть меню игры');
+      trigger.setAttribute('aria-label',window.GameI18n?.isEnglish?.()?(open?'Close game menu':'Open game menu'):(open?'Закрыть меню игры':'Открыть меню игры'));
       if(open)drawer.querySelector('.game-menu-close').focus({preventScroll:true});
       else if(drawer.contains(document.activeElement))trigger.focus({preventScroll:true});
     }
@@ -78,11 +91,72 @@
       cleanToggle.setAttribute('aria-label','Показать интерфейс игры');
       cleanToggle.title='Показать интерфейс';
       gameFrame.append(cleanToggle);
+      // Contextual mobile actions prevent clean mode from blocking later chapters.
+      // The original v20 buttons retain their own handlers; proxies only invoke them.
+      const contextToggle=document.createElement('button');
+      contextToggle.type='button';
+      contextToggle.id='cleanContextToggle';
+      contextToggle.className='clean-context-toggle';
+      contextToggle.textContent='⋯';
+      contextToggle.setAttribute('aria-expanded','false');
+      contextToggle.setAttribute('aria-label','Дополнительные игровые действия');
+      contextToggle.setAttribute('aria-controls','cleanContextActions');
+      const contextActions=document.createElement('div');
+      contextActions.id='cleanContextActions';
+      contextActions.className='clean-context-actions';
+      contextActions.hidden=true;
+      contextActions.setAttribute('aria-label','Дополнительные действия');
+      gameFrame.append(contextToggle,contextActions);
+      const touchControls=document.getElementById('touchControls');
+      const extraButtons=touchControls?.querySelector('.adv-extra-controls');
+      const getChapter=()=>{
+        const label=document.getElementById('levelLabel')?.textContent||'';
+        if(label.startsWith('ПЕРЕПЛЕТЕНИЕ МИРОВ')||label.startsWith('INTERTWINED WORLDS'))return 'v20';
+        if(label.startsWith('НАВСТРЕЧУ ДРУГ ДРУГУ')||label.startsWith('TOWARD EACH OTHER'))return 'v21';
+        if(label.startsWith('ФИЗИКА СВЕТА')||label.startsWith('PHYSICS OF LIGHT'))return 'v23';
+        return 'base';
+      };
+      const makeContextButton=(label,fn)=>{
+        const button=document.createElement('button');
+        button.type='button';
+        button.className='clean-context-action';
+        button.textContent=label;
+        button.addEventListener('click',()=>{fn();closeContext();});
+        contextActions.append(button);
+      };
+      const closeContext=()=>{
+        contextActions.hidden=true;
+        contextToggle.setAttribute('aria-expanded','false');
+        touchControls?.classList.remove('clean-show-extra');
+      };
+      const openContext=()=>{
+        contextActions.replaceChildren();
+        const chapter=getChapter();
+        if(extraButtons)touchControls.classList.add('clean-show-extra');
+        if(chapter==='v20'){
+          const originals=[...document.querySelectorAll('.v20-quick button')];
+          for(const [i,label] of ['⛓ Нить','◈ Мир','◷ Время'].entries()){
+            if(originals[i])makeContextButton(label,()=>originals[i].click());
+          }
+        }else if(chapter==='v21'){
+          makeContextButton('✧ Действия главы',()=>window.GameV21?.open('level'));
+        }else if(chapter==='v23'){
+          makeContextButton('✦ Физика света',()=>window.GameFuture?.open('physics'));
+        }
+        const hasSpecial=contextActions.childElementCount>0;
+        contextActions.hidden=!hasSpecial;
+        contextToggle.setAttribute('aria-expanded','true');
+      };
+      contextToggle.addEventListener('click',()=>{
+        if(contextToggle.getAttribute('aria-expanded')==='true')closeContext();
+        else openContext();
+      });
       const storageKey='linked-light-clean-ui';
       const applyCleanMode=(enabled,remember=true)=>{
         document.documentElement.classList.toggle('clean-play-mode',enabled);
         cleanEntry.setAttribute('aria-pressed',String(enabled));
         if(enabled)setOpen(false);
+        closeContext();
         if(remember){try{localStorage.setItem(storageKey,enabled?'1':'0');}catch(_){}}
       };
       const switchMode=()=>{

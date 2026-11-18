@@ -1,0 +1,26 @@
+/* v28 First Experience: nonintrusive role, help, ping and wake controls. */
+.v28-role-selector{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;margin:12px auto;max-width:540px}
+.v28-role-selector label{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;color:#e2e6fb;font:12px/1.4 system-ui}
+.v28-role-selector select{appearance:auto;min-height:42px;background:#171f3d;color:#fff;padding:8px;border:1px solid #a8a4ed;border-radius:8px;font-size:14px}
+.v28-share-line{display:flex;justify-content:center;gap:10px;margin-top:12px}
+.v28-tip{position:absolute;z-index:3;top:100px;left:50%;transform:translateX(-50%);max-width:min(450px,calc(100% - 24px));width:max-content;padding:12px 40px 10px 14px;background:#132445ea;border:1px solid #bed3fa9c;border-radius:12px;box-shadow:0 6px 20px #0008;color:#fff;pointer-events:auto;font:12px/1.45 system-ui;text-align:left}
+.v28-tip strong{font-size:12px;color:#ffdbac}
+.v28-tip p{margin:5px 0 0}
+.v28-tip-close{position:absolute;top:4px;right:5px;border:0;background:#ffffff16;color:#fff;padding:2px 7px;font-size:20px;border-radius:6px;cursor:pointer}
+.v28-ping-toggle{position:absolute;right:10px;top:225px;z-index:5;background:#273d69e8;color:white;border:1px solid #badbf2;border-radius:9px;min-height:39px;padding:5px 9px;cursor:pointer;font:600 12px system-ui}
+.v28-ping-wheel{position:absolute;z-index:7;top:267px;right:10px;background:#13244df3;border:1px solid #b2cafa;border-radius:12px;padding:8px;max-width:210px;display:grid;grid-template-columns:1fr 1fr;gap:6px;box-shadow:0 8px 20px #0008}
+.v28-ping-option{background:#34456b;border:1px solid #9daedb;color:#fff;min-height:42px;border-radius:8px;cursor:pointer;font-size:11px;padding:5px}
+.v28-wake{position:absolute;top:36px;right:0;min-width:min(320px,95vw);background:#0d1d39f5;color:#f7faff;border:1px solid #97c5ea;border-radius:9px;box-shadow:0 8px 25px #0009;padding:11px;z-index:200;display:flex;align-items:center;gap:9px;font:12px/1.4 system-ui}
+.v28-wake-spinner{animation:v28pulse 1.5s ease-in-out infinite;color:#ffe5af;font-size:20px}
+.v28-wake-retry{background:#244267;color:#fff;border:1px solid #acd7f2;padding:7px;border-radius:7px;cursor:pointer}
+.v28-role-selector :focus-visible,.v28-ping-wheel :focus-visible,.v28-ping-toggle:focus-visible{outline:3px solid #ffe8ae;outline-offset:2px}
+.v28-ping-toggle[hidden],.v28-wake[hidden],.v28-tip[hidden],.v28-ping-wheel[hidden],.v28-role-selector [hidden]{display:none!important}
+.v28-ping-toggle:disabled{opacity:.55;cursor:progress}
+@keyframes v28pulse{50%{opacity:.35;transform:rotate(90deg)}}
+@media(max-width:700px){.v28-tip{top:82px;max-width:calc(100% - 50px);font-size:11px}.v28-ping-toggle{top:145px;right:6px;font-size:11px;min-height:35px;padding:4px}.v28-ping-wheel{top:187px;right:6px}.v28-wake{top:26px;right:-5px;max-width:95vw;flex-wrap:wrap}}
+/* Keep the tap controls and marker wheel within short, notched iPhone landscape viewports. */
+@media(pointer:coarse) and (orientation:landscape){
+ .v28-ping-toggle{right:calc(env(safe-area-inset-right) + 8px);top:calc(env(safe-area-inset-top) + 68px);min-height:44px;font-size:12px}
+ .v28-ping-wheel{right:calc(env(safe-area-inset-right) + 8px);top:calc(env(safe-area-inset-top) + 116px);max-height:calc(100% - 124px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto}
+}
+@media(prefers-reduced-motion:reduce){.v28-wake-spinner{animation:none}}

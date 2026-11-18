@@ -5,7 +5,7 @@ const vm=require('node:vm');
 const fs=require('node:fs');
 const path=require('node:path');
 function dom(){const nodes=new Map(),host={append(node){nodes.set(node.id,node);}};
- const makeNode=tag=>({tag,hidden:false,style:{},id:'',value:'',open:false,
+ const makeNode=tag=>({tag,hidden:false,style:{},id:'',value:'',open:false,querySelector:()=>null,setAttribute(){},
   set innerHTML(v){this._html=v;for(const match of v.matchAll(/id="([A-Za-z0-9_-]+)"/g))if(!nodes.has(match[1]))nodes.set(match[1],makeNode('child'));},
   get innerHTML(){return this._html;},
   showModal(){this.open=true;},close(){this.open=false;},append(){}});
@@ -14,7 +14,7 @@ function dom(){const nodes=new Map(),host={append(node){nodes.set(node.id,node);
 }
 test('Google sign-in UI shows for guests and never requires an account to play',async()=>{
  const {nodes,document}=dom();let locationChanged='';const timers=[];
- const window={};const sandbox={window,document,URLSearchParams,location:{pathname:'/',search:'',assign:u=>{locationChanged=u;}},history:{replaceState(){}},setInterval:f=>timers.push(f),fetch:async(path)=>{
+ const window={GameI18n:{aux:key=>require('../public/aux-locale').text(key,'ru'),subscribe(){},mountDialogLanguage(){}}};const sandbox={window,document,URLSearchParams,location:{pathname:'/',search:'',assign:u=>{locationChanged=u;}},history:{replaceState(){}},setInterval:f=>timers.push(f),fetch:async(path)=>{
   assert.equal(path,'/api/auth/me');return {ok:true,json:async()=>({enabled:true,authenticated:false,user:null})};
  },console};
  const text=fs.readFileSync(path.join(__dirname,'../public/auth.js'),'utf8');
@@ -28,7 +28,7 @@ test('Google sign-in UI shows for guests and never requires an account to play',
 });
 test('HTML includes Google module after existing co-op client',()=>{
  const html=fs.readFileSync(path.join(__dirname,'../public/index.html'),'utf8');
- assert.ok(html.includes('/client.js?v=26'));assert.ok(html.includes('/auth.js?v=13'));
- assert.ok(html.indexOf('/auth.js?v=13')>html.indexOf('/client.js?v=26'));
+ assert.ok(html.includes('/client.js?v=26'));assert.ok(html.includes('/auth.js?v=15'));
+ assert.ok(html.indexOf('/auth.js?v=15')>html.indexOf('/client.js?v=26'));
  assert.ok(html.includes('id="createBtn"'),'guest rooms remain available');
 });

@@ -20,6 +20,9 @@ jobs:
       - name: Verify JavaScript syntax
         run: |
           node --check server.js
+          node --check v28-core.js
+          node --check v28-telemetry.js
+          node --check public/v28.js
           node --check websocket-transport.js
           node --check room-checkpoint.js
           node --check action-replay-cache.js

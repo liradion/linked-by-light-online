@@ -49,16 +49,28 @@ function interpolationDelay(){
 function predictionLead(){return clamp(avg/2000+.045,.09,.35);}
 function stats(){return {rtt:Math.round(avg),jitter:Math.round(jitter),fps:Math.round(fps),quality,buffer:Math.round(interpolationDelay()),snapshotHz:snapshotSamples?Math.round(1000/snapshotGap):0};}
 function sample(dt){if(!Number.isFinite(dt)||dt<=0)return;frames++;fpsElapsed+=dt;
- if(fpsElapsed>=1){fps=Math.round(frames/fpsElapsed);frames=0;fpsElapsed=0;const next=adapt();if(next!==quality){quality=next;document.documentElement.dataset.gameGraphics=quality;}const d=$('qualityStats');if(d){const s=stats();d.textContent=`FPS ${s.fps} · RTT ${s.rtt} мс · Джиттер ${s.jitter} мс · Буфер ${s.buffer} мс · Снимки ${s.snapshotHz} Гц · ${s.quality}`;}}
+ if(fpsElapsed>=1){fps=Math.round(frames/fpsElapsed);frames=0;fpsElapsed=0;const next=adapt();if(next!==quality){quality=next;document.documentElement.dataset.gameGraphics=quality;}const d=$('qualityStats');if(d){const s=stats();d.textContent=root.GameI18n?.ui?.('quality.stats',s)||`FPS ${s.fps} · RTT ${s.rtt} мс · Джиттер ${s.jitter} мс · Буфер ${s.buffer} мс · Снимки ${s.snapshotHz} Гц · ${s.quality}`;}}
  pollGamepad();
 }
-function pollGamepad(){if(typeof navigator.getGamepads!=='function')return;
- let pads;try{pads=navigator.getGamepads();}catch(_){return;}
- const pad=Array.from(pads||[]).find(p=>p&&p.connected);const playing=getSession().phase==='playing';
+function pollGamepad(){
+ let pads=[];try{if(typeof navigator.getGamepads==='function')pads=navigator.getGamepads()||[];}catch(_){pads=[];}
+ const pad=Array.from(pads).find(p=>p&&p.connected);
+ const bindings=root.GamePadBindings;
+ const capturing=bindings?.pollCapture(pad)===true;
+ // While a settings/modal dialog is open, release held movement and suppress
+ // all button actions. Remapping itself is handled by the binding capture UI.
+ const modalOpen=!!document.querySelector('dialog[open]');
+ const playing=getSession().phase==='playing'&&!capturing&&!modalOpen;
  const left=!!(pad&&playing&&(pad.axes?.[0]<-.34||pad.buttons?.[14]?.pressed));
  const right=!!(pad&&playing&&(pad.axes?.[0]>.34||pad.buttons?.[15]?.pressed));
  if(left!==oldLeft||right!==oldRight){oldLeft=left;oldRight=right;onControls(left,right);}
- const buttons=[0,1,2,3];buttons.forEach((n,i)=>{const down=!!(pad&&playing&&pad.buttons?.[n]?.pressed);if(down&&!gamepadButtons[i])onAction(['jump','ability','bond','emote'][i]);gamepadButtons[i]=down;});
+ const actions=['jump','ability','bond','emote'];
+ actions.forEach((action,i)=>{
+  const n=bindings?.buttonFor(action)??i;
+  const down=!!(pad&&playing&&(bindings?bindings.active(pad,action):pad.buttons?.[n]?.pressed));
+  if(down&&!gamepadButtons[i])onAction(action);
+  gamepadButtons[i]=down;
+ });
 }
 function init(api={}){onControls=api.onControls||onControls;onAction=api.onAction||onAction;getSession=api.getSession||getSession;
  const settings=document.createElement('button');settings.type='button';settings.className='mini-btn';settings.textContent='⚙ Настройки';settings.id='qualityOpen';
@@ -74,16 +86,34 @@ function init(api={}){onControls=api.onControls||onControls;onAction=api.onActio
  <label class="quality-check"><input id="qualitySound" type="checkbox"> Музыка и эффекты</label>
  <label class="quality-check"><input id="qualityReduced" type="checkbox"> Меньше анимаций</label>
  <label class="quality-check"><input id="qualityDiag" type="checkbox"> FPS и диагностика соединения</label></div>
- <p class="quality-note">🎮 Геймпад: левый стик — движение, A — прыжок, B — способность, X — связь, Y — эмоция. Настройки сохраняются только на этом устройстве.</p>
+ <p class="quality-note">🎮 Геймпад: левый стик/крестовина — движение. Кнопки A/B/X/Y можно изменить через «🎮 Геймпад» в меню. Схема сохраняется только на этом устройстве.</p>
  <div class="quality-actions"><button type="button" id="qualitySave">Применить</button></div>`;
- document.body.append(d);
+ document.body.append(d);root.GameI18n?.mountDialogLanguage?.(d);
  const bind=[['qualityGraphics','graphics','value'],['qualityButtons','buttons','number'],['qualityOpacity','opacity','percent'],['qualityLift','lift','number'],['qualityInset','inset','number'],['qualitySound','sound','checked'],['qualityReduced','reducedMotion','checked'],['qualityDiag','diagnostics','checked']];
+ function refreshLanguage(){
+   const translate=(key)=>root.GameI18n?.ui?.('quality.'+key)||key;
+   settings.textContent=translate('open');
+   d.querySelector('.quality-head strong').textContent=translate('title');
+   $('qualityClose').setAttribute('aria-label',translate('close'));
+   const fields=[['qualityGraphics','graphics'],['qualityButtons','buttons'],['qualityOpacity','opacity'],['qualityLift','lift'],['qualityInset','inset'],
+    ['qualitySound','sound'],['qualityReduced','motion'],['qualityDiag','diagnostics']];
+   for(const [id,key]of fields){
+    const label=$(id)?.closest('label');if(!label)continue;
+    const node=$(id).type==='checkbox'?label.lastChild:label.firstChild;
+    if(node&&node.nodeType===3)node.textContent=$(id).type==='checkbox'?' '+translate(key):translate(key)+' ';
+   }
+   const opts=d.querySelectorAll('#qualityGraphics option');
+   ['auto','low','medium','high'].forEach((key,i)=>{if(opts[i])opts[i].textContent=translate(key);});
+   d.querySelector('.quality-note').textContent=translate('note');
+   $('qualitySave').textContent=translate('apply');
+  }
  function refresh(){for(const [id,key,kind] of bind){const n=$(id);n[kind==='checked'?'checked':'value']=kind==='percent'?String(Math.round(options[key]*100)):options[key];}const vals=[['qualityButtonsValue',options.buttons+' px'],['qualityOpacityValue',Math.round(options.opacity*100)+'%'],['qualityLiftValue',options.lift+' px'],['qualityInsetValue',options.inset+' px']];for(const [id,value] of vals)$(id).textContent=value;}
  for(const [id,key,kind] of bind)$(id).addEventListener(kind==='checked'?'change':'input',()=>{const n=$(id);options[key]=kind==='checked'?n.checked:kind==='percent'?Number(n.value)/100:kind==='number'?Number(n.value):n.value;refresh();apply();});
  const close=()=>d.close();$('qualityClose').addEventListener('click',close);$('qualitySave').addEventListener('click',close);
  settings.addEventListener('click',()=>{refresh();if(!d.open)d.showModal();});d.addEventListener('click',e=>{if(e.target===d)close();});
  const stat=document.createElement('div');stat.id='qualityStats';stat.className='quality-stats';const frame=$('frame');if(frame)frame.append(stat);
- apply();refresh();return d;
+ root.GameI18n?.subscribe?.(refreshLanguage);
+  apply();refresh();refreshLanguage();return d;
 }
 function setSound(enabled){options.sound=!!enabled;save();if(padGain&&audioCtx)padGain.gain.setTargetAtTime(enabled?.012:0,audioCtx.currentTime,.4);}
 function audioUnlock(){if(!options.sound)return;try{

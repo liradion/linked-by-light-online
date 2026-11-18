@@ -1,10 +1,11 @@
 /* v17-v19: shared room notes, quick signals, screenshot, safe map constructor and endings. */
 (function(root){'use strict';
-const $=id=>document.getElementById(id),el=(tag,text,cls)=>{
+const tr=key=>root.GameI18n?.aux?.('editor.'+key)||key;
+ const $=id=>document.getElementById(id),el=(tag,text,cls)=>{
  const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;
 };
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-let api={},dialog,body,tab='notes',notes=[],blueprint={v:1,title:'Наш световой маршрут',platforms:[]},lastDuets=0,lastEnding='';
+let api={},dialog,body,tab='notes',notes=[],blueprint={v:1,title:'Наш световой маршрут',platforms:[]},lastDuets=0,lastEnding='',tabButtons={},titleLabel;
 const MAX_NOTES=24;
 function normalize(raw){
  if(!raw||raw.v!==1||typeof raw.title!=='string'||!Array.isArray(raw.platforms)||raw.platforms.length>8)return null;
@@ -53,10 +54,10 @@ function onSnapshot(s){
  }
 }
 function noteEditor(){
- const intro=el('p','Записки видят только участники комнаты. Последние 24 записки хранятся в комнате, до 40 попадают в ваш личный архив и синхронизируются с Google при входе.','adv-description');
+ const intro=el('p',tr('notesIntro'),'adv-description');
  body.append(intro);
  const list=el('div',undefined,'exp-notes');
- if(!(api.getMemories?.()?.length||notes.length))list.append(el('p','Пока нет записок. Оставьте первую ✨','adv-mini'));
+ if(!(api.getMemories?.()?.length||notes.length))list.append(el('p',tr('noNotes'),'adv-mini'));
  const saved=api.getMemories?.()||[];
  const seen=new Set(),all=[...saved,...notes].filter(n=>{
   if(!n||typeof n.text!=='string')return false;
@@ -64,22 +65,22 @@ function noteEditor(){
  }).sort((x,y)=>(x.at||0)-(y.at||0)).slice(-40);
  for(const n of all){
   const item=el('article',undefined,'exp-note');
-  item.append(el('strong',n.role===0?'✦ Искра':'◈ Эхо'));
+  item.append(el('strong',n.role===0?(root.GameI18n?.isEnglish?.()?'✦ Spark':'✦ Искра'):(root.GameI18n?.isEnglish?.()?'◈ Echo':'◈ Эхо')));
   item.append(el('p',n.text));list.append(item);
  }
  body.append(list);
- const input=el('textarea');input.maxLength=160;input.rows=2;input.placeholder='Напиши что-нибудь друг другу…';
+ const input=el('textarea');input.id='exp-note-draft';input.maxLength=160;input.rows=2;input.placeholder=tr('notePlaceholder');
  input.className='exp-input';body.append(input);
- const send=el('button','Отправить записку','adv-button');
+ const send=el('button',tr('sendNote'),'adv-button');
  send.onclick=()=>{const text=input.value.trim();if(!text)return;
   if(api.inRoom?.())api.send?.({t:'note',text});
-  else{const note={text,role:0,at:Date.now()};api.saveMemory?.(note);notify('Личная заметка сохранена на устройстве.');render();}
+  else{const note={text,role:0,at:Date.now()};api.saveMemory?.(note);notify(tr('savedNote'));render();}
   input.value='';
  };
  body.append(send);
- body.append(el('h3','Быстрые сигналы'));
+ body.append(el('h3',tr('quickTitle')));
  const actions=el('div',undefined,'adv-options');
- for(const [kind,label] of [['here','📍 Я здесь'],['wait','✋ Подожди'],['help','❗ Помоги'],['heart','♡ Люблю']]){
+ for(const [kind,label] of [['here',tr('here')],['wait',tr('wait')],['help',tr('help')],['heart',tr('heart')]]){
   const b=el('button',label,'adv-button');b.onclick=()=>api.send?.({t:'quick',kind});actions.append(b);
  }
  body.append(actions);
@@ -107,15 +108,15 @@ function paintEditor(canvas){
  ctx.fillStyle='#a1f6d4';ctx.fillRect(1506*sx,465*sy,8,14);
  ctx.fillStyle='#c6b6ff';
  for(const p of blueprint.platforms)ctx.fillRect(p.x*sx,p.y*sy,p.w*sx,Math.max(3,p.h*sy));
- ctx.fillStyle='#f3eaff';ctx.font='12px system-ui';ctx.fillText('Коснитесь поля, чтобы поставить платформу (макс. 8)',12,18);
+ ctx.fillStyle='#f3eaff';ctx.font='12px system-ui';ctx.fillText(tr('canvasHelp'),12,18);
 }
 function renderEditor(){
- body.append(el('p','Создайте безопасную карту с собственными платформами. Две плиты и портал остаются обязательными. Создатель запускает карту в новой комнате, второй игрок получает её автоматически.','adv-description'));
- const title=el('input');title.className='exp-input';title.maxLength=38;title.value=blueprint.title;title.placeholder='Название уровня';
+ body.append(el('p',tr('mapIntro'),'adv-description'));
+ const title=el('input');title.className='exp-input';title.maxLength=38;title.value=blueprint.title;title.placeholder=tr('mapName');
  title.oninput=()=>{blueprint.title=title.value.slice(0,38);};
  body.append(title);
  const canvas=el('canvas');canvas.className='exp-canvas';canvas.width=650;canvas.height=215;
- canvas.setAttribute('aria-label','Редактор платформ: нажмите, чтобы разместить платформу');body.append(canvas);
+ canvas.setAttribute('aria-label',tr('canvasLabel'));body.append(canvas);
  canvas.addEventListener('click',e=>{
   if(blueprint.platforms.length>=8){return;}
   const r=canvas.getBoundingClientRect();
@@ -125,43 +126,49 @@ function renderEditor(){
  });
  paintEditor(canvas);
  const tools=el('div',undefined,'adv-options');
- const undo=el('button','↶ Убрать последнюю','adv-button');undo.onclick=()=>{blueprint.platforms.pop();paintEditor(canvas);};tools.append(undo);
- const clear=el('button','Очистить','adv-button');clear.onclick=()=>{blueprint.platforms=[];paintEditor(canvas);};tools.append(clear);
- const play=el('button','🎮 Создать комнату с картой','adv-button');play.onclick=()=>{
-  const b=normalize(blueprint);if(!b){notify('Проверьте название и платформы.');return;}
-  if(api.inRoom?.()){notify('Сначала завершите текущую комнату или откройте игру в другой вкладке.');return;}
+ const undo=el('button',tr('undo'),'adv-button');undo.onclick=()=>{blueprint.platforms.pop();paintEditor(canvas);};tools.append(undo);
+ const clear=el('button',tr('clear'),'adv-button');clear.onclick=()=>{blueprint.platforms=[];paintEditor(canvas);};tools.append(clear);
+ const play=el('button',tr('play'),'adv-button');play.onclick=()=>{
+  const b=normalize(blueprint);if(!b){notify(tr('invalidMap'));return;}
+  if(api.inRoom?.()){notify(tr('alreadyRoom'));return;}
   api.createCustom?.(b);dialog.close();
  };tools.append(play);
  body.append(tools);
- const code=el('textarea');code.className='exp-input';code.rows=3;code.placeholder='Здесь появится код карты или вставьте код друга';body.append(code);
+ const code=el('textarea');code.id='exp-map-code';code.className='exp-input';code.rows=3;code.placeholder=tr('codePlaceholder');body.append(code);
  const actions=el('div',undefined,'adv-options');
- const share=el('button','📋 Код карты','adv-button');share.onclick=async()=>{
-  const b=normalize(blueprint);if(!b){notify('Название карты недопустимо.');return;}
+ const share=el('button',tr('copyCode'),'adv-button');share.onclick=async()=>{
+  const b=normalize(blueprint);if(!b){notify(tr('invalidName'));return;}
   code.value=encode(b);
-  try{await navigator.clipboard.writeText(code.value);notify('Код карты скопирован.');}catch(_){notify('Скопируйте код из поля.');}
+  try{await navigator.clipboard.writeText(code.value);notify(tr('codeCopied'));}catch(_){notify(tr('codeCopyManual'));}
  };actions.append(share);
- const load=el('button','📥 Загрузить код','adv-button');load.onclick=()=>{
-  const b=decode(code.value);if(!b){notify('Неверный код карты.');return;}
+ const load=el('button',tr('loadCode'),'adv-button');load.onclick=()=>{
+  const b=decode(code.value);if(!b){notify(tr('invalidCode'));return;}
   blueprint=b;render();
  };actions.append(load);
  body.append(actions);
- body.append(el('p','Коды карт — это переносимый текст; публичного каталога и серверной публикации пока нет.','adv-mini'));
+ body.append(el('p',tr('codeInfo'),'adv-mini'));
 }
 function notify(text){const n=$('exp-message');if(n)n.textContent=text;}
 function savePhoto(){
  const c=$('game');if(!c)return;
  try{const url=c.toDataURL('image/png'),a=el('a');
   a.href=url;a.download='svyazannye-svetom-'+Date.now()+'.png';
-  document.body.append(a);a.click();a.remove();notify('Кадр сохранён на устройстве.');}
- catch(_){notify('Браузер не разрешил сохранить кадр. Сделайте обычный скриншот.');}
+  document.body.append(a);a.click();a.remove();notify(tr('photoSaved'));}
+ catch(_){notify(tr('photoDenied'));}
 }
 function renderPhoto(){
- body.append(el('p','Сохраните памятный кадр текущего уровня. Фото создаётся на устройстве и не загружается на сервер.','adv-description'));
- const save=el('button','📸 Сохранить кадр PNG','adv-button');save.onclick=savePhoto;body.append(save);
+ body.append(el('p',tr('photoIntro'),'adv-description'));
+ const save=el('button',tr('savePhoto'),'adv-button');save.onclick=savePhoto;body.append(save);
 }
 function render(){
- if(!body)return;body.replaceChildren();
+ if(!body)return;
+ // Refresh translated controls but preserve draft note and imported map text.
+ const draft=body.querySelector('#exp-note-draft')?.value||'';
+ const code=body.querySelector('#exp-map-code')?.value||'';
+ body.replaceChildren();
  if(tab==='notes')noteEditor();else if(tab==='editor')renderEditor();else renderPhoto();
+ if(tab==='notes'&&body.querySelector('#exp-note-draft'))body.querySelector('#exp-note-draft').value=draft;
+ if(tab==='editor'&&body.querySelector('#exp-map-code'))body.querySelector('#exp-map-code').value=code;
  body.append(el('p',undefined,'adv-mini'));body.lastChild.id='exp-message';
 }
 function open(next){tab=next;render();if(!dialog.open)dialog.showModal();body.scrollTop=0;dialog.scrollTop=0;}
@@ -169,11 +176,16 @@ function init(callbacks){
  api=callbacks;
  const host=document.querySelector('.adv-nav')||document.querySelector('.topline');
  if(!host)return;
- const buttons=[['notes','💌 Записки'],['editor','🛠 Карты'],['photo','📸 Кадр']];
- for(const [id,label] of buttons){const b=el('button',label,'adv-button');b.onclick=()=>open(id);host.append(b);}
+ const buttons=[['notes','notesTab'],['editor','mapTab'],['photo','photoTab']];
+ for(const [id,key] of buttons){const b=el('button',tr(key),'adv-button');b.id='exp-'+id+'-open';b.onclick=()=>open(id);host.append(b);tabButtons[id]=b;}
  dialog=el('dialog',undefined,'adv-dialog');dialog.id='exp-dialog';
- const head=el('div',undefined,'adv-dialog-head');head.append(el('strong','✦ Наше приключение'));const close=el('button','✕','adv-button');close.onclick=()=>dialog.close();head.append(close);dialog.append(head);
- body=el('div',undefined,'adv-dialog-body');dialog.append(body);document.body.append(dialog);
+ const head=el('div',undefined,'adv-dialog-head');titleLabel=el('strong',tr('title'));head.append(titleLabel);const close=el('button','✕','adv-button');close.onclick=()=>dialog.close();head.append(close);dialog.append(head);
+ body=el('div',undefined,'adv-dialog-body');dialog.append(body);document.body.append(dialog);root.GameI18n?.mountDialogLanguage?.(dialog);
+ root.GameI18n?.subscribe?.(()=>{
+  for(const [id,key]of buttons)tabButtons[id].textContent=tr(key);
+  titleLabel.textContent=tr('title');
+  if(dialog.open)render();
+ });
 }
 function drawWeather(ctx,width,height,weather,time,quality='high'){
  if(!weather||weather.kind==='clear')return;

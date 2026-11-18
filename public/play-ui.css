@@ -192,3 +192,264 @@ html.clean-play-mode .clean-play-toggle{display:inline-flex}
 @media(pointer:coarse) and (orientation:landscape){
   .topline .clean-play-entry{min-width:31px;min-height:32px;padding:4px 7px;font-size:16px}
 }
+
+/* Commercial readiness: optional contextual chapter actions in the clean-play HUD. */
+.clean-context-toggle,.clean-context-actions{display:none}
+html.clean-play-mode .clean-context-toggle{
+  display:inline-flex;align-items:center;justify-content:center;
+  position:absolute;right:max(12px,env(safe-area-inset-right));bottom:calc(76px + env(safe-area-inset-bottom));
+  z-index:5;min-width:38px;min-height:38px;padding:0 9px;
+  border:1px solid #a8afe27e;border-radius:12px;
+  background:#182139cd;color:#faf6ff;cursor:pointer;
+  box-shadow:0 5px 17px #0006;touch-action:manipulation;font:800 21px system-ui;
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)
+}
+html.clean-play-mode .clean-context-toggle:focus-visible,
+html.clean-play-mode .clean-context-action:focus-visible{outline:3px solid #fff0ad;outline-offset:2px}
+html.clean-play-mode .clean-context-toggle[aria-expanded="true"]{background:#454168e6;border-color:#ddd1ff}
+.clean-context-actions[hidden]{display:none!important}
+html.clean-play-mode .clean-context-actions:not([hidden]){
+  display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px;
+  position:absolute;z-index:5;right:max(55px,calc(env(safe-area-inset-right) + 55px));
+  bottom:calc(77px + env(safe-area-inset-bottom));
+  max-width:min(75%,410px);padding:7px;border:1px solid #aab4dc66;border-radius:13px;
+  background:#111b35e8;box-shadow:0 8px 22px #0007;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)
+}
+html.clean-play-mode .clean-context-action{
+  min-height:38px;padding:7px 10px;border:1px solid #a5b7db7b;border-radius:10px;
+  background:#293857;color:#f2f7ff;touch-action:manipulation;cursor:pointer;
+  font:650 12px system-ui
+}
+/* The base bond/emote buttons remain the *original* pointer-driven controls. */
+html.clean-play-mode #touchControls.clean-show-extra .adv-extra-controls{
+  display:flex!important;flex-direction:column;gap:5px;
+}
+html.clean-play-mode #touchControls.clean-show-extra .adv-extra-controls .touch-button{
+  display:inline-flex!important;align-items:center;justify-content:center;
+  width:36px!important;min-width:36px!important;
+  height:36px!important;min-height:36px!important;
+  border-radius:11px!important;font-size:16px!important
+}
+@media(pointer:fine){
+  html.clean-play-mode .clean-context-toggle{display:none}
+  html.clean-play-mode .clean-context-actions{display:none!important}
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:420px){
+  html.clean-play-mode .clean-context-toggle{bottom:calc(63px + env(safe-area-inset-bottom))}
+  html.clean-play-mode .clean-context-actions:not([hidden]){bottom:calc(63px + env(safe-area-inset-bottom))}
+}
+
+/* Modal safety: entry/restore stays reachable when saved clean mode opens at the title screen. */
+html.clean-play-mode .clean-play-toggle{z-index:12!important}
+html.clean-play-mode .clean-context-toggle,
+html.clean-play-mode .clean-context-actions:not([hidden]){z-index:3}
+
+
+/* G1: non-blocking first-use help, never a modal by default. */
+.beta-quickstart{
+  margin:10px auto 12px;max-width:540px;
+  display:flex;align-items:center;justify-content:center;flex-wrap:wrap;
+  gap:7px 10px;padding:10px 12px;
+  border:1px solid #998eb650;border-radius:14px;
+  background:#19243ac9;color:#f2eaff;font:12px/1.35 system-ui;
+}
+.beta-quickstart-title{font-weight:760;color:#f6dca8}
+.beta-quickstart-copy{color:#cbd5eb}
+.beta-quickstart .beta-btn{
+  min-height:33px;padding:5px 9px;border:1px solid #a1acdc78;
+  border-radius:10px;background:#273251;color:#f9f4ff;
+  cursor:pointer;font-size:12px;white-space:nowrap;
+}
+.beta-quickstart .beta-quickstart-dismiss{background:transparent;border-color:#ffffff22;color:#c6cde5}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:450px){
+  .beta-quickstart{margin:6px auto 8px;padding:6px 10px;gap:5px 8px}
+  .beta-quickstart-title,.beta-quickstart-copy{font-size:10px}
+  .beta-quickstart .beta-btn{min-height:31px}
+}
+
+/* G1 layering: the live Canvas must never intercept top-bar controls.
+   Keep top navigation on top in normal mode; the immersive frame still fills the screen. */
+html:not(.clean-play-mode) .game-shell > .topline{
+  position:relative;
+  z-index:8;
+}
+html:not(.clean-play-mode) .game-shell > .frame{
+  position:relative;
+  z-index:0;
+}
+
+
+/* G1 vertical-slice entry — a single product decision, not another technical chapter button. */
+.demo-launch{
+  margin:15px auto 10px;padding:16px 18px;max-width:530px;
+  border:1px solid #e0c3f06e;border-radius:19px;
+  background:linear-gradient(125deg,#262644ed,#1d3850e5 55%,#1c243feb);
+  box-shadow:0 10px 34px #090d2252, inset 0 1px #e9d6ff18;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.demo-launch-tag{font:800 10px/1.3 system-ui;letter-spacing:.16em;color:#efc8fa}
+.demo-launch strong{font:800 clamp(15px,2.8vw,21px)/1.25 system-ui;color:#fff4db}
+.demo-launch p{font:12px/1.5 system-ui;color:#d7d9ed;max-width:390px;margin:0}
+.demo-launch #demoBtn{min-height:47px;min-width:min(100%,260px);padding:12px 18px}
+#demoBackBtn[hidden]{display:none!important}
+#demoBackBtn{margin:10px auto 0;min-height:42px}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:450px){
+  .demo-launch{margin:5px auto;padding:8px 10px;gap:4px;border-radius:12px}
+  .demo-launch strong{font-size:14px}
+  .demo-launch p{font-size:10px;line-height:1.2}
+  .demo-launch #demoBtn{min-height:36px;padding:7px 11px;font-size:12px}
+}
+
+
+/* M2 Content Alpha: non-blocking, contextual hint. Not a physics/room control. */
+#gameHintBtn[hidden],#gameHintCleanBtn[hidden],#gameHintPanel[hidden]{display:none!important}
+.game-hint-clean{display:none}
+.game-hint-panel{
+  position:absolute;top:clamp(70px,10vh,105px);right:max(12px,env(safe-area-inset-right));
+  z-index:7;box-sizing:border-box;width:min(425px,calc(100% - 24px));
+  padding:13px 15px 12px;border:1px solid #aaa1db9c;border-radius:16px;
+  color:#f6f5ff;background:#17223beb;box-shadow:0 12px 38px #020718b8;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+.game-hint-caption{display:block;color:#e3c5ff;font:800 12px/1.3 system-ui;letter-spacing:.025em}
+.game-hint-text{margin:9px 0 11px;color:#f4f6ff;font:500 14px/1.55 system-ui;overflow-wrap:anywhere}
+.game-hint-actions{display:flex;justify-content:flex-end;gap:9px}
+.game-hint-actions button{
+  min-height:37px;padding:7px 12px;border:1px solid #afb2d79b;border-radius:11px;
+  color:#f6f6ff;background:#2d3655;font:700 12px system-ui;cursor:pointer;touch-action:manipulation
+}
+.game-hint-panel button:focus-visible,.game-hint-clean:focus-visible{
+  outline:3px solid #ffe5a2;outline-offset:2px
+}
+html.clean-play-mode #gameHintCleanBtn:not([hidden]){
+  display:inline-flex;align-items:center;justify-content:center;
+  position:absolute;right:calc(max(12px,env(safe-area-inset-right)) + 48px);
+  bottom:calc(76px + env(safe-area-inset-bottom));z-index:4;
+  min-width:38px;min-height:38px;padding:0 8px;
+  border:1px solid #b6b8e38a;border-radius:12px;
+  color:#faf5ff;background:#1d2947dc;
+  box-shadow:0 5px 17px #0006;font:800 19px system-ui;cursor:pointer;touch-action:manipulation
+}
+html.clean-play-mode .game-hint-panel{top:auto;bottom:calc(126px + env(safe-area-inset-bottom));right:max(12px,env(safe-area-inset-right))}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:420px){
+  .game-hint-panel{top:44px;right:max(9px,env(safe-area-inset-right));padding:9px 11px;width:min(360px,calc(100% - 18px))}
+  .game-hint-text{font-size:12px;line-height:1.38;margin:5px 0 7px}
+  .game-hint-caption{font-size:11px}
+  .game-hint-actions button{min-height:32px;padding:5px 9px}
+  html.clean-play-mode #gameHintCleanBtn:not([hidden]){bottom:calc(63px + env(safe-area-inset-bottom))}
+  html.clean-play-mode .game-hint-panel{bottom:calc(109px + env(safe-area-inset-bottom))}
+}
+
+
+/* M2 control accessibility: local keyboard remapping, dialog remains visible in clean mode. */
+.controls-dialog{
+  box-sizing:border-box;width:min(520px,calc(100vw - 24px));max-height:min(88dvh,700px);
+  overflow-y:auto;border-radius:20px;border:1px solid #aaa8dc8f;padding:18px 20px;
+  color:#f8f5ff;background:linear-gradient(145deg,#222742,#111a32);
+  box-shadow:0 18px 65px #030614cb;font:14px/1.45 system-ui;
+}
+.controls-dialog::backdrop{background:#050915be;backdrop-filter:blur(5px)}
+.controls-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px}
+.controls-head strong{font-size:17px}
+.controls-head>button,.controls-actions button{
+  min-height:39px;border-radius:11px;padding:7px 12px;
+  background:#2e3b61;color:#fff;border:1px solid #a8add475;cursor:pointer
+}
+.controls-note{color:#cbd1ea;line-height:1.5;font-size:12px;margin:9px 0 13px}
+.controls-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.controls-role{padding:12px;border:1px solid #aaa8da52;border-radius:14px;background:#111a32a8}
+.controls-role>strong{display:block;font-size:14px;color:#f4e5bf;margin-bottom:10px}
+.controls-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(80px,110px);gap:6px;align-items:center;min-height:41px}
+.controls-row>span{font-size:12px}
+.controls-row>button{min-height:36px;min-width:0;border:1px solid #acb7e485;border-radius:10px;background:#29365a;color:#fff;font:700 12px system-ui;cursor:pointer;overflow-wrap:anywhere}
+.controls-row>button:focus-visible,.controls-actions button:focus-visible,.controls-head button:focus-visible{
+  outline:3px solid #f8e29d;outline-offset:2px
+}
+.controls-row>button:hover{background:#3b4b76}
+.controls-actions{display:flex;justify-content:space-between;gap:12px;margin-top:14px}
+#controlsNotice[hidden]{display:none}
+#controlsNotice{color:#f2d89b}
+@media(max-width:430px){.controls-dialog{padding:13px}.controls-grid{grid-template-columns:1fr;gap:9px}.controls-role{padding:9px}.controls-note{font-size:11px}}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:440px){
+ .controls-dialog{max-height:94dvh;padding:10px 12px}
+ .controls-grid{gap:8px}.controls-role{padding:8px}
+ .controls-row{min-height:34px}.controls-row>button{min-height:32px}
+ .controls-note{margin:5px 0;font-size:11px}
+}
+
+
+/* M2 gamepad bindings: responsive local standard-layout controller configuration. */
+.gamepad-dialog{
+ box-sizing:border-box;width:min(490px,calc(100vw - 20px));max-height:90dvh;
+ overflow-y:auto;padding:18px 20px;border:1px solid #aaa8dc8f;border-radius:19px;
+ color:#f8f5ff;background:linear-gradient(145deg,#222742,#111a32);
+ box-shadow:0 18px 65px #030614cb;font:14px/1.45 system-ui
+}
+.gamepad-dialog::backdrop{background:#050915bc;backdrop-filter:blur(5px)}
+.gamepad-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.gamepad-head strong{font-size:17px}
+.gamepad-head button,.gamepad-actions button{
+ min-height:39px;padding:7px 12px;border:1px solid #a8add475;
+ border-radius:11px;background:#2e3b61;color:#fff;cursor:pointer
+}
+.gamepad-note{color:#cbd1ea;line-height:1.5;font-size:12px;margin:10px 0}
+.gamepad-rows{display:grid;gap:7px;margin:14px 0}
+.gamepad-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,170px);
+ gap:10px;align-items:center;min-height:42px;padding:6px 10px;
+ border:1px solid #aaa8da42;border-radius:12px;background:#111a32a8
+}
+.gamepad-row>span{font-size:13px}
+.gamepad-row>button{
+ min-height:35px;padding:6px 10px;border:1px solid #acb7e485;
+ border-radius:10px;color:#fff;background:#29365a;
+ font:700 12px system-ui;cursor:pointer
+}
+.gamepad-actions{display:flex;justify-content:space-between;gap:12px;margin-top:15px}
+#gamepadNotice[hidden]{display:none}
+#gamepadNotice{color:#f2d89b}
+.gamepad-dialog button:focus-visible{outline:3px solid #f8e29d;outline-offset:2px}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:430px){
+ .gamepad-dialog{max-height:94dvh;padding:9px 12px}
+ .gamepad-head strong{font-size:14px}
+ .gamepad-rows{gap:4px;margin:6px 0}
+ .gamepad-row{min-height:34px;padding:3px 8px}
+ .gamepad-row>button{min-height:30px}
+ .gamepad-note{font-size:11px;line-height:1.3;margin:5px 0}
+}
+
+
+/* G2 bilingual launch: visible local language control, safe for 390px landscape. */
+.language-control{display:inline-flex;align-items:center;justify-content:center;flex:none}
+.language-control select{
+ min-height:34px;min-width:57px;padding:5px 7px;
+ border:1px solid #aaa5d27b;border-radius:9px;background:#182642ed;
+ color:#f6f1ff;font:800 11px/1 system-ui;letter-spacing:.04em;
+ cursor:pointer;touch-action:manipulation
+}
+.language-control select:focus-visible{outline:3px solid #f7dc95;outline-offset:2px}
+.visually-hidden{
+ position:absolute!important;width:1px!important;height:1px!important;
+ overflow:hidden!important;clip:rect(0 0 0 0)!important;
+ white-space:nowrap!important;clip-path:inset(50%)!important
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:440px){
+ .language-control select{min-height:29px;min-width:49px;font-size:10px;padding:4px 5px}
+}
+
+
+/* G2 language selection inside modal dialogs, rather than an inert header selector. */
+.dialog-language-control{display:inline-flex;flex:none;margin-inline-start:auto;align-items:center}
+.dialog-language-control select{
+ min-height:34px;min-width:57px;padding:5px 7px;
+ border:1px solid #aaa5d27b;border-radius:9px;
+ background:#182642;color:#f6f1ff;
+ font:800 11px/1 system-ui;letter-spacing:.04em;cursor:pointer
+}
+.dialog-language-control select:focus-visible{outline:3px solid #f7dc95;outline-offset:2px}
+.quality-head,.controls-head,.gamepad-head,.adv-dialog-head,.v21-top{
+ flex-wrap:wrap
+}
+@media (max-width:420px){
+ .dialog-language-control select{min-height:31px;min-width:50px;padding:4px 5px}
+}
