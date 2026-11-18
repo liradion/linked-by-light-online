@@ -23,6 +23,9 @@ test('Stage4 preview: chapter navigation uses consumer labels in Russian and Eng
  await roomCode(page);
  await page.locator('#startBtn').click();
  await expect(page.locator('#overlay')).toHaveClass(/hidden/,{timeout:15000});
+ // Chapter buttons are intentionally grouped inside the consumer quick menu.
+ await page.locator('.game-menu-trigger').click();
+ await expect(page.locator('#gameQuickMenu')).toHaveClass(/is-open/);
  const toggle=page.locator('.v2346-toggle');
  await expect(toggle).toBeVisible();
  await expect(toggle).toHaveText('✦ Новые миры');
