@@ -100,6 +100,13 @@ async function persistRoomsCloud(force=false){
  }).finally(()=>{cloudSaveInFlight=null;});
  return cloudSaveInFlight;
 }
+// Durable room/seat/role changes are checkpointed before network acknowledgement.
+// Ordinary in-level movement still uses the periodic 12-second checkpoint.
+// Cloud writes remain asynchronous; SIGKILL evidence only covers local disk.
+function persistStructural(){
+ persistRooms();
+ if(cloud.active)void persistRoomsCloud(true);
+}
 async function restoreRoomsCloud(){if(!cloud.active)return;
  try{const data=await cloud.loadRooms();if(data)hydrateRooms(data);recovery.recorded('restore',true);}
  catch(e){recovery.recorded('restore',false);console.warn('Cloud room restore failed:',e.message);}
@@ -208,6 +215,7 @@ server.on('upgrade',(req,socket,head)=>{
     room=r;role=index;seat.online=true;seat.peer=peer;seat.protocol=clientProtocol;seat.connectionEpoch=(seat.connectionEpoch||0)+1;r.lastActivity=Date.now();
     // После обновления страницы счётчики нажатий в браузере начинаются с нуля.
     r.game.input[role].packetSeq=0;r.game.input[role].processedSeq=0;r.game.input[role].jumpSeq=0;r.game.input[role].abilitySeq=0;r.game.input[role].bondSeq=0;r.game.input[role].emoteSeq=0;clearMovement(r.game,role);r.game.input[role].resync=true;
+    persistStructural();
     peer.send({t:'joined',room:r.code,role,hostRole:v28.roleChoice(r.hostRole),solo:!!r.solo,soloActiveRole:r.solo?r.soloActiveRole:null,token:seat.token,connectionEpoch:seat.connectionEpoch,protocol:4,phase:r.game.phase,connected:countOnline(r),home:r.home||[],notes:r.notes||[]});
     peer.send(roomSnapshot(r));
     peer.send({t:'v21State',data:social.publicState(r)});
@@ -308,6 +316,7 @@ server.on('upgrade',(req,socket,head)=>{
       clearMovement(room.game,room.soloActiveRole);
       room.soloActiveRole=msg.activeRole;room.urgentSnapshot=true;
       clearMovement(room.game,room.soloActiveRole);room.game.input[room.soloActiveRole].resync=true;
+      persistStructural();
       sendIntel(room);broadcast(room,roomSnapshot(room));return;
     }
     // Demo cannot be diverted into editor, later worlds or endless generation.
@@ -514,7 +523,7 @@ server.on('upgrade',(req,socket,head)=>{
        else if(target>room.unlockedMax&&(target!==99||msg.secrets!==11))return error('Уровень ещё не открыт.');
       if(target===99&&msg.secrets!==11)return error('Сначала найдите все 11 секретных рун.');
       initStage(room.game,target);room.game.lastResult=null;room.customLevel=null;room.ending=null;room.game.phase='playing';
-      sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
+      persistStructural();sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='input'&&room.game.phase==='playing'){
       const actingRole=room.solo?room.soloActiveRole:role;
@@ -528,13 +537,13 @@ server.on('upgrade',(req,socket,head)=>{
       if(v23.hasStage(room.game.stage)&&room.seats.some(s=>s?.online&&s.protocol<4))return error('Для новой главы необходимы два клиента v26.');
       if(v21.hasStage(room.game.stage)&&room.seats.some(s=>s?.online&&s.protocol<3))return error('Для новой главы нужен клиент v21 на обоих устройствах.');
       if(v20.hasStage(room.game.stage)&&room.seats.some(s=>s?.online&&s.protocol<2))return error('Для новой кампании обновите игру на обоих устройствах.');
-      room.game.phase='playing';initStage(room.game,room.customLevel?0:room.game.stage);room.game.solo=!!room.solo;telemetry.record(room.solo?'soloStarted':'coopStarted');if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
+      room.game.phase='playing';initStage(room.game,room.customLevel?0:room.game.stage);room.game.solo=!!room.solo;telemetry.record(room.solo?'soloStarted':'coopStarted');if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;persistStructural();sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='restart'&&isHost(room,role)&&readyPlayers(room)){
-      initStage(room.game,v23.hasStage(room.game.stage)?v23.FIRST:v21.hasStage(room.game.stage)?v21.FIRST:v20.hasStage(room.game.stage)?100:0);room.game.lastResult=null;room.customLevel=null;room.ending=null;room.game.phase='playing';sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
+      initStage(room.game,v23.hasStage(room.game.stage)?v23.FIRST:v21.hasStage(room.game.stage)?v21.FIRST:v20.hasStage(room.game.stage)?100:0);room.game.lastResult=null;room.customLevel=null;room.ending=null;room.game.phase='playing';persistStructural();sendSeatRoom(room);broadcast(room,roomSnapshot(room));return;
     }
     if(msg.t==='resetStage'&&isHost(room,role)&&room.game.phase==='playing'){
-      initStage(room.game,room.customLevel?0:room.game.stage);room.game.lastResult=null;if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;broadcast(room,roomSnapshot(room));return;
+      initStage(room.game,room.customLevel?0:room.game.stage);room.game.lastResult=null;if(room.customLevel)expansion.applyBlueprint(room.game,room.customLevel);room.ending=null;persistStructural();broadcast(room,roomSnapshot(room));return;
     }
   },()=>{
     if(!room)return;
@@ -555,6 +564,7 @@ const loop=setInterval(()=>{
     tick(r.game,countOnline(r));
     if(r.game.phase==='playing'&&r.lastV28Stage!==r.game.stage){
       r.lastV28Stage=r.game.stage;telemetry.record('stageEntered',r.game.stage);
+      persistStructural();
     }
     if(r.game.lastResult?.completed){const result=r.game.lastResult;
       const id=[result.level,result.elapsed,result.deaths,result.stars].join(':');
