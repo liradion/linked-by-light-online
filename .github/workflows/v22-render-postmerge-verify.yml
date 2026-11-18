@@ -26,6 +26,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # A reviewed engineering integration may be merged without releasing to public Render.
+          # Do not misreport the absence of an intentionally skipped production deploy as an incident.
+          if git log -1 --format=%B "$EXPECTED_SHA" | grep -Eiq '\[(skip render|render skip)\]'; then
+            echo "Render production deployment intentionally skipped for this integration merge."
+            echo "Preview and physical acceptance remain separate, mandatory release gates."
+            exit 0
+          fi
           SHORT_SHA="${EXPECTED_SHA:0:12}"
           echo "Expecting v26.0.0 at commit $SHORT_SHA"
           for i in $(seq 1 36); do
