@@ -12,6 +12,9 @@ on:
 jobs:
   cross-browser:
     runs-on: ubuntu-24.04
+    # Match the verified full browser E2E image; skip slow OS package mirrors.
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -20,8 +23,8 @@ jobs:
           node-version: '22'
       - name: Install ephemeral browser test dependencies
         run: npm install --no-save --ignore-scripts @playwright/test@1.56.1
-      - name: Install Chromium and WebKit
-        run: npx playwright install --with-deps chromium webkit
+      - name: Verify pinned browser runtime
+        run: npx playwright --version
       - name: Node tests
         run: npm test
       - name: Local-only browser E2E
