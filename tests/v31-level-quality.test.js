@@ -161,3 +161,32 @@ test('v31 all six role-aware RU and EN stalled-help messages are readable',()=>{
   if(lang)assert.doesNotMatch(message,/[\u0400-\u04FF]/);
  }
 });
+
+test('v31: invalid restored checkpoints cannot bypass locked walls or unlatchable bridge',()=>{
+ const g=game(7);g.quality.active=1;
+ quality.clean(g);
+ assert.equal(g.quality.active,-1,'old checkpoint behind unbroken wall is invalid');
+ const sail=game(5);sail.quality.active=1;
+ quality.clean(sail);
+ assert.equal(sail.quality.active,0,'after bridge, checkpoint must downgrade when bridge not latched');
+ sail.level.padLatched=true;sail.level.bridgeLatched=true;
+ sail.quality.active=1;quality.clean(sail);
+ assert.equal(sail.quality.active,1,'earned bridge permits checkpoint beyond the gap');
+});
+test('v31: legacy first-act layouts migrate to curated geometry without resetting compatible progress',()=>{
+ const {normalizeIntroLevel}=require('../level-repair');
+ const l4=game(3),oldFlowers=structuredClone(l4.level.signature.nodes);
+ l4.level.width=2400;l4.level.signature.nodes.push({x:1450,role:0,active:false});
+ l4.level.signature.nodes[1].active=true;
+ assert.equal(normalizeIntroLevel(l4),true);
+ assert.equal(l4.level.width,1700);
+ assert.equal(l4.level.signature.nodes.length,2);
+ assert.equal(l4.level.signature.nodes[1].active,true);
+ const l9=game(8);l9.level.width=2600;
+ l9.level.crystals[0].on=true;l9.level.pads[0].pressed=true;
+ assert.equal(normalizeIntroLevel(l9),true);
+ assert.equal(l9.level.width,1880);
+ assert.equal(l9.level.crystals[0].on,true);
+ assert.equal(l9.level.pads[0].pressed,true);
+ assert.deepEqual(oldFlowers.map(n=>n.role),[0,1]);
+});
