@@ -37,7 +37,7 @@
  const FIRST_OBJECTIVES=Object.freeze([
   'Spark stands on the orange plate; Echo on the blue. Hold them simultaneously.',
   'Spark breaks the wall and holds a plate; Echo crosses the bridge and activates the crystal.',
-  'Break the wall, charge the crystal and stand together on the color-matched plates.',
+  'Jump the short gap, then stand on both color-matched plates at the same time.'
   'Spark breaks the barrier. Activate both plates.',
   'Light the crystal and stand on both plates at the same time.',
   'Spark holds the plate while Echo crosses the bridge and charges the crystal.',
@@ -120,7 +120,7 @@
   if(!has(index))return fallback;
   if(index===0)return 'Both plates work only while you stand on them together.';
   if(index===1)return 'Spark dashes into the cracked wall; Echo pulses next to the crystal.';
-  if(index===2)return 'Use both abilities, then find a shared rhythm.';
+  if(index===2)return 'Jump near the edge of the first short gap. The next light bridge is stable; then hold both plates together.';
   return objective(index,fallback);
  }
  function world(index){
