@@ -37,7 +37,7 @@
  const FIRST_OBJECTIVES=Object.freeze([
   'Spark stands on the orange plate; Echo on the blue. Hold them simultaneously.',
   'Spark breaks the wall and holds the amber plate; Echo crosses the bridge and charges the crystal.',
-  'Jump the short gap, then stand on both color-matched plates at the same time.'
+  'Jump the short gap, then stand on both color-matched plates at the same time.',
   'Spark breaks the barrier. Activate both plates.',
   'Light the crystal and stand on both plates at the same time.',
   'Spark holds the plate while Echo crosses the bridge and charges the crystal.',
