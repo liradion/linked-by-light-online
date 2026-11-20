@@ -8,7 +8,7 @@ const feetNear=(p,x,range=74)=>p.grounded&&Math.abs(p.x+15-x)<range&&Math.abs(p.
 const bothNear=(g,x,distance=94)=>g.players.every(p=>near(p,x,GROUND-34,distance)&&p.grounded);
 function initWorld(g){
  const s=g.level.signature;if(!s)return;
- s.elapsed=0;s.progress=0;s.hold=0;s.window=0;s.done=false;s.phase=0;s.flash=0;
+ s.elapsed=0;s.progress=0;s.hold=0;s.window=0;s.done=s.tutorialOnly===true;s.phase=0;s.flash=0;
  for(const n of s.nodes){n.active=false;n.hold=0;}
  for(const pair of s.pairs){pair.active=false;pair.hold=0;}
 }
