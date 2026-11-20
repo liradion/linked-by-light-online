@@ -406,7 +406,7 @@ server.on('upgrade',(req,socket,head)=>{
          }
        }
        if(msg.t==='v21GalleryPlay'){
-         const item=V21_GALLERY.find(x=>x.id===msg.id&&!x.hidden);
+         const item=V21_GALLERY.find(x=>x.id===msg.id&&!x.hidden&&x.status==='approved');
          if(!isHost(room,role)||!readyPlayers(room)||room.solo)result={ok:false,error:'Для публикации нужен совместный режим'};
          else if(!item)result={ok:false,error:'Карта отсутствует'};
          else{
