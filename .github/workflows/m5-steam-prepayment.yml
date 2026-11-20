@@ -1,0 +1,53 @@
+name: M5 Steam pre-payment media proofs (isolated, not published)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/generate-steam-concepts.cjs'
+      - 'scripts/validate-steam-assets.cjs'
+      - 'e2e/steam-prepayment-capture.spec.cjs'
+      - 'tests/m5-steam-prepayment.test.js'
+      - '.github/workflows/m5-steam-prepayment.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  artwork-and-gameplay-capture:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated browser capture runner
+        run: npm install --no-save --ignore-scripts @playwright/test@1.56.1
+      - name: Generate original vector-derived Steam concept graphics
+        run: node scripts/generate-steam-concepts.cjs
+      - name: Capture real gameplay frames from isolated local server (no production traffic)
+        run: npx playwright test e2e/steam-prepayment-capture.spec.cjs --project=Chromium --config=playwright.config.cjs
+      - name: Validate output file dimensions and provenance
+        run: node scripts/validate-steam-assets.cjs > artifacts/steam-prepayment/validation.json
+      - name: Print independent validation summary
+        run: node -e "const x=require('./artifacts/steam-prepayment/validation.json'); console.log(JSON.stringify({status:x.status,count:x.count,errors:x.errors})); if(x.errors.length)process.exit(1)"
+      - name: Upload draft graphic assets and authentic screenshots for human review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linked-by-light-m5-steam-PREPAYMENT-DRAFTS
+          path: artifacts/steam-prepayment/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload failed test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-steam-assets-failure-traces
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
