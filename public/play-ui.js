@@ -39,7 +39,7 @@
     for(const name of ['.v20-toggle','.v21-toggle','.v2346-toggle'])move(name,'.game-menu-worlds');
     move('.v20-quick','.game-menu-skills');
     move('.v21-quick','.game-menu-skills');
-    for(const name of ['#qualityOpen','#controlsOpen','#gamepadOpen','#gameHintBtn','#betaHelpBtn','#betaReportBtn','#installGameBtn','#resetBtn'])move(name,'.game-menu-tools');
+    for(const name of ['#qualityOpen','#controlsOpen','#gamepadOpen','#gameHintBtn','#betaHelpBtn','#betaReportBtn','#installGameBtn','#resetBtn','#evolutionToggle'])move(name,'.game-menu-tools');
     const refreshLocale=()=>{
       const english=window.GameI18n?.isEnglish?.()===true;
       const headings=drawer.querySelectorAll('.game-menu-group-title');
