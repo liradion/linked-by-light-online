@@ -1,3 +1,4 @@
 src-tauri/target/
 src-tauri/gen/
 src-tauri/.tauri/
+src-tauri/icons/icon.ico
