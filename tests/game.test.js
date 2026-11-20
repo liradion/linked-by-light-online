@@ -35,12 +35,14 @@ test('вторая глава: рывок ломает стену, плита с
  assert.equal(g.level.bridgeLatched,true);
 });
 
-test('третья глава: кристалл и две плиты необходимы вместе',()=>{
- const g=createGame();initStage(g,2);g.phase='playing';g.level.signature.done=true;
- putOnPlate(g.players[0],g.level.pads[0]);putOnPlate(g.players[1],g.level.pads[1]);
- run(g,20);assert.equal(g.level.gateOpen,false);
- g.level.crystals[0].on=true;g.adventure.arcade.done=true;run(g,20);
- assert.equal(g.level.gateOpen,true);
+test('третья глава: короткий прыжок и две плиты, без неописанного кристалла или мини-игры',()=>{
+ const g=createGame();initStage(g,2);g.phase='playing';
+ assert.equal(g.level.crystals.length,0);assert.equal(g.level.walls.length,0);
+ assert.equal(g.adventure.arcade,null);
+ putOnPlate(g.players[0],g.level.pads[0]);run(g,20);
+ assert.equal(g.level.gateOpen,false,'one player cannot solve two pads');
+ putOnPlate(g.players[1],g.level.pads[1]);run(g,20);
+ assert.equal(g.level.gateOpen,true,'two pads are the only required gate after the traversal');
 });
 
 test('завершение главы происходит, только когда оба героя в портале',()=>{

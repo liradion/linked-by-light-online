@@ -33,7 +33,8 @@ test('normal switches must combine with the world-specific objective',()=>{
   for(const crystal of g.level.crystals)crystal.on=true;
   for(const pad of g.level.pads){const p=g.players[pad.type];p.x=pad.x+pad.w/2-15;p.y=GROUND-43;p.vx=p.vy=0;p.grounded=true;}
   for(let j=0;j<22;j++)tick(g,connected);
-  assert.equal(g.level.gateOpen,false,`level ${i+1} should require signature too`);
+  if(i<3)assert.equal(g.level.gateOpen,true,`tutorial level ${i+1} must not require hidden signature`);
+  else assert.equal(g.level.gateOpen,false,`level ${i+1} should require signature too`);
   g.level.signature.done=true;
   if(g.level.reality)g.level.reality.done=true;
   if(g.adventure.boss)g.adventure.boss.hp=0;

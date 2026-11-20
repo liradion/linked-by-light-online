@@ -208,6 +208,7 @@
   }
   if(depth<=1)return objectiveEn[index];
   if(/Ворота открыты|портал/.test(message))return EN.goalGate;
+  if(index===2&&/пропаст|прыгните|края/.test(message))return 'Jump just before the first short gap. The following light bridge is safe. Then hold both plates together.';
   if(/оранжевую плиту|голубую плиту|плиты|цветные/.test(message))
    return role===1?'Find the blue plate and stand on it while Spark holds the orange one.'
      :'Find the orange plate and stand on it while Echo holds the blue one.';

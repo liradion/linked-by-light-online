@@ -1,0 +1,24 @@
+/* Level Repair v30: voluntary, contextual assistance when a pair is stuck. */
+#gameHintNudge[hidden]{display:none!important}
+.game-hint-nudge{
+ position:absolute;z-index:6;
+ left:calc(12px + env(safe-area-inset-left));
+ bottom:calc(119px + env(safe-area-inset-bottom));
+ box-sizing:border-box;max-width:min(350px,calc(100% - 24px));
+ padding:10px 13px;border:1px solid #cbdcffb5;border-radius:13px;
+ color:#f7faff;background:#182b48e8;
+ box-shadow:0 8px 20px #0009;backdrop-filter:blur(10px);
+ font:600 12px/1.42 system-ui,sans-serif;text-align:left;cursor:pointer;
+ touch-action:manipulation
+}
+.game-hint-nudge:focus-visible{outline:3px solid #ffe3a2;outline-offset:2px}
+html.clean-play-mode .game-hint-nudge{bottom:calc(162px + env(safe-area-inset-bottom))}
+@media(max-width:700px){
+ .game-hint-nudge{font-size:10px;padding:7px 9px;max-width:min(275px,calc(100% - 20px));
+   bottom:calc(106px + env(safe-area-inset-bottom))}
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:430px){
+ .game-hint-nudge{bottom:calc(113px + env(safe-area-inset-bottom));
+  left:calc(10px + env(safe-area-inset-left));max-width:min(255px,45vw)}
+ html.clean-play-mode .game-hint-nudge{bottom:calc(135px + env(safe-area-inset-bottom))}
+}

@@ -98,14 +98,19 @@ function stepPlayer(g,p,dt){const i=g.input[p.type], axis=Number(i.right)-Number
   worlds.worldForces(g,p,dt);adventure.forces(g,p,dt);reality.forces(g,p,dt);expansion.forces(g,p,dt);
   const solids=solidRects(g,p);
   p.x+=p.vx*dt;
-  for(const s of solids)if(overlaps(p,s)){
+  for(const s of solids)if(!s.oneWay&&overlaps(p,s)){
     if(s.kind==='wall'&&p.type===0&&p.dash>0){s.wall.broken=true;continue;}
     if(p.vx>0)p.x=s.x-p.w;else if(p.vx<0)p.x=s.x+s.w;
     p.vx=0;p.dash=0;
   }
   p.x=clamp(p.x,5,g.level.width-p.w-5);
+  const previousFeet=p.y+p.h;
   p.y+=p.vy*dt;p.grounded=false;
   for(const s of solids)if(overlaps(p,s)){
+    if(s.oneWay){
+      if(p.vy>=0&&previousFeet<=s.y+2&&p.y+p.h>=s.y){p.y=s.y-p.h;p.vy=0;p.grounded=true;}
+      continue;
+    }
     if(p.vy>=0&&p.y+p.h-s.y<Math.max(30,p.vy*dt+14)){
       p.y=s.y-p.h;p.vy=0;p.grounded=true;
     }else if(p.vy<0){p.y=s.y+s.h;p.vy=0;if(v23.gravity(g,p)<0)p.grounded=true;}

@@ -50,13 +50,18 @@ function integrate(p,input,solids,width,dt=DT,gravity=1300,wind=0,rain=false){
  q.vy=Math.min(950,q.vy+gravity*dt);
  q.vx+=wind*dt;if(rain&&q.grounded)q.vx*=.998;
  q.x+=q.vx*dt;
- for(const s of solids)if(overlaps(q,s)){
+ for(const s of solids)if(!s.oneWay&&overlaps(q,s)){
   if(q.vx>0)q.x=s.x-q.w;else if(q.vx<0)q.x=s.x+s.w;
   q.vx=0;q.dash=0;
  }
  q.x=clamp(q.x,5,width-q.w-5);
+ const previousFeet=q.y+q.h;
  q.y+=q.vy*dt;q.grounded=false;
  for(const s of solids)if(overlaps(q,s)){
+  if(s.oneWay){
+   if(q.vy>=0&&previousFeet<=s.y+2&&q.y+q.h>=s.y){q.y=s.y-q.h;q.vy=0;q.grounded=true;}
+   continue;
+  }
   if(q.vy>=0&&q.y+q.h-s.y<Math.max(30,q.vy*dt+14)){q.y=s.y-q.h;q.vy=0;q.grounded=true;}
   else if(q.vy<0){q.y=s.y+s.h;q.vy=0;}
   else if(q.x+q.w/2<s.x+s.w/2)q.x=s.x-q.w;else q.x=s.x+s.w;
