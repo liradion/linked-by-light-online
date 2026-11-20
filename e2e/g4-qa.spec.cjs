@@ -48,6 +48,8 @@ test('G4: iPhone landscape safe-area report can be opened, reviewed and localize
   const requests=[];
   page.on('request',r=>{if(/g4|diagnostic/i.test(r.url())&&r.method()!=='GET')requests.push(r.url());});
   await page.goto('/');
+  // The game has an explicit motion setting independent of the OS media query.
+  await page.evaluate(()=>GameQuality.setReducedMotion(true));
   const open=page.locator('#g4QaOpen');
   await expect(open).toContainText('Диагностика G4');
   await open.click();
