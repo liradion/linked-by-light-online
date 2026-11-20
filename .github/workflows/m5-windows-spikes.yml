@@ -46,6 +46,9 @@ jobs:
           @{ framework='Electron'; candidateSha=$sha; compiledOn='windows-2022 GitHub-hosted runner'; exeBytes=$exeInfo.Length; unpackedBytes=$size; exeSha256=$hash; executableExists=$true; signature='UNSIGNED'; physicalWindowsAcceptance=$false; steamReady=$false } |
             ConvertTo-Json | Set-Content artifacts/electron-metrics.json
           Compress-Archive -Path 'desktop/electron/dist/LinkedByLightM5Preview-win32-x64/*' -DestinationPath artifacts/electron-M5-UNSIGNED-x64.zip -CompressionLevel Fastest
+      - name: M5 Electron desktop first-room smoke on Windows CI (not physical QA)
+        working-directory: desktop/electron
+        run: npm run smoke:desktop
       - name: Upload internal unsigned Electron package and compile-only metrics
         uses: actions/upload-artifact@v4
         with:
