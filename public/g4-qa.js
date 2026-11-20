@@ -23,7 +23,7 @@
   const checkpoint=world.checkpoint&&typeof world.checkpoint==='object'?world.checkpoint:{};
   return {
    schema:'linked-light-g4-local-v1',
-   recordedAt:typeof timestamp==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(timestamp)&&
+   recordedAt:typeof timestamp==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(timestamp)&&
      Number.isFinite(Date.parse(timestamp))?timestamp:null,
    level:Number.isInteger(s.stage)&&s.stage>=0&&s.stage<=136?s.stage+1:null,
    playerRole:role(s.role),
