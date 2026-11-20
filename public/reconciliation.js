@@ -42,9 +42,13 @@ function integrate(p,input,solids,width,dt=DT,gravity=1300,wind=0,rain=false){
  const q={...p},axis=Number(!!input.right)-Number(!!input.left);
  if(axis)q.face=axis;
  q.cool=Math.max(0,(q.cool||0)-dt);q.abilityFx=Math.max(0,(q.abilityFx||0)-dt);
- if(input.jump&&((q.grounded||false)||(q.coyote||0)>0)){q.vy=-486;q.grounded=false;q.coyote=0;}
+ const tutorial=!!input.tutorial;
+ if(input.jump)q.jumpBuffer=tutorial?.18:.14;
+ else q.jumpBuffer=Math.max(0,(q.jumpBuffer||0)-dt);
+ if(q.grounded)q.coyote=tutorial?.15:.11;
+ else q.coyote=Math.max(0,(q.coyote||0)-dt);
+ if(q.jumpBuffer>0&&q.coyote>0){q.vy=-486;q.grounded=false;q.coyote=0;q.jumpBuffer=0;}
  if(input.ability&&q.cool<=0){if(q.type===0){q.dash=.22;q.cool=1;q.vy*=.2;}else{q.cool=1.05;q.abilityFx=.55;}}
- if(q.grounded)q.coyote=.11;else q.coyote=Math.max(0,(q.coyote||0)-dt);
  if(q.dash>0){q.dash=Math.max(0,q.dash-dt);q.vx=(q.face||1)*760;}
  else q.vx+=clamp(axis*273-q.vx,-2450*dt,2450*dt);
  q.vy=Math.min(950,q.vy+gravity*dt);
@@ -97,17 +101,17 @@ function createPredictor(){
    for(const item of history){
     const elapsed=clamp((item.at-prev.at)/1000,0,.08);
     const steps=Math.min(5,Math.round(elapsed/DT));
-    for(let n=0;n<steps&&used<24;n++,used++)p=integrate(p,{left:prev.left,right:prev.right},solids,level.width,DT,gravity,wind,rain);
+    for(let n=0;n<steps&&used<24;n++,used++)p=integrate(p,{left:prev.left,right:prev.right,tutorial:!!level.onboarding},solids,level.width,DT,gravity,wind,rain);
     const blocked=level?.v21?.kind==='asymmetry'&&world?.v21?.asymmetry?.phase<2&&p.type===(world.v21.asymmetry.phase===0?1:0);
      const jump=!blocked&&item.jumpSeq>appliedJump,ability=item.abilitySeq>appliedAbility;
-    if(jump||ability)p=integrate(p,{left:item.left,right:item.right,jump,ability},solids,level.width,DT,gravity,wind,rain);
+    if(jump||ability)p=integrate(p,{left:item.left,right:item.right,jump,ability,tutorial:!!level.onboarding},solids,level.width,DT,gravity,wind,rain);
     appliedJump=Math.max(appliedJump,item.jumpSeq);appliedAbility=Math.max(appliedAbility,item.abilitySeq);
     prev=item;
    }
    const steps=Math.min(15,Math.round(horizon/DT));
-   for(let n=0;n<steps&&used<24;n++,used++)p=integrate(p,{left:prev.left,right:prev.right},solids,level.width,DT,gravity,wind,rain);
+   for(let n=0;n<steps&&used<24;n++,used++)p=integrate(p,{left:prev.left,right:prev.right,tutorial:!!level.onboarding},solids,level.width,DT,gravity,wind,rain);
   }else if(lastSent){
-   const steps=Math.round(horizon/DT);for(let n=0;n<steps;n++)p=integrate(p,{left:lastSent.left,right:lastSent.right},solids,level.width,DT,gravity,wind,rain);
+   const steps=Math.round(horizon/DT);for(let n=0;n<steps;n++)p=integrate(p,{left:lastSent.left,right:lastSent.right,tutorial:!!level.onboarding},solids,level.width,DT,gravity,wind,rain);
   }
   baseline=p;
   if(!state||Math.hypot(state.x-p.x,state.y-p.y)>170)state={...p};
@@ -123,7 +127,7 @@ function createPredictor(){
    const gravity=level?.reality?.kind==='gravity'&&world?.reality?.gravityTimer>0?480:1300;
    const wind=Number(world?.expansion?.wind)||0,rain=world?.expansion?.kind==='rain';
    const blocked=level?.v21?.kind==='asymmetry'&&world?.v21?.asymmetry?.phase<2&&state.type===(world.v21.asymmetry.phase===0?1:0);
-    state=integrate(state,{left:live.left,right:live.right,jump:jump&&!blocked,ability},
+    state=integrate(state,{left:live.left,right:live.right,jump:jump&&!blocked,ability,tutorial:!!level.onboarding},
     geometry(level,world,state.type),level.width,dt,gravity,wind,rain);
    // Never run too far ahead of the authoritative state if packets stall.
    const bound=clamp(273*estimatedDelay+45,45,160);
