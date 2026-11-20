@@ -1,7 +1,7 @@
 /* G4 QA uses no backend and stays away from gameplay canvas controls. */
 .g4-qa-dialog{
  box-sizing:border-box;max-width:min(640px,calc(100vw - 20px));max-height:min(90vh,720px);
- padding:20px;border:1px solid #8eb8d8a8;border-radius:16px;
+ padding:20px;overflow:auto;border:1px solid #8eb8d8a8;border-radius:16px;
  background:#142037;color:#f2f7ff;box-shadow:0 18px 55px #0009;
  font:14px/1.5 system-ui,sans-serif;
 }
