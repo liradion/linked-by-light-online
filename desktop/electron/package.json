@@ -1,0 +1,17 @@
+{
+  "name": "linked-by-light-m5-electron-spike",
+  "productName": "Linked by Light (M5 Internal Preview)",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "description": "Unsigned research-only Windows desktop shell for the existing authoritative web game",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "pack:win": "electron-packager . LinkedByLightM5Preview --platform=win32 --arch=x64 --out=dist --overwrite --asar --ignore=^/dist$ --ignore=^/tests$"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "@electron/packager": "20.3.0"
+  }
+}
