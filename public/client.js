@@ -13,7 +13,7 @@ const isHost=()=>role>=0&&role===hostRole;
 const controlledRole=()=>soloMode?soloActiveRole:role;
 let pendingRoom='',pendingCreate=false,pendingCreateStage=0,pendingBlueprint=null,pendingDemo=false,connectedBefore=false,reconnectCount=0,totalReconnects=0,wsTimer=null,joinAckTimer=null;
 let latest=null,snapshots=[],fpsTime=performance.now(),sound=true,ac=null;
-const keys=new Set(),touchPointers=new Map(),input={left:false,right:false,jumpSeq:0,abilitySeq:0,bondSeq:0,emoteSeq:0};
+const keys=new Set(),touchPointers=new Set(),input={left:false,right:false,jumpSeq:0,abilitySeq:0,bondSeq:0,emoteSeq:0};
 let prediction=null,lastPredStage=-1,predJumpAt=0,lastAck=0,lastResultId='',packetSeq=0,wasOnGround=null,lastFootstep=0;
 const predictor=GameReconciliation.createPredictor();
 let latency=0,lastSend=0,playingOnce=false;
@@ -236,7 +236,7 @@ spectatorCopy.onclick=async()=>{
 };
 $('copyBtn').parentElement.append(spectatorCopy);
 $('soundBtn').addEventListener('click',()=>{sound=!sound;GameQuality.setSound(sound);$('soundBtn').textContent=sound?'♫ Вкл.':'♫ Выкл.';if(sound)GameQuality.audioUnlock();});
-function resetKeys(){keys.clear();for(const set of touchPointers.values())set.clear();input.left=false;input.right=false;
+function resetKeys(){keys.clear();for(const set of touchPointers)set.clear();input.left=false;input.right=false;
   document.querySelectorAll('.touch-button').forEach(b=>b.classList.remove('pressed'));sendInput();}
 function updateInput(){const left=GameControls.keyFor(controlledRole(),'left'),right=GameControls.keyFor(controlledRole(),'right');
   input.left=keys.has(left)||keys.has('touch-left')||keys.has('gamepad-left');input.right=keys.has(right)||keys.has('touch-right')||keys.has('gamepad-right');sendInput();}
@@ -262,7 +262,7 @@ window.addEventListener('blur',resetKeys);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)resetKeys();else if(!ready)openConnection();});
 window.addEventListener('online',()=>{if(!ready)openConnection();});
 document.querySelectorAll('.touch-button').forEach(btn=>{
-  const k=btn.dataset.input,tag='touch-'+k,pointers=new Set();touchPointers.set(k,pointers);
+  const k=btn.dataset.input,tag='touch-'+k,pointers=new Set();touchPointers.add(pointers);
   function down(e){e.preventDefault();if(!room||phase!=='playing')return;
     GameQuality.audioUnlock();pointers.add(e.pointerId);if(!keys.has(tag)){
       keys.add(tag);btn.classList.add('pressed');if(['jump','ability','bond','emote'].includes(k))activateKey(k);else updateInput();
