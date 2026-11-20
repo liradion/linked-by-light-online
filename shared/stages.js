@@ -105,6 +105,66 @@
   classic.forEach((stage,i)=>{stage.act=1;stage.chapter=ACTS[0][0];stage.challenge=i;});
   const stages=classic.concat(Array.from({length:96},(_,offset)=>makeStage(offset+3)));
 
+  // v31: six curated second-half tutorial stages. Distinct, deliberate routes
+  // replace stacked auto-generated tasks that confused early two-player sessions.
+  // These are stage data, shared by the authoritative server and both clients.
+  const FIRST_ACT_REWORK={
+    3:{onboarding:'flowers-wall',title:'Светлая долина · Сила двоих',
+      objective:'Искра разрушает стену рывком. После неё Искра касается янтарного цветка, Эхо — голубого.',
+      hint:'Сначала рывок Искры в стену. Затем оба найдите свой световой цветок.',
+      width:1700,spawn:[82,157],floor:[[0,1700]],
+      platforms:[{x:265,y:482,w:148,h:18},{x:1100,y:482,w:140,h:18}],
+      walls:[{x:442,y:352,w:32,h:192,broken:false}],pads:[],crystals:[],bridges:[],hazards:[],
+      gates:[{x:1440,y:350,w:30,h:194}],portal:1610,shards:[356,820,1180],
+      bridgeTrigger:'none',puzzle:{walls:true},checkpoints:[620,1150]},
+    4:{onboarding:'first-flight',title:'Светлая долина · Общий сигнал',
+      objective:'Эхо заряжает кристалл импульсом. Затем оба прыгните в световое кольцо полёта.',
+      hint:'Эхо: импульс рядом с кристаллом. У кольца прыгайте: воздушный поток поможет подняться.',
+      width:1720,spawn:[82,157],floor:[[0,1720]],
+      platforms:[{x:315,y:482,w:145,h:18},{x:950,y:482,w:135,h:18}],
+      walls:[],pads:[],crystals:[{x:560,y:478,on:false}],bridges:[],hazards:[],
+      gates:[{x:1490,y:350,w:30,h:194}],portal:1640,shards:[370,990,1280],
+      bridgeTrigger:'none',puzzle:{crystals:true},checkpoints:[715,1320]},
+    5:{onboarding:'hold-and-sail',title:'Светлая долина · Держи мост',
+      objective:'Искра удерживает плиту и закрепляет мост. Затем оба встают на парус: Искра направляет его, Эхо заряжает импульсом.',
+      hint:'Сначала удерживайте янтарную плиту, пока мост не закрепится. На парусе Искра движется вправо, Эхо нажимает способность.',
+      width:1750,spawn:[82,157],floor:[[0,1030],[1120,1750]],
+      platforms:[{x:310,y:482,w:142,h:18},{x:1350,y:482,w:130,h:18}],
+      walls:[],pads:[{x:645,w:92,type:0}],crystals:[],
+      bridges:[{x:1030,y:544,w:90,h:18}],hazards:[],
+      gates:[{x:1540,y:350,w:30,h:194}],portal:1670,shards:[365,910,1320],
+      bridgeTrigger:'pad',puzzle:{pads:true},checkpoints:[770,1280]},
+    6:{onboarding:'rhythm-duo',title:'Светлая долина · Двойное сияние',
+      objective:'Эхо заряжает кристалл. После этого оба встаньте у своих ритмических сигналов и нажмите способности с небольшим интервалом.',
+      hint:'Сначала зарядите кристалл. У световых сигналов оба используйте способности в течение общего временного окна.',
+      width:1730,spawn:[82,157],floor:[[0,1730]],
+      platforms:[{x:325,y:482,w:145,h:18},{x:915,y:482,w:135,h:18}],
+      walls:[],pads:[],crystals:[{x:550,y:478,on:false}],bridges:[],hazards:[],
+      gates:[{x:1490,y:350,w:30,h:194}],portal:1650,shards:[370,980,1320],
+      bridgeTrigger:'none',puzzle:{crystals:true},checkpoints:[730,1310]},
+    7:{onboarding:'combine-three',title:'Светлая долина · Верное решение',
+      objective:'Искра ломает стену, Эхо заряжает кристалл, затем оба одновременно активируют цветные плиты.',
+      hint:'Последовательность: рывок в стену → импульс у кристалла → две плиты одновременно.',
+      width:1850,spawn:[82,157],floor:[[0,1850]],
+      platforms:[{x:300,y:482,w:143,h:18},{x:1050,y:482,w:130,h:18}],
+      walls:[{x:485,y:352,w:32,h:192,broken:false}],
+      pads:[{x:1190,w:88,type:0},{x:1330,w:88,type:1}],
+      crystals:[{x:860,y:478,on:false}],bridges:[],hazards:[],
+      gates:[{x:1595,y:350,w:30,h:194}],portal:1770,shards:[360,930,1500],
+      bridgeTrigger:'none',puzzle:{walls:true,crystals:true,pads:true},checkpoints:[1000,1455]},
+    8:{onboarding:'first-boss',title:'Светлая долина · Финальная связка',
+      objective:'Эхо заряжает кристалл, оба активируют плиты, затем по очереди атакуют первого стража своими способностями.',
+      hint:'Сначала кристалл и две плиты. У босса чередуйте способности Искры и Эха, следите за предупреждением.',
+      width:1880,spawn:[82,157],floor:[[0,1880]],
+      platforms:[{x:315,y:482,w:142,h:18},{x:1110,y:482,w:130,h:18}],
+      walls:[],pads:[{x:910,w:90,type:0},{x:1050,w:90,type:1}],
+      crystals:[{x:645,y:478,on:false}],bridges:[],hazards:[],
+      gates:[{x:1590,y:350,w:30,h:194}],portal:1790,shards:[355,820,1520],
+      bridgeTrigger:'none',puzzle:{crystals:true,pads:true},checkpoints:[770,1200]}
+  };
+  for(const [id,layout] of Object.entries(FIRST_ACT_REWORK))
+    Object.assign(stages[Number(id)],layout);
+
   // World signature engine: one new cooperative interaction in every chapter.
   // Signatures are data only, so the server and both browsers see identical geometry.
   const SIGNATURES=['flowers','forest','tide','wind','constellation','prism','city','river','clock','relay','heart'];
@@ -186,7 +246,14 @@
     }
     // Levels 0–2 teach only the objectives advertised on screen. Light flowers
     // remain available from level 3, when the mechanic can be introduced explicitly.
-    if(index<=2){s.nodes=[];s.platforms=[];s.tutorialOnly=true;s.done=true;}
+    if(index<=2||index>=4&&index<=8){
+      s.nodes=[];s.platforms=[];s.zones=[];s.pairs=[];s.tutorialOnly=true;s.done=true;
+    }else if(index===3){
+      // First introduction to role-colored flowers: just one per hero.
+      s.nodes=s.nodes.slice(0,2);
+      s.nodes[0].x=720;s.nodes[0].role=0;
+      s.nodes[1].x=1050;s.nodes[1].role=1;
+    }
     stage.signature=s;
     stage.signatureHint=s.hint;
     stage.levelSubtitle=TWISTS[variant];

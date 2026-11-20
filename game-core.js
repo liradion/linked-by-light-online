@@ -8,6 +8,7 @@ const v20=require('./v20-core');
 const v21=require('./v21-core');
 const v23=require('./v23-core');
 const demo=require('./shared/demo-mode');
+const quality=require('./gameplay-quality');
 const DT=1/60, WIDTH=1200, HEIGHT=650;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const overlaps=(a,b)=>a.x < b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
@@ -25,7 +26,7 @@ function initStage(g,index){
     if(Number.isSafeInteger(previousInputs[i]?.[key]))g.input[i][key]=previousInputs[i][key];
   worlds.initWorld(g);adventure.init(g);reality.init(g);expansion.init(g);
   if(v20.hasStage(index)||v23.hasStage(index)){g.adventure.boss=null;g.adventure.arcade=null;g.adventure.pet.visible=false;g.adventure.secret.visible=false;}
-  v20.init(g);v21.init(g);v23.init(g);
+  v20.init(g);v21.init(g);v23.init(g);quality.init(g);
 }
 const makeInput=()=>({left:false,right:false,jumpQueued:false,abilityQueued:false,bondQueued:false,emoteQueued:false,jumpSeq:0,abilitySeq:0,bondSeq:0,emoteSeq:0,packetSeq:0,processedSeq:0});
 function updateInput(g,role,message){
@@ -69,7 +70,7 @@ function solidRects(g,p){const l=g.level,out=l.platforms.map(p=>({...p,kind:'pla
   out.push(...worlds.extraPlatforms(g),...worlds.extraBarriers(g),...reality.platforms(g,p.type),...v20.platforms(g,p.type),...v21.platformRects(g,p.type),...v23.platforms(g,p.type));
   return out;
 }
-function respawn(g,p){if(g.stats)g.stats.deaths++;p.x=g.level.spawn[p.type];p.y=GROUND-43;p.vx=0;p.vy=0;p.dash=0;p.cool=Math.min(.4,p.cool);}
+function respawn(g,p){if(g.stats)g.stats.deaths++;if(!quality.recover(g,p)){p.x=g.level.spawn[p.type];p.y=GROUND-43;p.vx=0;p.vy=0;p.dash=0;p.grounded=false;p.coyote=0;p.jumpBuffer=0;}p.cool=Math.min(.4,p.cool);}
 function stepPlayer(g,p,dt){const i=g.input[p.type], axis=Number(i.right)-Number(i.left);
   if(axis)p.face=axis;
   p.cool=Math.max(0,p.cool-dt);p.abilityFx=Math.max(0,p.abilityFx-dt);
@@ -85,9 +86,9 @@ function stepPlayer(g,p,dt){const i=g.input[p.type], axis=Number(i.right)-Number
   i.abilityQueued=false;
   const v21Operator=g.v21?.kind==='asymmetry'&&g.v21.asymmetry.phase<2&&p.type===(g.v21.asymmetry.phase===0?1:0);
    if(v21Operator){i.jumpQueued=false;p.jumpBuffer=0;}
-   if(i.jumpQueued)p.jumpBuffer=.14;else p.jumpBuffer=Math.max(0,p.jumpBuffer-dt);
+   if(i.jumpQueued)p.jumpBuffer=g.level.onboarding?.18:.14;else p.jumpBuffer=Math.max(0,p.jumpBuffer-dt);
   i.jumpQueued=false;
-  if(p.grounded)p.coyote=.11;else p.coyote=Math.max(0,p.coyote-dt);
+  if(p.grounded)p.coyote=g.level.onboarding?.15:.11;else p.coyote=Math.max(0,p.coyote-dt);
   if(p.jumpBuffer>0&&p.coyote>0){
     const sig=g.level.signature;
     const lunarBoost=sig?.kind==='tide'&&sig.phase>.65&&sig.nodes.some(n=>Math.abs(p.x+15-n.x)<85);
@@ -166,7 +167,7 @@ function tick(g,connected){g.tick++;
   if(g.stats){g.stats.elapsed+=DT;g.stats.hearts=g.adventure?.bond?.hearts||0;}
   worlds.updateWorld(g,DT);
   adventure.update(g,DT);reality.update(g,DT);v20.afterStep(g,DT);v21.afterStep(g,DT);v23.afterStep(g,DT);
-  updateObjectives(g,DT);
+  updateObjectives(g,DT);quality.advance(g);
   const both=g.players.every(p=>Math.abs(p.x+15-g.level.portal)<70&&p.y+p.h>400);
   if(g.level.gateOpen&&both){g.completion+=DT;if(g.completion>.58){
     const st=g.stats||{elapsed:0,deaths:0,rescues:0,abilities:[0,0],hearts:0};
@@ -176,7 +177,7 @@ function tick(g,connected){g.tick++;
   }}else g.completion=0;
 }
 function snapshot(g,connected){const l=g.level;
-  return {t:'snapshot',tick:g.tick,stage:g.stage,phase:g.phase,players:g.players.map(p=>({x:p.x,y:p.y,vx:p.vx,vy:p.vy,face:p.face,grounded:p.grounded,cool:p.cool,dash:p.dash,abilityFx:p.abilityFx})),
-  ack:g.input.map(i=>i.processedSeq||0),processedCommands:g.input.map(i=>({jumpSeq:i.jumpSeq||0,abilitySeq:i.abilitySeq||0})),stats:g.stats?{...g.stats}:null,result:g.lastResult,world:{pads:l.pads.map(p=>p.pressed),walls:l.walls.map(w=>w.broken),crystals:l.crystals.map(c=>c.on),gateOpen:l.gateOpen,bridgeLatched:l.bridgeLatched,padLatched:l.padLatched,shards:g.shards,signature:worlds.worldSnapshot(g),adventure:adventure.snapshot(g),reality:reality.snapshot(g),expansion:expansion.snapshot(g),v20:v20.snapshot(g),v21:v21.snapshot(g),v23:v23.snapshot(g)},connected,transition:g.transition>0};
+  return {t:'snapshot',tick:g.tick,stage:g.stage,phase:g.phase,players:g.players.map(p=>({x:p.x,y:p.y,vx:p.vx,vy:p.vy,face:p.face,grounded:p.grounded,coyote:p.coyote,jumpBuffer:p.jumpBuffer,cool:p.cool,dash:p.dash,abilityFx:p.abilityFx})),
+  ack:g.input.map(i=>i.processedSeq||0),processedCommands:g.input.map(i=>({jumpSeq:i.jumpSeq||0,abilitySeq:i.abilitySeq||0})),stats:g.stats?{...g.stats}:null,result:g.lastResult,world:{pads:l.pads.map(p=>p.pressed),walls:l.walls.map(w=>w.broken),crystals:l.crystals.map(c=>c.on),gateOpen:l.gateOpen,bridgeLatched:l.bridgeLatched,padLatched:l.padLatched,shards:g.shards,checkpoint:quality.snapshot(g),signature:worlds.worldSnapshot(g),adventure:adventure.snapshot(g),reality:reality.snapshot(g),expansion:expansion.snapshot(g),v20:v20.snapshot(g),v21:v21.snapshot(g),v23:v23.snapshot(g)},connected,transition:g.transition>0};
 }
 module.exports={createGame,initStage,updateInput,clearMovement,tick,snapshot,bridgeActive};

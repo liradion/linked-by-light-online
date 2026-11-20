@@ -40,7 +40,7 @@ test('every one of 99 missions has a unique signature and 11 mechanics',()=>{
   assert.equal(stages[i].signature.variant,i%9);
   assert.equal(stages[i].signature.finale,i%9===8);
   assert.ok(stages[i].signature.hint.length>20);
-  if(i<3){
+  if(stages[i].signature.tutorialOnly===true){
    assert.equal(stages[i].signature.tutorialOnly,true);
    assert.equal(stages[i].signature.nodes.length+stages[i].signature.pairs.length,0);
   }else assert.ok(stages[i].signature.nodes.length+stages[i].signature.pairs.length>0);

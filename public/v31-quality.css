@@ -1,0 +1,33 @@
+/* v31: keep the two heroes oriented without changing world camera authority. */
+.v31-edge-marker[hidden]{display:none!important}
+.v31-edge-marker{position:absolute;z-index:4;top:calc(91px + env(safe-area-inset-top));
+ max-width:min(200px,36vw);padding:7px 11px;box-sizing:border-box;
+ font:700 11px/1.35 system-ui,sans-serif;letter-spacing:.015em;
+ background:#142b43df;border:1px solid #9fe3f28c;color:#ddfaff;
+ border-radius:10px;pointer-events:none;box-shadow:0 5px 13px #0007;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v31-edge-marker.v31-left{left:calc(9px + env(safe-area-inset-left))}
+.v31-edge-marker.v31-right{right:calc(9px + env(safe-area-inset-right))}
+.v31-edge-goal{top:calc(132px + env(safe-area-inset-top));border-color:#ffdfa57f;color:#fff0cd}
+@media(pointer:coarse){
+ .touch-button[data-input="jump"]{border:2px solid #ffc88c!important;
+   box-shadow:0 0 0 2px #ffc88c22,0 7px 14px #0008!important}
+ .touch-button[data-input="ability"]{border-width:2px!important}
+ .touch-button{touch-action:none!important;-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent}
+ .touch-button:focus-visible{outline:3px solid #fff2b9;outline-offset:3px}
+ .touch-controls.compact .touch-button{min-width:50px!important;min-height:50px!important}
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:450px){
+ .v31-edge-marker{top:calc(42px + env(safe-area-inset-top));
+   padding:5px 7px;font-size:10px;max-width:38vw}
+ .v31-edge-goal{top:calc(78px + env(safe-area-inset-top))}
+}
+@media(max-width:480px){
+ .v31-edge-marker{top:calc(66px + env(safe-area-inset-top));
+   max-width:40vw;font-size:10px}
+ .v31-edge-goal{top:calc(97px + env(safe-area-inset-top))}
+}
+@media(prefers-reduced-motion:reduce){
+ .v31-edge-marker{transition:none}
+}

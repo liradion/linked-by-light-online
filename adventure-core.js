@@ -2,6 +2,7 @@
 // Adventure systems are authoritative: neither player simulates boss health, tether or secrets.
 const {GROUND}=require('./shared/stages');
 const resonance=require('./coop-resonance');
+const quality=require('./gameplay-quality');
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const dist=(p,x,y)=>Math.hypot(p.x+15-x,p.y+21.5-y);
 const BOSS_NAMES=['Сонный Великан','Лесной Хранитель','Лунный Кракен','Король Ветров','Звёздный Сфинкс','Алмазный Страж','Неоновый Титан','Хранитель Течения','Часовой Голем','Тень Горизонта','Сердце Тьмы','Последняя Тень'];
@@ -71,7 +72,7 @@ function update(g,dt){
      const target=g.players.reduce((best,p)=>Math.abs(p.x-boss.x)<Math.abs(best.x-boss.x)?p:best,g.players[0]);
      boss.focusX=Math.max(50,Math.min(l.width-90,target.x));}
    if(boss.warning>0){boss.warning-=dt;if(boss.warning<=0&&a.bond.shield<=0){
-    for(const p of g.players){const nearBoss=dist(p,boss.x,GROUND-43)<165;const beam=Math.abs(p.x-boss.x)<80;const targetZone=Math.abs(p.x-(boss.phase>=2?boss.focusX:boss.x-110))<80;const danger=boss.pattern===0?nearBoss:boss.pattern===1?beam:targetZone;if(danger){p.x=l.spawn[p.type];p.y=GROUND-43;p.vx=0;p.vy=0;}}
+    for(const p of g.players){const nearBoss=dist(p,boss.x,GROUND-43)<165;const beam=Math.abs(p.x-boss.x)<80;const targetZone=Math.abs(p.x-(boss.phase>=2?boss.focusX:boss.x-110))<80;const danger=boss.pattern===0?nearBoss:boss.pattern===1?beam:targetZone;if(danger){if(!quality.recover(g,p)){p.x=l.spawn[p.type];p.y=GROUND-43;p.vx=0;p.vy=0;p.grounded=false;p.coyote=0;p.jumpBuffer=0;}}}
    }}
   }
  }
