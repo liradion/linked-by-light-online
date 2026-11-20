@@ -3,7 +3,7 @@
 // Native game screenshots are captured separately from a local authoritative server.
 // No remote assets, purchased fonts, images or user-submitted content are loaded.
 const fs=require('node:fs'),path=require('node:path');
-const {chromium}=require('playwright');
+// Playwright is a build-time-only dependency; npm test works with zero runtime dependencies.
 
 const FORMATS=Object.freeze([
  {id:'store-header',w:920,h:430,ext:'png'},
@@ -63,6 +63,7 @@ function scene(d){
  return all;
 }
 async function generate(dest=path.join(process.cwd(),'artifacts','steam-prepayment','concepts')){
+ const {chromium}=require('playwright');
  const browser=await chromium.launch({headless:true});
  fs.mkdirSync(dest,{recursive:true});
  const outputs=[];
