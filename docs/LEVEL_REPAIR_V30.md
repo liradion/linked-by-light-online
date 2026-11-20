@@ -30,8 +30,13 @@ The **first three** tutorial missions explicitly bypass flower completion by mar
 - Tapping the nudge opens the existing more-detailed role hint; users can dismiss it. Progress resets the stalled-time counter. No analytics/telemetry or personal data is added.
 - The nudge supports Russian/English, keyboard focus and iPhone landscape layout. Context is computed locally from authoritative snapshots, not from speculative private user profiling.
 
+## Checkpoint compatibility
+
+Rooms created before this repair can contain a serialized pre-v30 level object in the existing v11 disk/cloud checkpoint. `level-repair.js` normalizes **only** canonical stages 0–2 when those rooms are hydrated on the server, using the new geometry and tutorial-only signature while preserving already-pressed pads, opened gates, broken walls, charged crystals and latched bridges. Saved custom creator content and stages 3+ are excluded. Checkpoint envelope and payload schema versions do not change.
+
 ## Automated acceptance plan
 
+- `tests/v30-checkpoint-migration.test.js`: old v11 tutorial layout migration, persistence of earned progress, advanced-stage and custom-level exclusion.
 - `tests/v30-onboarding.test.js`: actual measured jump peak, geometry of **all 99** base stages, safe ledge approach, existence/trigger of bridges, no hidden flower gates, predictor/server collision agreement, and movement-based staged route completion for the first three missions. Only the focused underside-collision fixture starts below a test ledge; staged walkthroughs begin at the official spawn and use server input ticks.
 - `e2e/v30-onboarding.spec.cjs`: Chromium + WebKit check first-level objective, nudge and mobile landscape usability.
 - Existing full Node and browser suites still cover protocol, online pairing, UI, reconnect, demo puzzles and story mechanics. Incomplete human QA remains in G4 Issue #26.
