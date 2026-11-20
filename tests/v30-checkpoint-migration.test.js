@@ -47,8 +47,8 @@ test('v30 checkpoint: discard obsolete level-3 wall/crystal/gap after load, reta
  assert.equal(g.padTimer,.1);
  assert.equal(g.level.bridgeTrigger,'always');
 });
-test('v30 checkpoint: never rewrite an advanced stage or a custom creator puzzle',()=>{
- const g=createGame();initStage(g,3);
+test('v31 checkpoint: never rewrite a post-onboarding stage or a custom creator puzzle',()=>{
+ const g=createGame();initStage(g,9);
  const previous=g.level;
  assert.equal(normalizeIntroLevel(g),false);
  assert.equal(g.level,previous);
