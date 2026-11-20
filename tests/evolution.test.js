@@ -36,7 +36,7 @@ test('Reject distant, stale, solo and invalid actions; only actual distinct abil
  }
  const b=localBond();
  assert.equal(resonance.ability(b,0,near,false),false);
- resonance.advance(b,1.25);
+ for(let tick=0;tick<76;tick++)resonance.advance(b,1/60);
  assert.equal(resonance.ability(b,1,near,false),false);
  assert.equal(b.syncs,0);
 });
