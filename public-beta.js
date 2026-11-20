@@ -8,6 +8,18 @@ const FEEDBACK_TYPES=new Set(['bug','idea','experience']);
 const PLATFORM_TYPES=new Set(['windows','iphone','android','mac','other']);
 const safeText=(value,max)=>typeof value==='string'
  ?value.normalize('NFC').replace(/[\u0000-\u001f\u007f-\u009f<>]/g,'').trim().slice(0,max):'';
+// Best-effort minimization of accidentally pasted identifiers in free-text feedback.
+// This is NOT a substitute for moderation or an approved data deletion policy.
+const safeFeedbackText=(value,max=800)=>{
+ const value0=safeText(value,1200);
+ return value0
+  .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,'[email removed]')
+  .replace(/https?:\/\/[^\s]+/gi,'[link removed]')
+  .replace(/(?:\+?\d[\s()/-]?){10,16}\d/g,'[phone removed]')
+  .replace(/\b(token|recovery key|ключ восстановления)\s*[:=]\s*\S+/gi,'$1: [removed]')
+  .replace(/\b(room|code|код|комната)\s*[:=#-]?\s*[A-HJ-NP-Z2-9]{6}\b/gi,'$1: [room removed]')
+  .slice(0,max).trim();
+};
 const MAX_REPORTS=100;
 const percentile=(values,p)=>{
  if(!values.length)return 0;
@@ -18,7 +30,7 @@ const validToken=t=>typeof t==='string'&&t.length>=32&&t.length<=256;
 const normalizeFeedback=(raw,now=Date.now())=>{
  if(!raw||typeof raw!=='object'||raw.consent!==true)return null;
  const kind=FEEDBACK_TYPES.has(raw.kind)?raw.kind:null;
- const message=safeText(raw.message,800);
+ const message=safeFeedbackText(raw.message,800);
  const platform=PLATFORM_TYPES.has(raw.platform)?raw.platform:'other';
  const stage=Number.isInteger(raw.stage)&&raw.stage>=0&&raw.stage<=136?raw.stage:null;
  const rating=Number.isInteger(raw.rating)&&raw.rating>=1&&raw.rating<=5?raw.rating:null;
@@ -28,7 +40,7 @@ const normalizeFeedback=(raw,now=Date.now())=>{
 const cleanFeedback=raw=>(Array.isArray(raw)?raw:[]).slice(-MAX_REPORTS).flatMap(entry=>{
  if(!entry||typeof entry!=='object'||!/^[a-f0-9]{16}$/.test(entry.id||'')
   ||!FEEDBACK_TYPES.has(entry.kind))return [];
- const message=safeText(entry.message,800);
+ const message=safeFeedbackText(entry.message,800);
  if(message.length<10)return [];
  return [{id:entry.id,kind:entry.kind,message,
   platform:PLATFORM_TYPES.has(entry.platform)?entry.platform:'other',
