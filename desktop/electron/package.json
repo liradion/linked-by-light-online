@@ -9,11 +9,45 @@
     "start": "electron .",
     "test": "node --test tests/*.test.cjs",
     "pack:win": "electron-packager . LinkedByLightM5Preview --platform=win32 --arch=x64 --out=dist --overwrite --asar --ignore=^/dist$ --ignore=^/tests$",
-    "smoke:desktop": "node scripts/desktop-smoke.cjs"
+    "smoke:desktop": "node scripts/desktop-smoke.cjs",
+    "pack:installer": "electron-builder --win nsis --x64 --publish never"
   },
   "devDependencies": {
     "electron": "45.0.0",
     "@electron/packager": "20.3.0",
-    "playwright": "1.56.1"
+    "playwright": "1.56.1",
+    "electron-builder": "26.18.0"
+  },
+  "author": "Linked by Light Project",
+  "build": {
+    "appId": "io.github.liradion.linkedbylight.m5preview",
+    "productName": "Linked by Light M5 Internal Preview",
+    "directories": {
+      "output": "installer-out"
+    },
+    "asar": true,
+    "files": [
+      "main.js",
+      "security.cjs",
+      "offline.html",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "LinkedByLight-M5-UNSIGNED-Setup-${version}-${arch}.${ext}"
+    }
   }
 }
