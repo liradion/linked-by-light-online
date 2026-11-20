@@ -38,12 +38,12 @@
   'Spark stands on the orange plate; Echo on the blue. Hold them simultaneously.',
   'Spark breaks the wall and holds the amber plate; Echo crosses the bridge and charges the crystal.',
   'Jump the short gap, then stand on both color-matched plates at the same time.',
-  'Spark breaks the barrier. Activate both plates.',
-  'Light the crystal and stand on both plates at the same time.',
-  'Spark holds the plate while Echo crosses the bridge and charges the crystal.',
-  'Echo activates both crystals. Cross the bridge together.',
-  'Break the wall, charge the crystal and activate both plates.',
-  'Activate all mechanisms together and enter the portal.'
+  'Spark breaks the wall, then Spark touches the amber flower and Echo the blue one.',
+  'Echo charges the crystal; then both jump through the glowing flight ring.',
+  'Spark holds the amber plate to secure the bridge. Board the sail together: Spark steers and Echo boosts.',
+  'Echo charges the crystal; then both use abilities at the separate rhythm signals.',
+  'Spark breaks the wall, Echo charges the crystal; then stand on both colored plates.',
+  'Echo charges the crystal, both hold the plates, then alternate ability attacks against the guardian.'
  ]);
  const EXTRA=Object.freeze([
   ['The Mystery of the Hundredth Light','Discover all eleven secrets and defeat the Last Shadow.'],
@@ -121,6 +121,12 @@
   if(index===0)return 'Both plates work only while you stand on them together.';
   if(index===1)return 'Spark dashes into the cracked wall; Echo pulses next to the crystal.';
   if(index===2)return 'Jump near the edge of the first short gap. The next light bridge is stable; then hold both plates together.';
+  if(index===3)return 'Spark dashes through the wall; find one matching light flower for each hero.';
+  if(index===4)return 'Echo charges the crystal; jump through the flight ring when it glows.';
+  if(index===5)return 'Spark holds the amber plate until the bridge latches. Echo pulses the sail while Spark steers.';
+  if(index===6)return 'Echo charges the crystal. Both trigger their rhythm signals within a short shared window.';
+  if(index===7)return 'Dash wall, pulse crystal, then activate both plates at once.';
+  if(index===8)return 'Charge the crystal, hold both plates and alternate Spark/Echo attacks near the guardian.';
   return objective(index,fallback);
  }
  function world(index){
