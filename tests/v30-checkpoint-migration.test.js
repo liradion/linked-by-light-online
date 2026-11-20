@@ -1,0 +1,58 @@
+'use strict';
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const {createGame,initStage,tick}=require('../game-core');
+const {normalizeIntroLevel}=require('../level-repair');
+const {stages}=require('../shared/stages');
+test('v30 checkpoint: restore old level-1 geometry without reintroducing a mandatory flower',()=>{
+ const g=createGame(),original=structuredClone(g.level);
+ g.level.platforms[0].y=452;
+ g.level.signature.tutorialOnly=false;g.level.signature.done=false;
+ g.level.signature.nodes=[{x:290,mode:'flower',role:0,active:false}];
+ g.level.pads[0].pressed=true;g.level.padLatched=true;g.level.gateOpen=true;
+ assert.equal(normalizeIntroLevel(g),true);
+ assert.equal(g.level.platforms[0].y,480);
+ assert.equal(g.level.platforms[0].oneWay,true);
+ assert.equal(g.level.signature.done,true);
+ assert.equal(g.level.signature.tutorialOnly,true);
+ assert.deepEqual(g.level.signature.nodes,[]);
+ assert.equal(g.level.pads[0].pressed,true);
+ assert.equal(g.level.padLatched,true);
+ assert.equal(g.level.gateOpen,true);
+ assert.equal(original.platforms[0].y,480,'canonical template must stay unmodified');
+});
+test('v30 checkpoint: retain completed Spark wall, Echo crystal, bridge latch on level 2',()=>{
+ const g=createGame();initStage(g,1);
+ g.level.platforms[0].y=454;
+ g.level.walls[0].broken=true;g.level.crystals[0].on=true;
+ g.level.bridgeLatched=true;g.level.pads[0].pressed=true;
+ assert.equal(normalizeIntroLevel(g),true);
+ assert.equal(g.level.platforms[0].y,480);
+ assert.equal(g.level.walls[0].broken,true);
+ assert.equal(g.level.crystals[0].on,true);
+ assert.equal(g.level.bridgeLatched,true);
+ assert.equal(g.level.pads[0].pressed,true);
+ assert.equal(g.level.signature.done,true);
+});
+test('v30 checkpoint: discard obsolete level-3 wall/crystal/gap after load, retain earned pad progress',()=>{
+ const g=createGame();initStage(g,2);
+ g.level.floor=[[0,470],[625,1105],[1260,1820]];
+ g.level.walls=[{x:738,y:350,w:31,h:194,broken:false}];
+ g.level.crystals=[{x:1010,y:478,on:false}];
+ g.level.pads[0].pressed=true;g.padTimer=.1;
+ assert.equal(normalizeIntroLevel(g),true);
+ assert.equal(g.level.floor[1][0],565);
+ assert.equal(g.level.walls.length,0);assert.equal(g.level.crystals.length,0);
+ assert.equal(g.level.pads[0].pressed,true);
+ assert.equal(g.padTimer,.1);
+ assert.equal(g.level.bridgeTrigger,'always');
+});
+test('v30 checkpoint: never rewrite an advanced stage or a custom creator puzzle',()=>{
+ const g=createGame();initStage(g,3);
+ const previous=g.level;
+ assert.equal(normalizeIntroLevel(g),false);
+ assert.equal(g.level,previous);
+ initStage(g,0);g.customChallenge=true;const custom=g.level;
+ assert.equal(normalizeIntroLevel(g),false);
+ assert.equal(g.level,custom);
+});
