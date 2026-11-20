@@ -31,6 +31,10 @@
       };
       return names[arcade.kind]||'Скоординируйте действия обоих игроков для завершения мини-игры.';
     }
+    if(stage.onboarding==='hold-and-sail'&&!world?.padLatched)
+      return 'Искра: встаньте на янтарную плиту и удерживайте её до закрепления моста. Потом оба подойдите к парусу.';
+    if(stage.onboarding==='first-boss'&&world?.adventure?.boss?.active)
+      return 'Босс атакуется по очереди: сначала Искра рывком, затем Эхо импульсом. Между ударами держитесь на безопасной дистанции.';
     if(stage.onboarding==='jump-pads'&&(!players||players.some(p=>Number.isFinite(p?.x)&&p.x<555)))
       return 'Сначала прыгните через короткую пропасть: нажмите прыжок за шаг до края. После второго светового мостика оба встаньте на свои плиты.';
     const wall=stage.walls?.find((w,i)=>!(world?.walls?.[i]??w.broken));
@@ -75,7 +79,7 @@
     const count=a=>Array.isArray(a)?a.filter(Boolean).length:0;
     return (world.gateOpen?50:0)+(world.padLatched?4:0)+
       count(world.walls)*3+count(world.crystals)*3+
-      (world.signature?.done?6:0)+count(world.signature?.nodes)+
+      (world.signature?.done?6:0)+(Math.max(0,(world.checkpoint?.index??-1)+1))*3+count(world.signature?.nodes)+
       count(world.signature?.pairs)+(world.adventure?.arcade?.done?6:0);
   }
   function adaptivePrompt(stage,world,role,players,idleSeconds,deathsSince=0,english=false){
@@ -90,6 +94,15 @@
     if(stage.onboarding==='jump-pads'&&(!players||players.some(p=>p?.x<555)))
       return english?'Hard jump? Start just before the edge and press Jump. The next bridge is safe.'
         :'Не получается прыжок? Прыгайте за шаг до края. Следующий мост безопасен.';
+    const tips={
+      'flowers-wall':['Dash through the wall, then touch the amber flower as Spark and the blue one as Echo.','Разрушьте стену рывком Искры, затем каждый герой касается цветка своего цвета.'],
+      'first-flight':['Echo pulses the crystal. Jump into the glowing ring together — the air current lifts you.','Эхо заряжает кристалл. Затем оба подпрыгните в световое кольцо — поток поднимет вас.'],
+      'hold-and-sail':['Hold Spark’s amber plate until the bridge stays. Then board the sail; Spark moves right, Echo pulses.','Искра держит янтарную плиту до закрепления моста. На парусе Искра движется вправо, Эхо даёт импульс.'],
+      'rhythm-duo':['Echo charges the crystal, then use both abilities at your separate rhythm marks.','Эхо заряжает кристалл. У своих меток ритма оба нажмите способности в общем временном окне.'],
+      'combine-three':['Spark dashes through the wall, Echo pulses the crystal, then hold both colored plates.','Искра ломает стену рывком, Эхо заряжает кристалл, затем оба одновременно стоят на плитах.'],
+      'first-boss':['Charge the crystal, hold both plates, then alternate abilities on the guardian when close enough.','Зарядите кристалл и две плиты. У стража по очереди атакуйте способностями Искры и Эха.']
+    };
+    if(stage.onboarding&&tips[stage.onboarding])return tips[stage.onboarding][english?0:1];
     return english?'Need a hand? Open the hint for your role and the current objective.'
       :'Нужна помощь? Откройте подсказку для своей роли и текущей задачи.';
   }
