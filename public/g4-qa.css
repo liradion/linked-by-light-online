@@ -1,0 +1,28 @@
+/* G4 QA uses no backend and stays away from gameplay canvas controls. */
+.g4-qa-dialog{
+ box-sizing:border-box;max-width:min(640px,calc(100vw - 20px));max-height:min(90vh,720px);
+ padding:20px;overflow:auto;border:1px solid #8eb8d8a8;border-radius:16px;
+ background:#142037;color:#f2f7ff;box-shadow:0 18px 55px #0009;
+ font:14px/1.5 system-ui,sans-serif;
+}
+.g4-qa-dialog::backdrop{background:#050d1cb8}
+.g4-qa-dialog h2{margin:0 0 9px;font-size:20px}
+.g4-qa-dialog p{margin:0 0 14px}
+#g4QaPreview{
+ box-sizing:border-box;max-width:100%;max-height:38vh;overflow:auto;white-space:pre-wrap;
+ word-break:break-word;padding:12px;border-radius:9px;
+ background:#091426;color:#e2f9e6;border:1px solid #5c7d988c;
+ font:12px/1.5 ui-monospace,monospace;
+}
+#g4QaStatus{min-height:20px;color:#bbf1d7}
+.g4-qa-actions{display:flex;flex-wrap:wrap;gap:8px}
+.g4-qa-actions button{
+ min-height:40px;padding:9px 12px;color:#f1f5ff;background:#304567;border:1px solid #a5c1ef55;
+ border-radius:9px;font:600 13px system-ui;cursor:pointer
+}
+.g4-qa-actions button:focus-visible,#g4QaOpen:focus-visible,#g4QaPreview:focus-visible{
+ outline:3px solid #ffe3a2;outline-offset:2px
+}
+@media(max-width:520px){.g4-qa-dialog{padding:12px;font-size:12px}.g4-qa-dialog h2{font-size:17px}
+ #g4QaPreview{font-size:10px;max-height:30vh}.g4-qa-actions button{flex:1 1 42%}}
+@media(prefers-reduced-motion:reduce){.g4-qa-dialog *{animation:none!important;transition:none!important}}

@@ -1,0 +1,97 @@
+{
+  "candidateSha": "",
+  "ci": {
+    "node": {
+      "sha": "",
+      "conclusion": "",
+      "url": ""
+    },
+    "browsers": {
+      "sha": "",
+      "conclusion": "",
+      "url": ""
+    },
+    "commercial": {
+      "sha": "",
+      "conclusion": "",
+      "url": ""
+    },
+    "preview": {
+      "sha": "",
+      "conclusion": "",
+      "url": ""
+    }
+  },
+  "field": {
+    "windowsIphoneWifi": {
+      "passed": false,
+      "evidenceUrl": "",
+      "executedAt": null
+    },
+    "windowsIphoneCellular": {
+      "passed": false,
+      "evidenceUrl": "",
+      "executedAt": null
+    },
+    "safariBackgroundRecovery": {
+      "passed": false,
+      "evidenceUrl": "",
+      "executedAt": null
+    },
+    "fullCampaignHuman": {
+      "passed": false,
+      "evidenceUrl": "",
+      "executedAt": null
+    },
+    "isolatedStagingRestore": {
+      "passed": false,
+      "evidenceUrl": "",
+      "executedAt": null
+    },
+    "interRegionLatency": {
+      "passed": false,
+      "evidenceUrl": "",
+      "executedAt": null
+    }
+  },
+  "beta": {
+    "independentPairs": 0,
+    "joinsAttempted": 0,
+    "joinsSucceeded": 0,
+    "startedWithoutHelp": 0,
+    "firstObjectiveCompleted": 0,
+    "wouldContinue": 0,
+    "evidenceUrl": ""
+  },
+  "stability": {
+    "sessions": 0,
+    "crashFree": 0,
+    "evidenceUrl": ""
+  },
+  "issues": {
+    "openP0": null,
+    "openBlockingP1": null,
+    "triageUrl": ""
+  },
+  "compliance": {
+    "rightsApproved": false,
+    "rightsEvidenceUrl": "",
+    "privacyReviewed": false,
+    "privacyEvidenceUrl": "",
+    "ugcSafe": false,
+    "ugcEvidenceUrl": ""
+  },
+  "preview": {
+    "verifiedSha": "",
+    "httpsUrl": "",
+    "wssRoomJoinChecked": false,
+    "separateSecretsAndStorage": false,
+    "evidenceUrl": ""
+  },
+  "signoff": {
+    "approved": false,
+    "at": null,
+    "reviewer": "",
+    "evidenceUrl": ""
+  }
+}
