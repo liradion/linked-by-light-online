@@ -1,0 +1,22 @@
+// TEMPLATE ONLY. INVALID placeholder IDs. NEVER upload or set live before Steamworks onboarding.
+// Fill IDs from the Steamworks partner dashboard AFTER payment and rights approval.
+"AppBuild"
+{
+  "AppID" "__STEAM_APP_ID__"
+  "Desc" "Linked by Light internal Windows preview (NOT store release)"
+  "Preview" "1"
+  "ContentRoot" "..\content\"
+  "BuildOutput" "..\output\"
+  "Depots"
+  {
+    "__STEAM_DEPOT_ID__"
+    {
+      "FileMapping"
+      {
+        "LocalPath" "*"
+        "DepotPath" "."
+        "recursive" "1"
+      }
+    }
+  }
+}
