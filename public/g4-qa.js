@@ -90,22 +90,23 @@
   if(dialog||!root.document)return;
   getSession=typeof api.getSession==='function'?api.getSession:getSession;
   const header=root.document.querySelector('.topline');if(!header)return;
+  const actions=header.querySelector(':scope > div:last-of-type')||header;
   launch=root.document.createElement('button');launch.id='g4QaOpen';launch.className='mini-btn';
-  launch.type='button';launch.addEventListener('click',open);header.append(launch);
+  launch.type='button';launch.addEventListener('click',open);actions.append(launch);
   dialog=root.document.createElement('dialog');dialog.id='g4QaDialog';dialog.className='g4-qa-dialog';
   const title=root.document.createElement('h2');title.id='g4QaTitle';
   const desc=root.document.createElement('p');desc.id='g4QaDescription';
   preview=root.document.createElement('pre');preview.id='g4QaPreview';
   preview.setAttribute('tabindex','0');preview.setAttribute('aria-label','G4 JSON diagnostics preview');
   state=root.document.createElement('p');state.id='g4QaStatus';state.setAttribute('role','status');
-  const actions=root.document.createElement('div');actions.className='g4-qa-actions';
+  const buttons=root.document.createElement('div');buttons.className='g4-qa-actions';
   function button(id,fn){
    const el=root.document.createElement('button');el.type='button';el.id=id;
-   el.addEventListener('click',fn);actions.append(el);return el;
+   el.addEventListener('click',fn);buttons.append(el);return el;
   }
   button('g4QaRefresh',render);button('g4QaCopy',copy);button('g4QaSave',save);
   button('g4QaClose',()=>dialog.close());
-  dialog.append(title,desc,preview,state,actions);root.document.body.append(dialog);
+  dialog.append(title,desc,preview,state,buttons);root.document.body.append(dialog);
   root.GameI18n?.subscribe?.(refresh);
   refresh();
  }
