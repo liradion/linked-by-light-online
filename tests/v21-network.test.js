@@ -77,6 +77,10 @@ test('v21 genuine WebSocket campaign, story, home, gallery and reconnection',{ti
   assert.equal(overview.status,200);
   const pending=(await overview.json()).pendingGallery;
   assert.equal(pending.length,1);
+  // A map under moderation must not be playable even if its ID leaks.
+  host.send({t:'v21GalleryPlay',actionId:'before-approval',id:pending[0].id});
+  const blocked=await take(host,m=>m.t==='actionResult'&&m.actionId==='before-approval');
+  assert.equal(blocked.ok,false,'Pending UGC must not be launched by a client knowing its ID');
   const decision=await fetch('http://127.0.0.1:'+port+'/api/admin/v22/gallery',{
    method:'POST',headers:{'Content-Type':'application/json',
     Authorization:'Bearer TestServerAdminTokenForIntegration0123456789abcdefgh'},

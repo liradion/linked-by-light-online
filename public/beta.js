@@ -147,8 +147,8 @@ function init(callbacks){
  const overlay=$('menuView')||document.querySelector('.overlay-card');
  overlay?.append(notice);
  const info=add('div','beta-links');
- for(const [title,href] of [['Конфиденциальность','/privacy.html'],['Правила игры','/terms.html']]){
-  const a=add('a','',title);a.href=href;a.target='_blank';a.rel='noopener noreferrer';info.append(a);
+ for(const [type,title,href] of [['privacy','Конфиденциальность','/privacy.html'],['terms','Правила игры','/terms.html']]){
+  const a=add('a','',title);a.href=href;a.dataset.betaPolicy=type;a.target='_blank';a.rel='noopener noreferrer';info.append(a);
  }
  overlay?.append(info);
  fetch('/api/beta/status',{cache:'no-store'}).then(r=>r.ok?r.json():null)
@@ -169,6 +169,7 @@ function init(callbacks){
   const menu=$('menuView');
   menu?.insertBefore(card,menu.querySelector('.menu-actions'));
  }
+ refreshLanguage();
 }
 function refreshLanguage(){
  const english=root.GameI18n?.isEnglish?.();
@@ -180,6 +181,11 @@ function refreshLanguage(){
   const open=card.querySelector('.beta-quickstart-open'),dismiss=card.querySelector('.beta-quickstart-dismiss');
   if(open)open.textContent=english?'How to play':'Как играть';
   if(dismiss)dismiss.textContent=english?'Got it':'Понятно';
+ }
+ for(const link of document.querySelectorAll('[data-beta-policy]')){
+  const privacy=link.dataset.betaPolicy==='privacy';
+  link.href=(privacy?'/privacy':'/terms')+(english?'-en':'')+'.html';
+  link.textContent=privacy?(english?'Privacy':'Конфиденциальность'):(english?'Terms':'Правила игры');
  }
  const guide=$('betaHelpBtn'),report=$('betaReportBtn');
  if(guide)guide.textContent=english?'ⓘ How to play':'ⓘ Как играть';

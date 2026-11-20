@@ -1,0 +1,44 @@
+name: Stage 4 Visual Preview (isolated Chromium + WebKit)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'public/**'
+      - 'e2e/stage4-preview.spec.cjs'
+      - '.github/workflows/stage4-visual-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated Playwright runner
+        run: npm install --no-save --ignore-scripts @playwright/test@1.56.1
+      - name: Render RU/EN desktop and phone landscape previews with local-only game server
+        run: npx playwright test e2e/stage4-preview.spec.cjs --config=playwright.config.cjs
+      - name: Upload visual preview screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linked-by-light-stage4-visual-preview
+          path: preview-artifacts/*.png
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage4-preview-failure-traces
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

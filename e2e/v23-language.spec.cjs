@@ -11,7 +11,7 @@ test('v23-v26 chapter stays bilingual and retains an unsent invitation across ta
  await page.evaluate(()=>window.GameFuture.open('physics'));
  const modal=page.locator('.v2346-dialog');
  await expect(modal).toBeVisible();
- await expect(modal.locator('.v2346-content')).toContainText('Light physics · Five guardians');
+ await expect(modal.locator('.v2346-content')).toContainText('Light physics and five guardians');
  await expect(modal.locator('.v2346-content')).toContainText('Choose a challenge');
  await expect(modal.locator('.v2346-tabs [data-future-tab="physics"]')).toHaveText('Physics');
  await expect(modal.locator('.v2346-content')).not.toContainText('Физика света');

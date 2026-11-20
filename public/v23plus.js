@@ -55,7 +55,7 @@ function sync(){
  if(active==='theme')content.querySelector('[data-gift-theme]')?.focus({preventScroll:true});
 }
 function physics(){
- const container=section(content,'v23 · Физика света и пять хранителей');
+ const container=section(content,'Физика света и пять хранителей');
  p(container,'15 новых уровней. Находясь у обозначенного механизма, нажимайте соответствующую кнопку. Сервер проверяет расстояние и роли.');
  if(v23()&&state?.world?.v23){
   const z=state.world.v23,level=lvls[stage-122];
@@ -118,7 +118,7 @@ function physics(){
    push('✦ Нанести удар','boss_strike',{},role()!==0);
   }
   actions(container,a);
- }else p(container,'Выберите уровень главы v23 ниже. Первая карта доступна сразу.');
+ }else p(container,'Выберите испытание ниже. Первая карта доступна сразу.');
  const grid=section(content,'Выбрать испытание');
  if(canLead()){
   const unlocked=state?.v23Unlocked??122;
@@ -131,7 +131,7 @@ const quests=[['keeper','Хранитель рассвета'],['navigator','З�
 const pretty={keeper:'Хранитель',navigator:'Картограф',hermit:'Мастер',secret:'Тайный'};
 function living(){
  const z=social||{},host=canLead();
- const intro=section(content,'v24 · Живой мир');
+ const intro=section(content,'Живой мир');
  p(intro,'Побочные задания и совместные развлечения не влияют на результаты основной кампании и не требуют покупок.');
  const npc=section(content,'Новые персонажи и побочные задания');
  for(const [id,title] of quests){
@@ -184,7 +184,7 @@ function living(){
  if(z.events?.length){const journal=section(content,'Последние события');z.events.slice(-8).reverse().forEach(item=>pRaw(journal,item.text));}
 }
 function endless(){
- const box=section(content,'v25 · Endless Together');
+ const box=section(content,'Бесконечные приключения');
  p(box,'Общие seed-карты собираются сервером из заранее проверенных платформ. Один seed — одинаковая геометрия на обоих устройствах.');
  actions(box,[button('✧ Ежедневное испытание',()=>send('v25Generate',{mode:'daily'}),!canLead())]);
  const seed=el('input','v2346-input');seed.inputMode='numeric';seed.placeholder='Seed: 1…4294967295';seed.maxLength=10;
@@ -217,7 +217,7 @@ function endless(){
  p(notice,'Повтор показывает траектории игроков в текущем уровне. Это не записанное видео. Чтобы воспроизвести запись, выберите уровень с тем же номером и включите «Просмотреть запись».');
 }
 function access(){
- const box=section(content,'v26 · Доступность и управление');
+ const box=section(content,'Доступность и управление');
  p(box,'Настройки сохраняются только на этом устройстве. Основная физика игры остаётся общей для двух игроков.');
  const options=[
   ['largeControls','Крупные сенсорные кнопки'],
@@ -384,23 +384,23 @@ function init(callbacks){
  api=callbacks;
  nonce='v2346-'+Math.random().toString(36).slice(2,10);
  applySettings();
- toggle=button('✦ Новые миры v23–v26',()=>open('physics'));
+ toggle=button('✦ Новые миры',()=>open('physics'));
  toggle.classList.add('v2346-toggle');
  const host=document.querySelector('.frame')||document.body;host.append(toggle);
  dialog=el('dialog','v2346-dialog');
  const header=el('header','v2346-header');
- header.append(el('strong','', 'Linked by Light · v23–v26'),button('Закрыть ✕',()=>dialog.close()));dialog.append(header);
+ header.append(el('strong','',loc('Linked by Light · Новые миры')),button('Закрыть ✕',()=>dialog.close()));dialog.append(header);
  const tabs=el('nav','v2346-tabs');
- const tabLabels=[['physics','v23 · Физика'],['world','v24 · Мир'],['endless','v25 · Повторы'],['access','v26 · Доступность']];
+ const tabLabels=[['physics','Физика'],['world','Мир'],['endless','Повторы'],['access','Доступность']];
  for(const [key,label] of tabLabels){const item=button(label,()=>open(key));item.dataset.futureTab=key;tabs.append(item);}
  dialog.append(tabs);content=el('div','v2346-content');dialog.append(content);document.body.append(dialog);
  root.GameI18n?.mountDialogLanguage?.(dialog);
  const menuButtons=[],menu=$('createBtn')?.parentElement;
  if(menu){
-  const create=button('✦ Физика света v23',()=>api.create?.(122));menu.append(create);menuButtons.push([create,'✦ Физика света v23','']);
+  const create=button('✦ Физика света',()=>api.create?.(122));menu.append(create);menuButtons.push([create,'✦ Физика света','']);
   const done=GameAdventure.data()?.v23?.unlockedStages||[];
   let max=122;for(let i=122;i<=136;i++){if(!done.includes('v23-'+String(i-121).padStart(2,'0')))break;max=i;}
-  if(max>122){const suffix=(max-121)+'/15';const resume=button(loc('Продолжить v23 · ')+suffix,()=>api.create?.(max));menu.append(resume);menuButtons.push([resume,'Продолжить v23 · ',suffix]);}
+  if(max>122){const suffix=(max-121)+'/15';const resume=button(loc('Продолжить физику · ')+suffix,()=>api.create?.(max));menu.append(resume);menuButtons.push([resume,'Продолжить физику · ',suffix]);}
  }
  let giftMessage='',giftPreview=null;
  const gift=new URLSearchParams(location.search);
@@ -411,8 +411,9 @@ function init(callbacks){
   if(giftPreview)giftPreview.textContent=loc('✦ Подарочное приглашение: ')+giftMessage;
  }
  root.GameI18n?.subscribe?.(()=>{
-  toggle.textContent=loc('✦ Новые миры v23–v26');
-  header.querySelector('.v2346-button').textContent=loc('Закрыть ✕');
+  toggle.textContent=loc('✦ Новые миры');
+  header.querySelector('strong').textContent=loc('Linked by Light · Новые миры');
+   header.querySelector('.v2346-button').textContent=loc('Закрыть ✕');
   for(const [key,label] of tabLabels){
    const item=tabs.querySelector('[data-future-tab="'+key+'"]');
    if(item)item.textContent=loc(label);

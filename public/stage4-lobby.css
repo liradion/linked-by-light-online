@@ -1,0 +1,13 @@
+/* Stage 4 — concise first-session guidance across desktop and iPhone landscape. */
+.stage4-lobby-guide{max-width:470px;margin:10px auto 0;padding:11px 16px 12px;text-align:left;background:#15233bdc;border:1px solid #8d9eb899;border-radius:14px;box-shadow:0 6px 22px #0003;color:#e9f1ff}
+.stage4-lobby-guide[hidden]{display:none!important}
+.stage4-lobby-title{display:block;font:800 14px/1.3 system-ui;color:#f9e1b8}
+.stage4-lobby-detail{font:12px/1.45 system-ui;margin:6px 0 7px;color:#d6def3}
+.stage4-lobby-status{display:inline-block;border-radius:999px;border:1px solid #a4b7dd66;background:#9fcaf019;padding:4px 9px;font:700 11px/1.25 system-ui;color:#bce7f9}
+.stage4-lobby-guide[data-state="hostReady"] .stage4-lobby-status,.stage4-lobby-guide[data-state="solo"] .stage4-lobby-status{border-color:#8ff5c677;background:#70f4ad17;color:#b1ffda}
+.stage4-lobby-guide[data-state="offline"] .stage4-lobby-status{border-color:#ffbf9b77;background:#f99b7b19;color:#ffe0c9}
+@media(pointer:coarse) and (orientation:landscape){
+ .stage4-lobby-guide{padding:7px 11px 8px;margin:5px auto 0;max-width:min(95vw,470px)}
+ .stage4-lobby-title{font-size:12px}.stage4-lobby-detail{font-size:11px;line-height:1.28;margin:3px 0 4px}.stage4-lobby-status{font-size:10px;padding:2px 7px}
+}
+@media(prefers-reduced-motion:reduce){.stage4-lobby-guide{transition:none}}

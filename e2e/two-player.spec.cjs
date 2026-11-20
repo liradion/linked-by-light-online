@@ -14,7 +14,7 @@ test('two real browsers form one v26-compatible v23 cooperative room',async({bro
    buttons:[...document.querySelectorAll('button')].map(b=>b.textContent.trim()).filter(x=>/Физика|Создать/.test(x))
   }));
   console.log('Initial browser state:',JSON.stringify({diagnostic,pageErrors}));
-  const newChapter=host.getByRole('button',{name:/Физика света v23/}).first();
+  const newChapter=host.getByRole('button',{name:'✦ Физика света',exact:true}).first();
   await expect(newChapter).toBeVisible({timeout:12000});
   await newChapter.click();
   const codeEl=host.locator('#roomCode');

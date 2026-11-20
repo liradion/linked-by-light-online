@@ -180,7 +180,21 @@
  "Продолжить v23 · ": "Continue v23 · ",
  "Вас пригласили в совместное приключение!": "You have been invited to a co-op adventure!",
  "✦ Подарочное приглашение: ": "✦ Gift invitation: ",
- "v25 · Endless Together": "Endless Together"
+ "v25 · Endless Together": "Endless Together",
+ // Stage 4 human-readable chapter labels (keep historical keys for old cached clients).
+ "Физика света и пять хранителей": "Light physics and five guardians",
+ "Выберите испытание ниже. Первая карта доступна сразу.": "Choose a challenge below. The first stage is available now.",
+ "Живой мир": "Living world",
+ "Бесконечные приключения": "Endless Together",
+ "Доступность и управление": "Accessibility and controls",
+ "✦ Новые миры": "✦ New worlds",
+ "Linked by Light · Новые миры": "Linked by Light · New worlds",
+ "Физика": "Physics",
+ "Мир": "World",
+ "Повторы": "Replays",
+ "Доступность": "Accessibility",
+ "✦ Физика света": "✦ Light physics",
+ "Продолжить физику · ": "Continue physics · "
 });
  function text(source,language='ru'){
   if(typeof source!=='string'||language!=='en')return source;
