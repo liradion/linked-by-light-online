@@ -21,6 +21,10 @@ test('Stage4 preview: chapter navigation uses consumer labels in Russian and Eng
  await screenshot(page,'01-first-menu',info.project.name);
  await page.locator('#v28SoloBtn').click();
  await roomCode(page);
+ await expect(page.locator('#stage4LobbyGuide')).toHaveAttribute('data-state','solo');
+ await expect(page.locator('#startBtn')).toHaveText('Начать одному ✦');
+ await page.addStyleTag({content:'#roomCode{filter:blur(14px)}'});
+ await screenshot(page,'01b-solo-lobby',info.project.name);
  await page.locator('#startBtn').click();
  await expect(page.locator('#overlay')).toHaveClass(/hidden/,{timeout:15000});
  // Chapter buttons are intentionally grouped inside the consumer quick menu.
@@ -62,6 +66,7 @@ test('Stage4 preview: mobile landscape solo touch view renders without blocking 
   await page.locator('#v28RoleSelect').selectOption('1');
   await page.locator('#v28SoloBtn').tap();
   await roomCode(page);
+  await expect(page.locator('#stage4LobbyGuide')).toHaveAttribute('data-state','solo');
   await expect(page.locator('#startBtn')).toBeEnabled();
   await page.locator('#startBtn').tap();
   await expect(page.locator('#overlay')).toHaveClass(/hidden/,{timeout:15000});
