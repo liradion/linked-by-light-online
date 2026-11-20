@@ -114,7 +114,7 @@ test('v30: server and client predictor agree that a character can jump through a
  assert.ok(Math.abs(predicted.y-p.y)<1.1,'Client predictor diverged from server one-way geometry');
 });
 test('v30: both roles complete entire stage 1 by moving from actual spawn, not teleporting',()=>{
- const g=createGame();g.phase='playing',input=inputController();
+ const g=createGame();g.phase='playing';const input=inputController();
  const centers=g.level.pads.map(p=>p.x+p.w/2);
  travel(g,centers,x=>x.level.padLatched,800,{input});
  assert.equal(g.level.signature.done,true);
@@ -125,7 +125,7 @@ test('v30: both roles complete entire stage 1 by moving from actual spawn, not t
 test('v30: stage 2 bridge can be crossed without a teleport or a stuck disappearing platform',()=>{
  const g=createGame();initStage(g,1);g.phase='playing';const input=inputController();
  const wall=g.level.walls[0],plate=g.level.pads[0],crystal=g.level.crystals[0];
- travel(g,[wall.x-39,320],x=>x.level.walls[0].broken,650,{input,dash:true});
+ travel(g,[wall.x+150,320],x=>x.level.walls[0].broken,650,{input,dash:true});
  travel(g,[plate.x+plate.w/2,320],x=>x.level.pads[0].pressed,400,{input});
  travel(g,[plate.x+plate.w/2,crystal.x],x=>x.level.crystals[0].on,1000,{input,pulse:true});
  assert.equal(g.level.bridgeLatched,true,'Bridge must remain activated after Echo solves the crystal');
