@@ -16,8 +16,8 @@ const safeFeedbackText=(value,max=800)=>{
   .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,'[email removed]')
   .replace(/https?:\/\/[^\s]+/gi,'[link removed]')
   .replace(/(?:\+?\d[\s()\-]?){10,16}\d/g,'[phone removed]')
-  .replace(/\b(token|recovery key|ключ восстановления)\s*[:=]\s*\S+/gi,'$1: [removed]')
-  .replace(/\b(room|code|код|комната)\s*[:=#-]?\s*[A-HJ-NP-Z2-9]{6}\b/gi,'$1: [room removed]')
+  .replace(/(^|[\s,;])((?:token|recovery key|ключ восстановления))\s*[:=]\s*\S+/gim,'$1$2: [removed]')
+  .replace(/(^|[\s,;])((?:room|code|код|комната))\s*[:=#-]?\s*[A-HJ-NP-Z2-9]{6}\b/gim,'$1$2: [room removed]')
   .slice(0,max).trim();
 };
 const MAX_REPORTS=100;
