@@ -28,8 +28,7 @@
    level:Number.isInteger(s.stage)&&s.stage>=0&&s.stage<=136?s.stage+1:null,
    playerRole:role(s.role),
    phase:phase(s.phase),
-   connection:{ready:boolean(s.ready),bothPlayersConnected:twoNumbers(s.connected?.map(boolean),0,1)
-     .map(x=>x===1),reconnectCount:number(s.reconnectCount,0,9999)},
+   connection:{ready:boolean(s.ready),bothPlayersConnected:[0,1].map(i=>s.connected?.[i]===true),reconnectCount:number(s.reconnectCount,0,9999)},
    play:{elapsedSeconds:number(stats.elapsed,0,86400,1),deaths:number(stats.deaths,0,9999),
     rescues:number(stats.rescues,0,9999),abilities:twoNumbers(stats.abilities,0,9999),
     gateOpen:boolean(world.gateOpen),checkpointIndex:number(checkpoint.index,-1,99),
