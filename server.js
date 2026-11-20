@@ -75,7 +75,7 @@ function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.roo
    for(const key of ['players','shards','tick','padTimer','completion','transition','stats','lastResult','level','customChallenge','expansion','v20','v21','v23','assistMode'])
     if(saved.game[key]!==undefined)game[key]=saved.game[key];
    // Normalize old v11 room geometry after restoring earned puzzle flags.
-   introRepair.normalizeIntroLevel(game);
+   if(!saved.customLevel)introRepair.normalizeIntroLevel(game);
    game.solo=saved.solo===true;
    game.phase=saved.game.phase==='win'?'win':saved.game.phase==='playing'?'playing':'waiting';
     game.demo=saved.game.demo===true&&demo.includes(game.stage);
