@@ -13,6 +13,12 @@ function safeGround(level,x){
   !level.walls.some(w=>!w.broken&&x>=w.x-45&&x<=w.x+w.w+45)&&
   !level.gates.some(q=>!level.gateOpen&&x>=q.x-45&&x<=q.x+q.w+45);
 }
+function accessible(g,x){
+ return safeGround(g.level,x)&&
+  !g.level.walls.some(w=>!w.broken&&w.x<x)&&
+  !g.level.bridges.some(b=>b.x+b.w<x&&
+   ['pad','pad-crystal','crystal'].includes(g.level.bridgeTrigger)&&!g.level.bridgeLatched);
+}
 function init(g){
  if(eligible(g))g.quality={stage:g.stage,active:-1,recoveries:[0,0]};
  else g.quality=null;
@@ -25,7 +31,7 @@ function clean(g){
  c.recoveries=Array.isArray(c.recoveries)&&c.recoveries.length===2?
   c.recoveries.map(n=>Number.isSafeInteger(n)?Math.max(0,Math.min(9999,n)):0):[0,0];
  // Only restore checkpoint indices located on currently valid safe ground.
- while(c.active>=0&&!safeGround(g.level,g.level.checkpoints[c.active]))c.active--;
+ while(c.active>=0&&!accessible(g,g.level.checkpoints[c.active]))c.active--;
 }
 function advance(g){
  if(!eligible(g))return;
@@ -33,13 +39,8 @@ function advance(g){
  const cps=g.level.checkpoints,active=g.quality.active,next=active+1;
  if(next>=cps.length)return;
  const x=cps[next];
- if(!safeGround(g.level,x))return;
+ if(!accessible(g,x))return;
  if(!g.players.every(p=>p.grounded&&p.x+15>x+24&&p.y+p.h>=GROUND-2))return;
- // A passed wall must actually have been destroyed; bridge must be
- // latched before a checkpoint can be earned behind a temporary crossing.
- if(g.level.walls.some(w=>!w.broken&&w.x<x))return;
- if(g.level.bridges.some(b=>b.x<x&&b.x+b.w<x&&
-  ['pad','pad-crystal','crystal'].includes(g.level.bridgeTrigger)&&!g.level.bridgeLatched))return;
  g.quality.active=next;
 }
 function recover(g,p){
