@@ -1,0 +1,87 @@
+name: M5 Windows shell spikes (internal unsigned artifacts)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'desktop/**'
+      - 'tests/m5-shell-config.test.js'
+      - '.github/workflows/m5-windows-spikes.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  electron-windows:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install M5 Electron spike dependencies
+        working-directory: desktop/electron
+        run: npm install --no-audit --no-fund
+      - name: Test packaged-origin, navigation, permissions and dev sandbox
+        working-directory: desktop/electron
+        run: npm test
+      - name: Package unsigned internal Windows x64 prototype
+        working-directory: desktop/electron
+        run: npm run pack:win
+      - name: Record EXE presence and file-size evidence (not a clean-install or RAM test)
+        shell: pwsh
+        run: |
+          $exe = 'desktop/electron/dist/LinkedByLightM5Preview-win32-x64/LinkedByLightM5Preview.exe'
+          if (-not (Test-Path $exe)) { throw 'M5 Electron executable not created' }
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          $files = Get-ChildItem 'desktop/electron/dist/LinkedByLightM5Preview-win32-x64' -Recurse -File
+          $size = ($files | Measure-Object -Property Length -Sum).Sum
+          $exeInfo = Get-Item $exe
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash
+          $sha = '${{ github.sha }}'
+          @{ framework='Electron'; candidateSha=$sha; compiledOn='windows-2022 GitHub-hosted runner'; exeBytes=$exeInfo.Length; unpackedBytes=$size; exeSha256=$hash; executableExists=$true; signature='UNSIGNED'; physicalWindowsAcceptance=$false; steamReady=$false } |
+            ConvertTo-Json | Set-Content artifacts/electron-metrics.json
+          Compress-Archive -Path 'desktop/electron/dist/LinkedByLightM5Preview-win32-x64/*' -DestinationPath artifacts/electron-M5-UNSIGNED-x64.zip -CompressionLevel Fastest
+      - name: Upload internal unsigned Electron package and compile-only metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-electron-UNSIGNED-win-x64
+          path: artifacts/
+          retention-days: 7
+
+  tauri-windows:
+    runs-on: windows-2022
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/tauri/src-tauri -> target
+      - name: Compile Tauri v2 WebView2 internal Windows x64 prototype
+        shell: pwsh
+        run: cargo build --release --locked --manifest-path desktop/tauri/src-tauri/Cargo.toml
+      - name: Record EXE presence and file-size evidence
+        shell: pwsh
+        run: |
+          $exe = 'desktop/tauri/src-tauri/target/release/linked-by-light-m5-tauri-spike.exe'
+          if (-not (Test-Path $exe)) { throw 'M5 Tauri executable not created' }
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          $exeInfo = Get-Item $exe
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash
+          $sha = '${{ github.sha }}'
+          @{ framework='Tauri WebView2'; candidateSha=$sha; compiledOn='windows-2022 GitHub-hosted runner'; exeBytes=$exeInfo.Length; exeSha256=$hash; executableExists=$true; signature='UNSIGNED'; physicalWindowsAcceptance=$false; steamReady=$false } |
+            ConvertTo-Json | Set-Content artifacts/tauri-metrics.json
+          Copy-Item $exe artifacts/LinkedByLightM5Tauri-UNSIGNED-x64.exe
+      - name: Upload internal unsigned Tauri executable and compile-only metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-tauri-UNSIGNED-win-x64
+          path: artifacts/
+          retention-days: 7
