@@ -67,6 +67,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: desktop/tauri/src-tauri -> target
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate local ICO from procedural first-party PWA icon
+        run: node scripts/generate-m5-icon.cjs
       - name: Compile Tauri v2 WebView2 internal Windows x64 prototype
         shell: pwsh
         run: cargo build --release --manifest-path desktop/tauri/src-tauri/Cargo.toml
