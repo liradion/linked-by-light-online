@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Linked by Light M5 Internal Preview",
+  "version": "0.1.0",
+  "identifier": "io.github.liradion.linkedbylight.m5preview",
+  "build": {
+    "frontendDist": "https://linked-by-light-eu.onrender.com/"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false
+  }
+}
