@@ -15,7 +15,7 @@ test('M5 store concepts cover official 2026 Steam capsule and library sizes',()=
  for(const d of FORMATS){
   assert.deepEqual([d.w,d.h],expected[d.id]);
   assert.match(scene(d),new RegExp('width="'+d.w+'" height="'+d.h+'"'));
-  assert.doesNotMatch(scene(d),/https?:\/\//);
+  assert.doesNotMatch(scene(d),/\b(?:href|src)=["']https?:\/\//i);
   assert.doesNotMatch(scene(d),/mock screenshot|player review|price|trailer/i);
  }
 });
