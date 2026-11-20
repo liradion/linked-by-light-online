@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "contentStatus": "DRAFT_NOT_PUBLISHED",
+  "title": "Linked by Light",
+  "titleRu": "Связанные светом",
+  "shortDescription": {
+    "ru": "Два героя, два взгляда на мир и одно путешествие. Решайте кооперативные головоломки вместе, помогайте друг другу и пройдите путь сквозь миры света.",
+    "en": "Two heroes, two perspectives, one shared journey. Solve co-op puzzles together, support your partner, and explore a world shaped by light."
+  },
+  "longerCopySource": "docs/STORE_COPY_RU_EN.md",
+  "candidatePlatform": "Windows PC",
+  "contentCategory": "Game",
+  "genreCandidates": [
+    "Puzzle Platformer",
+    "Co-op",
+    "2D",
+    "Atmospheric",
+    "Indie"
+  ],
+  "featureClaimsNeedingOwnerReview": [
+    "Online Co-Op",
+    "Controller Support",
+    "Localization RU/EN",
+    "Windows 10/11"
+  ],
+  "excludeFromPublishedClaims": [
+    "Steam Friend Pass",
+    "Steam achievements",
+    "Steam Cloud",
+    "iOS native build",
+    "Android native build",
+    "Offline full campaign",
+    "Paid ownership verification"
+  ],
+  "serverRequired": true,
+  "serverArchitecture": "authoritative WebSocket v4",
+  "supportedLanguageClaims": {
+    "russian": "in-game localized, human QA pending",
+    "english": "in-game localized, human QA pending"
+  },
+  "commercial": {
+    "price": null,
+    "releaseDate": null,
+    "ageRating": null,
+    "refundPolicy": "Steam policy review required"
+  },
+  "platformRequirements": {
+    "minimumCpu": null,
+    "minimumRamGB": null,
+    "minimumGraphics": null,
+    "minimumOs": "Windows 10/11 x64 proposed, physical QA pending",
+    "network": "Broadband internet required",
+    "storageGB": null
+  },
+  "publisher": {
+    "legalName": null,
+    "publicLabel": null,
+    "supportContact": null,
+    "rightsApproved": false
+  },
+  "steamworks": {
+    "partnerAccessConfirmed": false,
+    "agreementSigned": false,
+    "feePaid": false,
+    "appId": null,
+    "reviewRequested": false,
+    "comingSoonPublished": false
+  },
+  "artwork": {
+    "conceptsGeneratedByCI": true,
+    "actualGameplayScreenshotsByCI": true,
+    "clearedForStoreUse": false
+  },
+  "externalGate": {
+    "g4Verified": false,
+    "g5Verified": false
+  },
+  "notes": "Prepare without collecting private identity, tax or bank details in GitHub. The owner must review and enter these only in Steamworks."
+}
