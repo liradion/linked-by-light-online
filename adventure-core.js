@@ -11,7 +11,7 @@ function init(g){
  const isBoss=variant===8||idx===99;
  const boss=isBoss?{name:BOSS_NAMES[idx===99?11:act],x:l.gates[0].x-156,y:GROUND-80,hp:idx===99?8:3+Math.floor(act/3),max:idx===99?8:3+Math.floor(act/3),next:0,active:false,attack:0,warning:0,flash:0,phase:1,style:act,pattern:act%3,focusX:0}:null;
  let kind=null;
- if(idx!==99&&[2,4,5,6].includes(variant)){
+ if(idx!==99&&idx>2&&[2,4,5,6].includes(variant)){
   kind=variant===2?'chase':variant===4?'flight':variant===5?'sail':'rhythm';
  }
  g.adventure={boss,bond:{power:.35,active:0,shield:0,hearts:0,syncs:0,resonance:0,syncCooldown:0,syncWindow:[0,0]},emotes:[0,0],emoteKinds:[0,0],pet:{x:Math.min(l.width-360,620+act*11),collected:false,act,visible:variant===4},secret:{x:Math.min(l.width-385,1320+act*9),y:GROUND-76,collected:false,act,visible:variant===7},arcade:kind?{kind,done:false,started:false,timer:kind==='chase'?29:0,progress:0,boat:Math.max(150,l.gates[0].x-690),hunter:Math.max(90,l.gates[0].x-1300),ringX:l.gates[0].x-335,flightHits:[false,false],rhythm:[false,false],rhythmTime:0,boost:0}:null};
