@@ -24,6 +24,7 @@ const {createRuntimeMonitor}=require('./runtime-monitor');
 const recovery=createRuntimeMonitor({storageConfigured:cloud.active,requireDurable:process.env.LL_REQUIRE_DURABLE_STORAGE==='1'});
 const checkpoints=require('./room-checkpoint');
 const introRepair=require('./level-repair');
+const quality=require('./gameplay-quality');
 const actionCache=require('./action-replay-cache');
 const pwaIcons=require('./pwa-icons');
 const expansion=require('./expansion-core');
@@ -72,10 +73,11 @@ function hydrateRooms(parsed){if(parsed?.version!==11||!Array.isArray(parsed.roo
    if(seats.length!==2||!seats.some(Boolean))continue;
    const game=createGame();initStage(game,saved.game.stage);
    // Restore only expected game state fields; avoid stale socket and input queues.
-   for(const key of ['players','shards','tick','padTimer','completion','transition','stats','lastResult','level','customChallenge','expansion','v20','v21','v23','assistMode'])
+   for(const key of ['players','shards','tick','padTimer','completion','transition','stats','lastResult','level','customChallenge','quality','expansion','v20','v21','v23','assistMode'])
     if(saved.game[key]!==undefined)game[key]=saved.game[key];
    // Normalize old v11 room geometry after restoring earned puzzle flags.
    if(!saved.customLevel)introRepair.normalizeIntroLevel(game);
+   quality.clean(game);
    game.solo=saved.solo===true;
    game.phase=saved.game.phase==='win'?'win':saved.game.phase==='playing'?'playing':'waiting';
     game.demo=saved.game.demo===true&&demo.includes(game.stage);
