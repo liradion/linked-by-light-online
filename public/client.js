@@ -383,7 +383,7 @@ function consumeSnapshot(s){
   collectibles=level.shards.map((x,i)=>({x,y:i%2?390:432,taken:!!s.world.shards[i]}));
   hostRole=s.hostRole===1?1:0;soloMode=s.solo===true;if(soloMode)soloActiveRole=s.soloActiveRole===1?1:0;
   GameV28.onSnapshot(s);updateTouchRole();
-  GameJuice.snapshot(previous,s,level);if(role>=0)GameAdventure.onSnapshot(s);GameExpansion.onSnapshot(s);GameV20.onSnapshot(s);GameV21.onSnapshot(s);GameFuture.onSnapshot(s);if(role>=0)GameAdventure.recordV23(s);
+  GameJuice.snapshot(previous,s,level);GameEvolution.onSnapshot(previous,s);if(role>=0)GameAdventure.onSnapshot(s);GameExpansion.onSnapshot(s);GameV20.onSnapshot(s);GameV21.onSnapshot(s);GameFuture.onSnapshot(s);if(role>=0)GameAdventure.recordV23(s);
   if(previous?.world?.reality&&!previous.world.reality.done&&s.world.reality?.done){
     announce('✦ Две реальности соединены!',2.6);tone(860,.22,'sine',.05);GameQuality.effect('star');
   }
@@ -437,7 +437,8 @@ function renderPlayers(dt){
 }
 function animate(ts){
   const dt=Math.min(.033,Math.max(0,(ts-fpsTime)/1000));fpsTime=ts;clock+=dt;GameQuality.sample(dt);
-  if(toastTimer>0){toastTimer-=dt;if(toastTimer<=0)toastEl.classList.remove('visible');}
+  GameEvolution.frame(ts);
+   if(toastTimer>0){toastTimer-=dt;if(toastTimer<=0)toastEl.classList.remove('visible');}
   for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=95*dt;p.life-=dt;}
   particles=particles.filter(p=>p.life>0);
   for(const r of rings){r.life-=dt;r.r+=(r.max-r.r)*dt*5.5;}rings=rings.filter(r=>r.life>0);
@@ -477,6 +478,7 @@ function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-
  // Layered terrain and enchanted scenery.
  GameVisuals.terrain(ctx,level,levelIndex,clock,GROUND);
  GameVisuals.scenery(ctx,level,levelIndex,clock);
+  GameEvolution.scenery(ctx,level,clock,camera,GameQuality.settings());
   if(GameQuality.settings().graphics!=='low')GameJuice.ambient(ctx,level,clock,levelIndex);
  // pits
  for(let x=0;x<level.width;x+=12){if(!level.floor.some(([a,b])=>x>=a&&x<b)){glowCircle(x,615,28,levelIndex===2?'#ed77a015':'#78e9eb12');}}
@@ -503,7 +505,8 @@ function drawWorld(){ctx.save();ctx.translate(Math.round(-camera+(Math.random()-
  ctx.textAlign='center';ctx.font='700 14px system-ui';ctx.fillStyle='#f5e5ff88';for(const w of level.walls)if(!w.broken)ctx.fillText('ИСКРА · F',w.x+w.w/2,w.y-22);for(const crystal of level.crystals)if(!crystal.on)ctx.fillText('ЭХО · ENTER',crystal.x,crystal.y-56);
  // particles behind character
  for(const r of rings){ctx.globalAlpha=Math.max(0,r.life/r.ttl)*.7;ctx.strokeStyle=r.color;ctx.lineWidth=5*(r.life/r.ttl)+1;ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;}
- P.forEach(drawPlayer);
+ GameEvolution.link(ctx,P,latest?.world?.adventure?.bond,clock,GameQuality.settings());
+  P.forEach(drawPlayer);
   if(GameQuality.settings().graphics!=='low')GameJuice.effects(ctx);
  for(const pt of particles){ctx.globalAlpha=Math.max(0,pt.life/pt.ttl);ctx.fillStyle=pt.color;ctx.beginPath();ctx.arc(pt.x,pt.y,pt.r*Math.max(.25,pt.life/pt.ttl),0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
  ctx.restore();}
@@ -541,6 +544,6 @@ GamePadBindings.init();
 GameQuality.init({getSession:()=>({phase,role:controlledRole(),room}),onControls:(left,right)=>{if(left)keys.add('gamepad-left');else keys.delete('gamepad-left');if(right)keys.add('gamepad-right');else keys.delete('gamepad-right');updateInput();},onAction:activateKey});
 GameQuality.ambient(0);
 GameAdventure.init({send:wsSend,currentStage:()=>levelIndex,bestStage,inRoom:()=>!!room,startStage:(n)=>{if(room){if(isHost())wsSend({t:'selectStage',stage:n,secrets:GameAdventure.data().secrets.length});else announce('Уровни выбирает создатель комнаты.');}else createRoom(false,n);}});
-GameHints.init({getState:()=>({level,world:latest?.world,role:controlledRole(),phase,stageIndex:levelIndex,customLevel:!!latest?.customLevel})});
+GameEvolution.init();GameHints.init({getState:()=>({level,world:latest?.world,role:controlledRole(),phase,stageIndex:levelIndex,customLevel:!!latest?.customLevel})});
 GameCloud.init();GameStage4Lobby.init();GameV28.init({send:wsSend,role:()=>role,phase:()=>phase,room:()=>room,level:()=>level,inRoom:()=>!!room,canvas:()=>canvas,camera:()=>camera,connected:()=>ready,createSolo:()=>createRoom(true,0,null,false,true),switchSolo:targetRole=>{resetKeys();wsSend({t:'v28SoloSwitch',activeRole:targetRole});},reconnect:()=>{if(socket?.readyState===WebSocket.CONNECTING)socket.close();else if(!ready)openConnection();},announce});GameFuture.init({send:wsSend,role:()=>controlledRole(),isHost,room:()=>room,stage:()=>levelIndex,inRoom:()=>!!room,create:stage=>createRoom(true,stage),announce,canvas:()=>canvas});GamePublicBeta.init({stage:()=>levelIndex,role:()=>role,inRoom:()=>!!room});GameV21.init({send:wsSend,role:()=>controlledRole(),isHost,stage:()=>levelIndex,inRoom:()=>!!room,create:()=>createRoom(true,112),resume:id=>createRoom(false,id),announce,canvas:()=>canvas});GameV20.init({send:wsSend,role:()=>controlledRole(),isHost,stage:()=>levelIndex,inRoom:()=>!!room,create:()=>createRoom(true,100),resume:id=>createRoom(false,id),announce,reconnects:()=>totalReconnects});GameExpansion.init({send:wsSend,inRoom:()=>!!room&&role>=0,createCustom:b=>createRoom(false,0,b),announce,saveMemory:GameAdventure.addMemory,getMemories:()=>GameAdventure.data().memories||[]});openConnection();showUI();requestAnimationFrame(animate);
 })();

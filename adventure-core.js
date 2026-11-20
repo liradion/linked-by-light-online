@@ -1,6 +1,7 @@
 'use strict';
 // Adventure systems are authoritative: neither player simulates boss health, tether or secrets.
 const {GROUND}=require('./shared/stages');
+const resonance=require('./coop-resonance');
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const dist=(p,x,y)=>Math.hypot(p.x+15-x,p.y+21.5-y);
 const BOSS_NAMES=['Сонный Великан','Лесной Хранитель','Лунный Кракен','Король Ветров','Звёздный Сфинкс','Алмазный Страж','Неоновый Титан','Хранитель Течения','Часовой Голем','Тень Горизонта','Сердце Тьмы','Последняя Тень'];
@@ -13,7 +14,7 @@ function init(g){
  if(idx!==99&&[2,4,5,6].includes(variant)){
   kind=variant===2?'chase':variant===4?'flight':variant===5?'sail':'rhythm';
  }
- g.adventure={boss,bond:{power:.35,active:0,shield:0,hearts:0},emotes:[0,0],emoteKinds:[0,0],pet:{x:Math.min(l.width-360,620+act*11),collected:false,act,visible:variant===4},secret:{x:Math.min(l.width-385,1320+act*9),y:GROUND-76,collected:false,act,visible:variant===7},arcade:kind?{kind,done:false,started:false,timer:kind==='chase'?29:0,progress:0,boat:Math.max(150,l.gates[0].x-690),hunter:Math.max(90,l.gates[0].x-1300),ringX:l.gates[0].x-335,flightHits:[false,false],rhythm:[false,false],rhythmTime:0,boost:0}:null};
+ g.adventure={boss,bond:{power:.35,active:0,shield:0,hearts:0,syncs:0,resonance:0,syncCooldown:0,syncWindow:[0,0]},emotes:[0,0],emoteKinds:[0,0],pet:{x:Math.min(l.width-360,620+act*11),collected:false,act,visible:variant===4},secret:{x:Math.min(l.width-385,1320+act*9),y:GROUND-76,collected:false,act,visible:variant===7},arcade:kind?{kind,done:false,started:false,timer:kind==='chase'?29:0,progress:0,boat:Math.max(150,l.gates[0].x-690),hunter:Math.max(90,l.gates[0].x-1300),ringX:l.gates[0].x-335,flightHits:[false,false],rhythm:[false,false],rhythmTime:0,boost:0}:null};
 }
 function baseComplete(g){
  const l=g.level,goal=l.puzzle||{pads:true};
@@ -21,6 +22,7 @@ function baseComplete(g){
 }
 function onAbility(g,p){
  const a=g.adventure;if(!a)return;
+ resonance.ability(a.bond,p.type,g.players,g.solo===true);
  const boss=a.boss;
  if(boss&&boss.active&&boss.hp>0&&p.type===boss.next&&dist(p,boss.x,boss.y)<190){boss.hp--;boss.next=1-boss.next;boss.flash=.55;boss.attack=0;boss.phase=boss.hp<=boss.max/3?3:boss.hp<=boss.max*2/3?2:1;boss.pattern=(boss.style+boss.phase-1)%3;if(boss.hp===0)boss.active=false;}
  if(a.arcade?.kind==='sail'&&a.arcade.started&&!a.arcade.done&&p.type===1&&dist(p,a.arcade.boat,GROUND-43)<155){a.arcade.boost=2.2;}
@@ -60,6 +62,7 @@ function update(g,dt){
  const a=g.adventure;if(!a)return;
  const l=g.level,base=baseComplete(g),p0=g.players[0],p1=g.players[1],boss=a.boss,mode=a.arcade;
  a.bond.active=Math.max(0,a.bond.active-dt);a.bond.shield=Math.max(0,a.bond.shield-dt);
+ resonance.advance(a.bond,dt);
  a.bond.power=clamp(a.bond.power+(Math.abs(p0.x-p1.x)<250?.064:.015)*dt,0,1);
  for(let i=0;i<2;i++)a.emotes[i]=Math.max(0,a.emotes[i]-dt);
  if(boss&&boss.hp>0){boss.active=base;boss.flash=Math.max(0,boss.flash-dt);
@@ -96,7 +99,7 @@ function update(g,dt){
 function canExit(g){const a=g.adventure;return !a||(!a.boss||a.boss.hp<=0)&&(!a.arcade||a.arcade.done);}
 function snapshot(g){const a=g.adventure;if(!a)return null;return {
  boss:a.boss?{...a.boss}:null,
- bond:{...a.bond},emotes:a.emotes.slice(),emoteKinds:a.emoteKinds.slice(),
+ bond:{...a.bond,syncWindow:resonance.ensure(a.bond)?a.bond.syncWindow.slice():[0,0]},emotes:a.emotes.slice(),emoteKinds:a.emoteKinds.slice(),
  pet:{...a.pet},secret:{...a.secret},
  arcade:a.arcade?{...a.arcade,flightHits:a.arcade.flightHits.slice(),rhythm:a.arcade.rhythm.slice()}:null
 };}
