@@ -10,6 +10,7 @@
 Build Windows x64 on a machine with current MSVC Rust toolchain, Windows SDK and WebView2 runtime:
 
 ```powershell
+node scripts/generate-m5-icon.cjs
 cargo build --release --manifest-path desktop/tauri/src-tauri/Cargo.toml
 ```
 
