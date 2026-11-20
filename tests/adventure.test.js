@@ -50,7 +50,7 @@ test('rare pets and secret runes are collectable and do not block regular levels
  }
 });
 test('four mini-game variants are actually playable through server rules',()=>{
- for(const [stage,kind] of [[2,'chase'],[4,'flight'],[5,'sail'],[6,'rhythm']]){
+ for(const [stage,kind] of [[11,'chase'],[4,'flight'],[5,'sail'],[6,'rhythm']]){
   const g=make(stage);assert.equal(g.adventure.arcade.kind,kind);solved(g);frames(g,3);
   const m=g.adventure.arcade;assert.equal(m.started,true);
   if(kind==='chase'){at(g,0,m.ringX+70);at(g,1,m.ringX+90);frames(g,3);}
