@@ -62,8 +62,8 @@ test('content-alpha hint resources are loaded and never hidden by clean mode',()
  const html=read('public/index.html'),client=read('public/client.js'),ui=read('public/play-ui.js'),css=read('public/play-ui.css');
  const hints=read('public/game-hints.js');
  assert.doesNotThrow(()=>new vm.Script(hints));
- assert.match(html,/\/game-hints\.js\?v=7/);
- assert.ok(html.indexOf('/game-hints.js?v=7')<html.indexOf(html.match(/\/client\.js\?v=[0-9.]+/)[0]));
+ assert.match(html,/\/game-hints\.js\?v=30/);
+ assert.ok(html.indexOf('/game-hints.js?v=30')<html.indexOf(html.match(/\/client\.js\?v=[0-9.]+/)[0]));
  assert.match(client,/GameHints\.init\(/);
  assert.match(client,/GameHints\.onSnapshot\(s\)/);
  assert.match(ui,/'#gameHintBtn'/);
@@ -123,8 +123,8 @@ test('RU/EN language pack has a stable preference, translates first-act status w
 test('all 137 authored English stages load before locale and multiplayer client',()=>{
  const html=read('public/index.html'),catalog=read('public/stage-locale.js');
  assert.doesNotThrow(()=>new vm.Script(catalog));
- assert.match(html,/\/stage-locale\.js\?v=1/);
- assert.ok(html.indexOf('/stage-locale.js?v=1')<html.indexOf('/i18n.js?v=7'));
+ assert.match(html,/\/stage-locale\.js\?v=30/);
+ assert.ok(html.indexOf('/stage-locale.js?v=30')<html.indexOf('/i18n.js?v=7'));
  assert.ok(html.indexOf('/i18n.js?v=7')<html.indexOf('/client.js?v=26.14'));
  assert.match(read('public/client.js'),/GameI18n\.stageWorld\(levelIndex\)/);
 });
