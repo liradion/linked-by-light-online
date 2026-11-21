@@ -24,7 +24,7 @@ test('v33: mobile lobby shows variable RTT, stale response and recovery without 
    const recovered=view({...base,...probe.snapshot(7400),lang:'en'});
    return {unstable,stalled,recovered};
   });
-  expect(result.unstable).toMatchObject({quality:'high',text:expect.stringContaining('Разброс RTT (3 замеров): 340 мс'),startDisabled:true});
+  expect(result.unstable).toMatchObject({quality:'high',text:expect.stringContaining('Разброс RTT (3 замера): 340 мс'),startDisabled:true});
   expect(result.stalled).toMatchObject({quality:'stalled',text:expect.stringContaining('No recent server response'),startDisabled:true});
   expect(result.recovered).toMatchObject({quality:'ok',text:expect.stringContaining('Server RTT · 71 ms'),startDisabled:true});
   expect(errors).toEqual([]);

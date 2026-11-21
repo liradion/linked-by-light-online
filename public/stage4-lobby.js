@@ -84,7 +84,7 @@ function describeNetwork(state,language){
  }
  const suffix=spread===null?'':lang==='en'
   ?' RTT spread ('+s.samples+' samples): '+spread+' ms.'
-  :' Разброс RTT ('+s.samples+' замеров): '+spread+' мс.';
+  :' Разброс RTT ('+s.samples+' '+(s.samples<5?'замера':'замеров')+'): '+spread+' мс.';
  return {key,text:(lang==='en'?en:ru)+suffix};
 }
 

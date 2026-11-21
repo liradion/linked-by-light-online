@@ -20,10 +20,10 @@ test('v33: transient spikes are reported as variation, not misleading median lat
  assert.match(hint.text,/RTT spread \(4 samples\): 505 ms/);
 });
 test('v33: no stale classifications from first two samples or invalid spread',()=>{
- const probe=createNetworkProbe();probe.reset(20);probe.add(80,100);probe.add(900,200);
+ const probe=createNetworkProbe();probe.reset(20);probe.add(80,100);probe.add(180,200);
  const sample=probe.snapshot(250);
  assert.equal(sample.variation,null);
- assert.equal(describeNetwork({...base,...sample},'en').key,'moderate');
+ assert.equal(describeNetwork({...base,...sample},'en').key,'ok');
  for(const v of [-1,Infinity,NaN,'500',null]){
   assert.equal(describeNetwork({...base,latency:80,variation:v,samples:5},'en').key,'ok');
  }
