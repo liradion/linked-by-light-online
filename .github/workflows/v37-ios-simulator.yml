@@ -1,0 +1,37 @@
+name: v37 unsigned iOS Simulator compilation (internal only)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'mobile/ios/**'
+      - '.github/workflows/v37-ios-simulator.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  simulator-build:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen project generator
+        run: brew install xcodegen
+      - name: Generate unsigned internal preview project
+        working-directory: mobile/ios
+        run: xcodegen generate
+      - name: Compile for generic iOS Simulator without signing or distribution
+        working-directory: mobile/ios
+        run: |
+          xcodebuild -quiet \
+            -project LinkedByLightPreview.xcodeproj \
+            -scheme LinkedByLightPreview \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      - name: CI output is not native physical-device or store acceptance
+        run: echo 'Only an unsigned iOS Simulator compilation has been requested. G4/G7 HOLD.'

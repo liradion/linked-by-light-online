@@ -1,0 +1,30 @@
+name: G4 isolated staging verification (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      staging_url:
+        description: "Operator-provisioned HTTPS staging URL (NOT production)"
+        required: true
+        type: string
+      exact_commit:
+        description: "Exact 40-character commit SHA deployed to staging"
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  read-only-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.exact_commit }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm URL isolation, code and WSS handshake; no room creation
+        env:
+          STAGING_URL: ${{ inputs.staging_url }}
+          EXPECTED_SHA: ${{ inputs.exact_commit }}
+        run: node scripts/verify-g4-staging.cjs "--url=$STAGING_URL" "--expect-commit=$EXPECTED_SHA"

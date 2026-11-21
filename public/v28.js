@@ -62,7 +62,9 @@ function onSnapshot(s){
     if(nearbyWall)context=controlRole()===0?'Преграда впереди: попробуйте рывок F (или кнопку способности).':'Преграду может разрушить Искра. Попросите её применить рывок.';
     else if(nearbyCrystal)context=controlRole()===1?'Кристалл рядом: нажмите Enter (или кнопку способности).':'Попросите Эхо активировать кристалл своим импульсом.';
    }
-   hint.querySelector('.v28-tip-text').textContent=(secs>40?loc('Подсказка: '):'')+loc(context)+(solo?loc(root.matchMedia?.('(pointer:coarse)')?.matches?' Коснитесь кнопки смены героя.':' Нажмите Tab для смены героя.'):'');
+   const next=root.GameV34Steps?.describe?.(level,s.world,controlRole(),s.players,root.GameI18n?.getLanguage?.());
+   if(next)context=next.text;
+   hint.querySelector('.v28-tip-text').textContent=(secs>40?loc('Подсказка: '):'')+(next?context:loc(context))+(solo?loc(root.matchMedia?.('(pointer:coarse)')?.matches?' Коснитесь кнопки смены героя.':' Нажмите Tab для смены героя.'):'');
   }
  }
 }

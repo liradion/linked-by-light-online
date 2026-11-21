@@ -1,0 +1,16 @@
+# Separate, manually controlled G4 staging Blueprint. Never modify production render.yaml.
+services:
+  - type: web
+    name: linked-by-light-g4-staging
+    runtime: node
+    repo: https://github.com/liradion/linked-by-light-online
+    region: frankfurt
+    plan: free
+    branch: main
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /ready
+    autoDeployTrigger: off
+    envVars:
+      - key: BETA_MAX_ROOMS
+        value: '5'
