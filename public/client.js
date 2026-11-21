@@ -386,6 +386,7 @@ function consumeSnapshot(s){
   collectibles=level.shards.map((x,i)=>({x,y:i%2?390:432,taken:!!s.world.shards[i]}));
   hostRole=s.hostRole===1?1:0;soloMode=s.solo===true;if(soloMode)soloActiveRole=s.soloActiveRole===1?1:0;
   GameV28.onSnapshot(s);updateTouchRole();
+  GameV36Moments.apply(previous,s,GameI18n.getLanguage(),announce,tone,toastEl);
   GameJuice.snapshot(previous,s,level);GameEvolution.onSnapshot(previous,s);if(role>=0)GameAdventure.onSnapshot(s);GameExpansion.onSnapshot(s);GameV20.onSnapshot(s);GameV21.onSnapshot(s);GameFuture.onSnapshot(s);if(role>=0)GameAdventure.recordV23(s);
   if(previous?.world?.reality&&!previous.world.reality.done&&s.world.reality?.done){
     announce('✦ Две реальности соединены!',2.6);tone(860,.22,'sine',.05);GameQuality.effect('star');
