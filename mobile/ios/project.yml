@@ -1,0 +1,26 @@
+# Internal XcodeGen prototype; no App Store or signing authorization.
+name: LinkedByLightPreview
+options:
+  bundleIdPrefix: io.github.liradion
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: '16.0'
+targets:
+  LinkedByLightPreview:
+    type: application
+    platform: iOS
+    sources:
+      - path: LinkedByLightPreview
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.liradion.linkedbylight.preview
+        SWIFT_VERSION: '5.9'
+        CODE_SIGNING_ALLOWED: 'NO'
+    info:
+      path: LinkedByLightPreview/Info.plist
+      properties:
+        CFBundleDisplayName: Linked by Light Preview
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight

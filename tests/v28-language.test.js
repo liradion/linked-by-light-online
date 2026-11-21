@@ -34,8 +34,8 @@ test('v28 role, ping, Share and tutorial labels follow local device language',()
 });
 test('v28 language file loads before first-experience UI and uses live notifications',()=>{
  const html=source('index.html'),client=source('client.js'),s=source('v28.js');
- assert.ok(html.indexOf('/v28-locale.js?v=1')<html.indexOf('/v28.js?v=28.1'));
- assert.ok(html.indexOf('/v28.js?v=28.1')<html.indexOf('/client.js?v=26.16'));
+ assert.ok(html.indexOf('/v28-locale.js?v=1')<html.indexOf('/v28.js?v=28.2'));
+ assert.ok(html.indexOf('/v28.js?v=28.2')<html.indexOf('/client.js?v=26.17'));
  assert.match(s,/root\.GameI18n\?\.subscribe\?\.\(refreshLanguage\)/);
  assert.match(s,/hint\.querySelector\('\.v28-tip-text'\)\.textContent/);
  assert.match(s,/ctx\.fillText\(loc\(c\.text\)/);

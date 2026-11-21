@@ -24,7 +24,7 @@ test('generated Apple and Windows icon bytes are valid PNG',()=>{
 });
 test('index references manifest, icons and installer without inline scripts',()=>{
  const html=fs.readFileSync(path.join(pub,'index.html'),'utf8');
- for(const asset of ['/app.webmanifest','/pwa.css?v=14','/pwa.js?v=14','/apple-touch-icon.png'])
+ for(const asset of ['/app.webmanifest','/pwa.css?v=14','/pwa.js?v=15','/apple-touch-icon.png'])
   assert.ok(html.includes(asset),asset+' missing');
  assert.equal(/<script(?![^>]*src=)[^>]*>/i.test(html),false,'CSP unsafe inline script');
 });

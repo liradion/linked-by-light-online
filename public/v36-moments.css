@@ -1,0 +1,16 @@
+/* v36: distinct, nonblocking milestone cues; no animation required to perceive meaning. */
+#toast[data-milestone]{font-weight:800;letter-spacing:.015em;border-width:2px;
+ box-shadow:0 8px 25px #0008,0 0 0 3px #ffffff09}
+#toast[data-milestone="checkpoint"]{border-color:#8bf3ce;background:#153a39ed;color:#dbffee}
+#toast[data-milestone="bridge"]{border-color:#9fc4ff;background:#1a3151ef;color:#ecf5ff}
+#toast[data-milestone="pads"]{border-color:#ffd29d;background:#473322ec;color:#fff2df}
+@media(max-width:700px){
+ #toast[data-milestone]{max-width:calc(100% - 28px);padding:8px 11px;font-size:11px;
+  top:calc(48px + env(safe-area-inset-top))}
+}
+@media(prefers-reduced-motion:reduce){
+ #toast{transition:none!important;transform:translate(-50%,0)!important}
+}
+html[data-reduce-game-motion="true"] #toast{
+ transition:none!important;transform:translate(-50%,0)!important
+}

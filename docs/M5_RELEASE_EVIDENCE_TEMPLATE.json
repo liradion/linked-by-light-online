@@ -1,0 +1,25 @@
+{
+  "candidateSha": "",
+  "windows": {
+    "installerSha256": "",
+    "authenticodeValid": false,
+    "signerOwnershipReviewed": false,
+    "windows10Physical": false,
+    "windows11Physical": false,
+    "controllerAndReconnectPhysical": false
+  },
+  "steam": {
+    "partnerAccountVerified": false,
+    "serverSideOwnershipVerified": false,
+    "guestAndRefundVerified": false,
+    "storeSubmissionReviewed": false
+  },
+  "compliance": {
+    "rightsApproved": false,
+    "privacyAndSecurityReviewed": false
+  },
+  "owner": {
+    "exactShaApproved": false,
+    "reviewer": ""
+  }
+}
