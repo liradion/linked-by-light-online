@@ -99,7 +99,7 @@ test('gamepad binding module loads before quality and client and preserves touch
  assert.doesNotThrow(()=>new vm.Script(module));
  assert.match(html,/\/gamepad-bindings\.js\?v=3/);
  assert.ok(html.indexOf('/gamepad-bindings.js?v=3')<html.indexOf('/quality.js?v=15.4'));
- assert.ok(html.indexOf('/quality.js?v=15.4')<html.indexOf('/client.js?v=26.15'));
+ assert.ok(html.indexOf('/quality.js?v=15.4')<html.indexOf('/client.js?v=26.16'));
  assert.match(client,/GamePadBindings\.init\(\)/);
  assert.match(quality,/root\.GamePadBindings/);
  assert.match(ui,/'#gamepadOpen'/);
@@ -112,7 +112,7 @@ test('RU/EN language pack has a stable preference, translates first-act status w
  assert.doesNotThrow(()=>new vm.Script(locale));
  assert.match(html,/id="languageSelect"/);
  assert.match(html,/\/i18n\.js\?v=7/);
- assert.ok(html.indexOf('/i18n.js?v=7')<html.indexOf('/client.js?v=26.15'));
+ assert.ok(html.indexOf('/i18n.js?v=7')<html.indexOf('/client.js?v=26.16'));
  assert.match(client,/GameI18n\.init\(\)/);
  assert.match(client,/GameI18n\.subscribe\(/);
  assert.match(beta,/root\.GameI18n/);
@@ -125,7 +125,7 @@ test('all 137 authored English stages load before locale and multiplayer client'
  assert.doesNotThrow(()=>new vm.Script(catalog));
  assert.match(html,/\/stage-locale\.js\?v=30/);
  assert.ok(html.indexOf('/stage-locale.js?v=30')<html.indexOf('/i18n.js?v=7'));
- assert.ok(html.indexOf('/i18n.js?v=7')<html.indexOf('/client.js?v=26.15'));
+ assert.ok(html.indexOf('/i18n.js?v=7')<html.indexOf('/client.js?v=26.16'));
  assert.match(read('public/client.js'),/GameI18n\.stageWorld\(levelIndex\)/);
 });
 
@@ -143,7 +143,7 @@ test('network and settings locale loads before client; every settings dialog res
  assert.doesNotThrow(()=>new vm.Script(loc));
  assert.match(html,/\/ui-locale\.js\?v=2/);
  assert.ok(html.indexOf('/ui-locale.js?v=2')<html.indexOf('/i18n.js?v=7'));
- assert.ok(html.indexOf('/i18n.js?v=7')<html.indexOf('/client.js?v=26.15'));
+ assert.ok(html.indexOf('/i18n.js?v=7')<html.indexOf('/client.js?v=26.16'));
  for(const module of ['quality.js','keybinds.js','gamepad-bindings.js','game-hints.js']){
   assert.match(read('public/'+module),/GameI18n\?\.subscribe\?\.\(refreshLanguage\)/,
     module+' does not update already-created UI when locale changes');
@@ -158,7 +158,7 @@ test('secondary RU/EN dictionaries load before app client; cloud auth editor and
  assert.doesNotThrow(()=>new vm.Script(aux));
  assert.match(html,/\/aux-locale\.js\?v=2/);
  assert.ok(html.indexOf('/aux-locale.js?v=2')<html.indexOf('/i18n.js?v=7'));
- assert.ok(html.indexOf('/i18n.js?v=7')<html.indexOf('/client.js?v=26.15'));
+ assert.ok(html.indexOf('/i18n.js?v=7')<html.indexOf('/client.js?v=26.16'));
  for(const [file,needle] of [
   ['public/cloud.js','GameI18n?.subscribe?.(renderLocale)'],
   ['public/auth.js','GameI18n?.subscribe?.(renderLocale)'],

@@ -17,6 +17,7 @@ const keys=new Set(),touchPointers=new Set(),input={left:false,right:false,jumpS
 let prediction=null,lastPredStage=-1,predJumpAt=0,lastAck=0,lastResultId='',packetSeq=0,wasOnGround=null,lastFootstep=0;
 const predictor=GameReconciliation.createPredictor();
 let latency=0,lastSend=0,playingOnce=false;
+const networkProbe=GameStage4Lobby.createNetworkProbe();
 const qs=new URLSearchParams(location.search);const invite=qs.get('room');let pendingSpectate=qs.get('spectate')==='1';
 if(invite&&/^[A-Z2-9]{6}$/i.test(invite))pendingRoom=invite.toUpperCase();
 function roomToken(id){try{return localStorage.getItem('lightroom:'+id)||sessionStorage.getItem('lightroom:'+id)||'';}catch(_){return '';}}
@@ -39,7 +40,7 @@ function setError(message='',vars=null){
   :GameI18n.networkError(message);
 }
 function wsSend(m){if(socket&&socket.readyState===WebSocket.OPEN)socket.send(JSON.stringify(m));}
-function syncLobby(){GameStage4Lobby.sync({room,role,hostRole,phase,connected,ready,solo:soloMode,lang:GameI18n.getLanguage(),latency});}
+function syncLobby(){const sample=networkProbe.snapshot(performance.now());GameStage4Lobby.sync({room,role,hostRole,phase,connected,ready,solo:soloMode,lang:GameI18n.getLanguage(),...sample});}
 function updateStatus(){const online=socket?.readyState===WebSocket.OPEN;
   GameV28.connection(online);
   $('statusDot').className='status-dot '+(online?'online':'offline');
@@ -54,7 +55,7 @@ function openConnection(){
   if(socket&&(socket.readyState===WebSocket.CONNECTING||socket.readyState===WebSocket.OPEN))return;
   clearTimeout(wsTimer);
   const protocol=location.protocol==='https:'?'wss:':'ws:';
-  socket=new WebSocket(protocol+'//'+location.host+'/ws');const connection=socket;ready=false;latency=0;updateStatus();
+  socket=new WebSocket(protocol+'//'+location.host+'/ws');const connection=socket;ready=false;latency=0;networkProbe.reset(performance.now());updateStatus();
   socket.addEventListener('open',()=>{
     if(socket!==connection)return;
     if(connectedBefore){totalReconnects++;GamePublicBeta.onRecovered();}reconnectCount=0;ready=true;connectedBefore=true;setError('');updateStatus();
@@ -106,13 +107,13 @@ function openConnection(){
       setError(help);if(!room)pendingRoom='';showUI();return;
     }
     if(m.t==='pong'){
-      if(Number.isFinite(m.sent)){latency=Math.max(0,Math.round(performance.now()-m.sent));GameQuality.net(latency);updateStatus();}return;
+      if(Number.isFinite(m.sent)){const now=performance.now();latency=Math.max(0,Math.round(now-m.sent));networkProbe.add(latency||1,now);GameQuality.net(latency);updateStatus();}return;
     }
   });
   socket.addEventListener('close',()=>{
     if(socket!==connection)return;
     clearTimeout(joinAckTimer);joinAckTimer=null;
-    ready=false;latency=0;updateStatus();resetKeys();GamePublicBeta.onDisconnected();
+    ready=false;latency=0;networkProbe.reset(performance.now());updateStatus();resetKeys();GamePublicBeta.onDisconnected();
     if(room){connected=[false,false];$('waitingBanner').classList.remove('hidden');}
     setError(room?'network.lost':'network.retry');
     reconnectCount++;const delay=Math.min(10_000,500*2**Math.min(reconnectCount,5))+Math.floor(Math.random()*220);
@@ -278,7 +279,7 @@ function sendInput(){if(!room||role<0||!ready||phase!=='playing')return;
   const packet={t:'input',inputSeq:++packetSeq,left:input.left,right:input.right,jumpSeq:input.jumpSeq,abilitySeq:input.abilitySeq,bondSeq:input.bondSeq,emoteSeq:input.emoteSeq};
   if(!soloMode)predictor.send(packet,performance.now());wsSend(packet);lastSend=performance.now();}
 setInterval(()=>{if(ready&&room&&phase==='playing')sendInput();},25);
-setInterval(()=>{if(ready)wsSend({t:'ping',sent:performance.now()});},1000);
+setInterval(()=>{if(ready){wsSend({t:'ping',sent:performance.now()});if(room&&phase==='waiting')syncLobby();}},1000);
 function announce(msg,duration=2){toastEl.textContent=msg;toastEl.classList.add('visible');toastTimer=duration;}
 function tone(freq,dur=.1,kind='sine',vol=.04){if(!sound||!GameQuality.settings().sound)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();const osc=ac.createOscillator(),gain=ac.createGain();osc.type=kind;osc.frequency.value=freq;gain.gain.value=vol;gain.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);osc.connect(gain);gain.connect(ac.destination);osc.start();osc.stop(ac.currentTime+dur);}catch(_){}}
 function burst(x,y,color,n=12,speed=130){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=(.25+Math.random()*.75)*speed;const ttl=.4+Math.random()*.6;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,life:ttl,ttl,r:1.5+Math.random()*3,color});}if(particles.length>500)particles.splice(0,particles.length-500);}
