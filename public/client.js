@@ -39,6 +39,7 @@ function setError(message='',vars=null){
   :GameI18n.networkError(message);
 }
 function wsSend(m){if(socket&&socket.readyState===WebSocket.OPEN)socket.send(JSON.stringify(m));}
+function syncLobby(){GameStage4Lobby.sync({room,role,hostRole,phase,connected,ready,solo:soloMode,lang:GameI18n.getLanguage(),latency});}
 function updateStatus(){const online=socket?.readyState===WebSocket.OPEN;
   GameV28.connection(online);
   $('statusDot').className='status-dot '+(online?'online':'offline');
@@ -47,12 +48,13 @@ function updateStatus(){const online=socket?.readyState===WebSocket.OPEN;
   const mobileStatus=$('mobileConnectionText'),mobileBox=$('mobileConnection');
   if(mobileStatus)mobileStatus.textContent=GameI18n.isEnglish()?(online?'Server connected'+(latency?' · '+latency+' ms':''):'Connecting to server…'):(online?'Сервер на связи'+(latency?' · '+latency+' мс':''):'Подключение к серверу…');
   if(mobileBox)mobileBox.dataset.status=online?'online':'offline';
+  syncLobby();
 }
 function openConnection(){
   if(socket&&(socket.readyState===WebSocket.CONNECTING||socket.readyState===WebSocket.OPEN))return;
   clearTimeout(wsTimer);
   const protocol=location.protocol==='https:'?'wss:':'ws:';
-  socket=new WebSocket(protocol+'//'+location.host+'/ws');const connection=socket;ready=false;updateStatus();
+  socket=new WebSocket(protocol+'//'+location.host+'/ws');const connection=socket;ready=false;latency=0;updateStatus();
   socket.addEventListener('open',()=>{
     if(socket!==connection)return;
     if(connectedBefore){totalReconnects++;GamePublicBeta.onRecovered();}reconnectCount=0;ready=true;connectedBefore=true;setError('');updateStatus();
@@ -110,7 +112,7 @@ function openConnection(){
   socket.addEventListener('close',()=>{
     if(socket!==connection)return;
     clearTimeout(joinAckTimer);joinAckTimer=null;
-    ready=false;updateStatus();resetKeys();GamePublicBeta.onDisconnected();
+    ready=false;latency=0;updateStatus();resetKeys();GamePublicBeta.onDisconnected();
     if(room){connected=[false,false];$('waitingBanner').classList.remove('hidden');}
     setError(room?'network.lost':'network.retry');
     reconnectCount++;const delay=Math.min(10_000,500*2**Math.min(reconnectCount,5))+Math.floor(Math.random()*220);
@@ -181,7 +183,7 @@ function showUI(){
     shareInviteBtn.setAttribute('aria-label','Отправить приглашение второму игроку');
   }
   $('touchControls').style.visibility=!!room&&role>=0&&phase==='playing'?'visible':'hidden';
-  GameStage4Lobby.sync({room,role,hostRole,phase,connected,ready,solo:soloMode,lang:GameI18n.getLanguage()});
+  syncLobby();
 }
 function createRoom(newGame=false,stageOverride=null,blueprint=null,startDemo=false,soloRequested=false){
  setError('');pendingCreate=true;pendingRoom='';pendingBlueprint=blueprint;pendingDemo=startDemo===true;pendingHostRole=GameV28.selectedHostRole();pendingSolo=soloRequested===true;pendingCreateStage=pendingDemo?GameDemo.stages[0]:Number.isInteger(stageOverride)?stageOverride:(newGame?0:bestStage());
