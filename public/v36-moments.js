@@ -26,8 +26,8 @@
  function apply(prev,next,language,announce,tone,toast){
   const event=detect(prev,next,language);
   if(!event||typeof announce!=='function')return false;
-  if(toast&&toast.dataset)toast.dataset.milestone=event.key;
   announce(event.text,2.7);
+  if(toast&&toast.dataset)toast.dataset.milestone=event.key;
   if(typeof tone==='function')tone(event.freq,.16,'sine',.027);
   return true;
  }

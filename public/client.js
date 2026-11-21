@@ -280,7 +280,7 @@ function sendInput(){if(!room||role<0||!ready||phase!=='playing')return;
   if(!soloMode)predictor.send(packet,performance.now());wsSend(packet);lastSend=performance.now();}
 setInterval(()=>{if(ready&&room&&phase==='playing')sendInput();},25);
 setInterval(()=>{if(ready){wsSend({t:'ping',sent:performance.now()});if(room&&phase==='waiting')syncLobby();}},1000);
-function announce(msg,duration=2){toastEl.textContent=msg;toastEl.classList.add('visible');toastTimer=duration;}
+function announce(msg,duration=2){delete toastEl.dataset.milestone;toastEl.textContent=msg;toastEl.classList.add('visible');toastTimer=duration;}
 function tone(freq,dur=.1,kind='sine',vol=.04){if(!sound||!GameQuality.settings().sound)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();const osc=ac.createOscillator(),gain=ac.createGain();osc.type=kind;osc.frequency.value=freq;gain.gain.value=vol;gain.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);osc.connect(gain);gain.connect(ac.destination);osc.start();osc.stop(ac.currentTime+dur);}catch(_){}}
 function burst(x,y,color,n=12,speed=130){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=(.25+Math.random()*.75)*speed;const ttl=.4+Math.random()*.6;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,life:ttl,ttl,r:1.5+Math.random()*3,color});}if(particles.length>500)particles.splice(0,particles.length-500);}
 function updateHUD(){
