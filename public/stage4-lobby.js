@@ -24,6 +24,24 @@
    spectator:['You are spectating','Only the two players can use the controls. Wait for the host to begin.','Spectator mode']
   }
  };
+ // RTT measures only this device's round trip to the authoritative game server.
+ function describeNetwork(state,language){
+  const lang=language==='en'?'en':'ru',s=state&&typeof state==='object'?state:{};
+  if(!s.ready)return {key:'offline',text:lang==='en'?'Server connection interrupted · reconnecting':'Соединение с сервером потеряно · восстанавливаем'};
+  const ms=s.latency;
+  if(typeof ms!=='number'||!Number.isFinite(ms)||ms<=0||ms>60000)
+   return {key:'measuring',text:lang==='en'?'Measuring server response time…':'Измеряем задержку до сервера…'};
+  const rtt=Math.round(ms);
+  if(rtt>=350)return {key:'high',text:lang==='en'
+   ?'High server RTT · '+rtt+' ms. Inputs may react later; check your connection.'
+   :'Высокая задержка до сервера · '+rtt+' мс. Управление может реагировать позже.'};
+  if(rtt>=180)return {key:'moderate',text:lang==='en'
+   ?'Elevated server RTT · '+rtt+' ms. Some delay is possible.'
+   :'Повышенная задержка до сервера · '+rtt+' мс. Возможна небольшая задержка.'};
+  return {key:'ok',text:lang==='en'
+   ?'Server RTT · '+rtt+' ms. Both players should check their own connection.'
+   :'До сервера · '+rtt+' мс. Каждому игроку стоит проверить свою связь.'};
+ }
  function describe(state){
   const s=state&&typeof state==='object'?state:{};
   if(!s.room||s.phase!=='waiting')return {hidden:true};
@@ -34,11 +52,12 @@
   const bothReady=connected[0]===true&&connected[1]===true;
   const key=!s.ready?'offline':s.solo?'solo':s.role<0?'spectator':isHost?(bothReady?'hostReady':'hostWaiting'):'guest';
   const [heading,detail,status]=c[key];
+  const network=describeNetwork(s,lang);
   return {hidden:false,key,heading,detail,status,isHost,canStart:!!s.ready&&(s.solo||isHost&&bothReady),
    startLabel:s.solo?(lang==='en'?'Start solo ✦':'Начать одному ✦'):(lang==='en'?'Start together ✦':'Начать вдвоём ✦'),
-   partnerReady:otherReady};
+   partnerReady:otherReady,network};
  }
- let panel=null,heading=null,detail=null,status=null,lastSignature='';
+ let panel=null,heading=null,detail=null,status=null,network=null,lastSignature='';
  function init(){
   if(typeof document==='undefined')return;
   const lobby=document.getElementById('lobbyView'),hint=document.getElementById('lobbyHint');
@@ -51,11 +70,14 @@
    heading=document.createElement('strong');heading.className='stage4-lobby-title';
    detail=document.createElement('p');detail.className='stage4-lobby-detail';
    status=document.createElement('span');status.className='stage4-lobby-status';
-   panel.append(heading,detail,status);hint.insertAdjacentElement('afterend',panel);
+   network=document.createElement('p');network.id='stage4NetworkQuality';
+   network.className='stage4-network-quality';network.setAttribute('aria-live','off');
+   panel.append(heading,detail,status,network);hint.insertAdjacentElement('afterend',panel);
   }else{
    heading=panel.querySelector('.stage4-lobby-title');
    detail=panel.querySelector('.stage4-lobby-detail');
    status=panel.querySelector('.stage4-lobby-status');
+   network=panel.querySelector('.stage4-network-quality');
   }
   panel.hidden=true;
  }
@@ -67,9 +89,14 @@
   const start=document.getElementById('startBtn');
   if(start&&start.textContent!==model.startLabel)start.textContent=model.startLabel;
   const signature=[model.key,model.heading,model.detail,model.status].join('|');
-  if(signature===lastSignature)return;
-  lastSignature=signature;panel.dataset.state=model.key;
-  heading.textContent=model.heading;detail.textContent=model.detail;status.textContent=model.status;
+  if(signature!==lastSignature){
+   lastSignature=signature;panel.dataset.state=model.key;
+   heading.textContent=model.heading;detail.textContent=model.detail;status.textContent=model.status;
+  }
+  if(network){
+   network.dataset.quality=model.network.key;
+   if(network.textContent!==model.network.text)network.textContent=model.network.text;
+  }
  }
- return Object.freeze({describe,init,sync});
+ return Object.freeze({describe,describeNetwork,init,sync});
 });

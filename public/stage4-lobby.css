@@ -11,3 +11,13 @@
  .stage4-lobby-title{font-size:12px}.stage4-lobby-detail{font-size:11px;line-height:1.28;margin:3px 0 4px}.stage4-lobby-status{font-size:10px;padding:2px 7px}
 }
 @media(prefers-reduced-motion:reduce){.stage4-lobby-guide{transition:none}}
+
+/* v32 — readable local RTT preflight, never a claim about partner latency. */
+.stage4-network-quality{margin:9px 0 0;padding:8px 0 0;border-top:1px solid #9aaccb33;color:#cbd8f0;font:600 11px/1.45 system-ui;overflow-wrap:anywhere}
+.stage4-network-quality[data-quality="ok"]{color:#b2f1dc}
+.stage4-network-quality[data-quality="moderate"]{color:#f5deb0}
+.stage4-network-quality[data-quality="high"],.stage4-network-quality[data-quality="offline"]{color:#ffc2ac}
+.stage4-network-quality[data-quality="measuring"]{color:#bbd4ee}
+@media(pointer:coarse) and (orientation:landscape){
+ .stage4-network-quality{margin:5px 0 0;padding:5px 0 0;font-size:10px;line-height:1.3}
+}
