@@ -24,24 +24,70 @@
    spectator:['You are spectating','Only the two players can use the controls. Wait for the host to begin.','Spectator mode']
   }
  };
- // RTT measures only this device's round trip to the authoritative game server.
- function describeNetwork(state,language){
-  const lang=language==='en'?'en':'ru',s=state&&typeof state==='object'?state:{};
-  if(!s.ready)return {key:'offline',text:lang==='en'?'Server connection interrupted · reconnecting':'Соединение с сервером потеряно · восстанавливаем'};
-  const ms=s.latency;
-  if(typeof ms!=='number'||!Number.isFinite(ms)||ms<=0||ms>60000)
-   return {key:'measuring',text:lang==='en'?'Measuring server response time…':'Измеряем задержку до сервера…'};
-  const rtt=Math.round(ms);
-  if(rtt>=350)return {key:'high',text:lang==='en'
-   ?'High server RTT · '+rtt+' ms. Inputs may react later; check your connection.'
-   :'Высокая задержка до сервера · '+rtt+' мс. Управление может реагировать позже.'};
-  if(rtt>=180)return {key:'moderate',text:lang==='en'
-   ?'Elevated server RTT · '+rtt+' ms. Some delay is possible.'
-   :'Повышенная задержка до сервера · '+rtt+' мс. Возможна небольшая задержка.'};
-  return {key:'ok',text:lang==='en'
-   ?'Server RTT · '+rtt+' ms. Both players should check their own connection.'
-   :'До сервера · '+rtt+' мс. Каждому игроку стоит проверить свою связь.'};
+// Session-local recent server RTT history. No room IDs, tokens or remote-player metrics.
+function createNetworkProbe(){
+ const values=[];
+ let startedAt=0,lastReplyAt=null;
+ const stamp=now=>typeof now==='number'&&Number.isFinite(now)&&now>=0?now:0;
+ function reset(now=0){values.length=0;startedAt=stamp(now);lastReplyAt=null;}
+ function add(rtt,now=0){
+  if(typeof rtt!=='number'||!Number.isFinite(rtt)||rtt<=0||rtt>60000)return false;
+  const at=stamp(now);
+  if(at<startedAt||(lastReplyAt!==null&&at<lastReplyAt))return false;
+  values.push(Math.round(rtt));
+  if(values.length>8)values.shift();
+  lastReplyAt=at;return true;
  }
+ function snapshot(now=0){
+  const at=stamp(now),count=values.length;
+  if(at<startedAt)return {latency:0,variation:null,samples:0,stalled:false};
+  const sorted=values.slice().sort((a,b)=>a-b);
+  const latency=count?Math.round((sorted[Math.floor((count-1)/2)]+sorted[Math.floor(count/2)])/2):0;
+  return {latency,variation:count>=3?sorted[count-1]-sorted[0]:null,
+   samples:count,stalled:at-(lastReplyAt===null?startedAt:lastReplyAt)>6000};
+ }
+ return Object.freeze({reset,add,snapshot});
+}
+
+// RTT and spread describe this device's path to the authoritative server only.
+function describeNetwork(state,language){
+ const lang=language==='en'?'en':'ru',s=state&&typeof state==='object'?state:{};
+ if(!s.ready)return {key:'offline',text:lang==='en'?'Server connection interrupted · reconnecting':'Соединение с сервером потеряно · восстанавливаем'};
+ if(s.stalled===true)return {key:'stalled',text:lang==='en'
+  ?'No recent server response. Check your network; reconnection starts if the socket closes.'
+  :'Нет свежих ответов сервера. Проверьте сеть; при обрыве игра переподключится.'};
+ const ms=s.latency;
+ if(typeof ms!=='number'||!Number.isFinite(ms)||ms<=0||ms>60000)
+  return {key:'measuring',text:lang==='en'?'Measuring server response time…':'Измеряем задержку до сервера…'};
+ const rtt=Math.round(ms);
+ const spread=Number.isInteger(s.samples)&&s.samples>=3&&s.samples<=8&&
+  typeof s.variation==='number'&&Number.isFinite(s.variation)&&s.variation>=0&&s.variation<=60000
+   ?Math.round(s.variation):null;
+ let key='ok',ru='До сервера · '+rtt+' мс. Каждому игроку стоит проверить свою связь.',
+  en='Server RTT · '+rtt+' ms. Both players should check their own connection.';
+ if(rtt>=350){
+  key='high';
+  ru='Высокая задержка до сервера · '+rtt+' мс. Управление может реагировать позже.';
+  en='High server RTT · '+rtt+' ms. Inputs may react later; check your connection.';
+ }else if(spread!==null&&spread>=250){
+  key='high';
+  ru='Нестабильная задержка до сервера · '+rtt+' мс. Возможны рывки управления.';
+  en='Unstable server RTT · '+rtt+' ms. Controls may feel uneven.';
+ }else if(rtt>=180){
+  key='moderate';
+  ru='Повышенная задержка до сервера · '+rtt+' мс. Возможна небольшая задержка.';
+  en='Elevated server RTT · '+rtt+' ms. Some delay is possible.';
+ }else if(spread!==null&&spread>=100){
+  key='moderate';
+  ru='Колебания задержки до сервера · '+rtt+' мс. Возможны короткие задержки.';
+  en='Variable server RTT · '+rtt+' ms. Short delays are possible.';
+ }
+ const suffix=spread===null?'':lang==='en'
+  ?' RTT spread ('+s.samples+' samples): '+spread+' ms.'
+  :' Разброс RTT ('+s.samples+' '+(s.samples<5?'замера':'замеров')+'): '+spread+' мс.';
+ return {key,text:(lang==='en'?en:ru)+suffix};
+}
+
  function describe(state){
   const s=state&&typeof state==='object'?state:{};
   if(!s.room||s.phase!=='waiting')return {hidden:true};
@@ -98,5 +144,5 @@
    if(network.textContent!==model.network.text)network.textContent=model.network.text;
   }
  }
- return Object.freeze({describe,describeNetwork,init,sync});
+ return Object.freeze({describe,describeNetwork,createNetworkProbe,init,sync});
 });

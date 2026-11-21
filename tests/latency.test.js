@@ -31,7 +31,7 @@ test('adaptive interpolation is faster on stable networks and protects against r
 test('client uses responsive input cadence and retains immediate key transmission',()=>{
  const client=fs.readFileSync(path.join(root,'public/client.js'),'utf8');
  assert.match(client,/sendInput\(\);\},25\)/,'40Hz periodic input stream');
- assert.match(client,/sent:performance\.now\(\)\}\);\},1000\)/,'1Hz RTT probes');
+ assert.match(client,/setInterval\(\(\)=>\{if\(ready\)\{wsSend\(\{t:'ping',sent:performance\.now\(\)\}\);if\(room&&phase==='waiting'\)syncLobby\(\);\}\},1000\)/,'1Hz RTT probes');
  assert.match(client,/GameQuality\.snapshotArrived\(receivedAt\)/);
  assert.match(client,/input\.left=keys\.has/,'existing immediate key input retained');
 });
