@@ -21,7 +21,7 @@ test('first-run invitation and room UI are device-agnostic',()=>{
  assert.match(client,/id='shareInviteBtn'/);
  assert.match(client,/typeof navigator\.share==='function'/);
  assert.match(client,/navigator\.clipboard\.writeText\(message/);
- assert.match(html,/\/client\.js\?v=26\.16/);
+ assert.match(html,/\/client\.js\?v=26\.17/);
  assert.match(html,/\/play-ui\.css\?v=28\.1/);
 });
 test('clean-play preserves original primary inputs and recovery controls',()=>{
