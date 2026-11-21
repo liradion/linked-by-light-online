@@ -6,10 +6,17 @@ test('v37: iPhone Safari-sized install dialog translates RU to EN without losing
   serviceWorkers:'block'});
  try{
   const page=await ctx.newPage();await page.goto('/');
+  // Install control is intentionally moved into the responsive game drawer.
+  await expect(page.locator('.game-menu-trigger')).toBeVisible();
+  await page.locator('.game-menu-trigger').click();
+  await expect(page.locator('#gameQuickMenu')).toHaveClass(/is-open/);
+  await expect(page.locator('#installGameBtn')).toBeVisible();
   await page.locator('#installGameBtn').click();
   await expect(page.locator('#installGameDialog')).toBeVisible();
   await expect(page.locator('#installGameSteps')).toContainText('На экран Домой');
-  await page.locator('#languageSelect').selectOption('en',{force:true});
+  // A modal dialog blocks the header language select. Use the real app
+  // language setter to exercise live translation while the dialog is open.
+  await page.evaluate(()=>window.GameI18n.setLanguage('en'));
   await expect(page.locator('#installGameTitle')).toContainText('Linked by Light');
   await expect(page.locator('#installGameSteps')).toContainText('Add to Home Screen');
   await page.locator('#installGameClose').click();
