@@ -203,6 +203,23 @@ canvas{position:relative;z-index:1}
 /* Chapter individuality and mobile legibility */
 .world-tag{display:inline-block;margin-top:4px;color:#ffe0b9;font-size:10px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
 @media(pointer:coarse) and (orientation:landscape){.world-tag{font-size:7px;margin-top:2px}.chapter{min-width:0}.chapter strong{font-size:11px;max-width:220px}.goal{max-width:35%;font-size:10px}}
+
+/* v38: scroll-safe initial menu. Auto margins center short content but never
+   create an unreachable negative top edge when the content exceeds the frame.
+   Fade opacity only: avoid moving the interactive menu's hit-test coordinates. */
+@keyframes v38MenuFade{from{opacity:0}to{opacity:1}}
+.overlay[data-view="menu"]:not(.hidden){
+  align-items:flex-start;overflow-y:auto;overflow-x:hidden;
+  scroll-padding-block:12px;overscroll-behavior-y:contain;
+}
+.overlay[data-view="menu"]:not(.hidden) .overlay-card{
+  flex:0 0 auto;min-width:0;margin:auto;
+  animation:v38MenuFade .25s ease-out both;
+}
+@media(prefers-reduced-motion:reduce){
+  .overlay[data-view="menu"]:not(.hidden) .overlay-card{animation:none!important}
+}
+
 </style><link rel="stylesheet" href="/v20.css?v=20" /><link rel="stylesheet" href="/v21.css?v=21" /><link rel="stylesheet" href="/v23plus.css?v=26" /><link rel="stylesheet" href="/beta.css?v=22" /><link rel="stylesheet" href="/v28.css?v=28" /><link rel="stylesheet" href="/play-ui.css?v=28.1" /><link rel="stylesheet" href="/evolution.css?v=29" /><link rel="stylesheet" href="/onboarding-v30.css?v=30" /><link rel="stylesheet" href="/v31-quality.css?v=31" /><link rel="stylesheet" href="/g4-qa.css?v=1" /><link rel="stylesheet" href="/stage4-lobby.css?v=33" /><link rel="stylesheet" href="/v36-moments.css?v=36" /></head><body>
 <div class="game-shell">
 <header class="topline">
